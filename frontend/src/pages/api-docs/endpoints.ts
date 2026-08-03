@@ -1394,6 +1394,20 @@ export const sections: readonly Section[] = [
         body: 'domain=example.com&port=443&network=tcp',
       },
       {
+        method: 'POST',
+        path: '/panel/api/xray/dedicated/egress/upsert',
+        summary: 'Create or replace one platform-managed tagged SOCKS egress and route a single dedicated client to it.',
+        body: '{\n  "tag": "dedicated-order-1",\n  "inboundTag": "sv-1",\n  "user": "order-1@dedicated.local",\n  "address": "198.51.100.10",\n  "port": 1080,\n  "username": "upstream-user",\n  "password": "upstream-password"\n}',
+        response: '{\n  "success": true,\n  "obj": { "tag": "dedicated-order-1", "outboundPresent": true, "routePresent": true }\n}',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/xray/dedicated/egress/remove',
+        summary: 'Remove one platform-managed dedicated egress and its route without changing unrelated Xray configuration.',
+        body: '{\n  "tag": "dedicated-order-1"\n}',
+        response: '{\n  "success": true,\n  "obj": { "tag": "dedicated-order-1" }\n}',
+      },
+      {
         method: 'GET',
         path: '/panel/api/xray/outbound-subs',
         summary: 'List all outbound subscriptions (remote URLs that supply additional outbounds), newest first.',

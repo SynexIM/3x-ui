@@ -52,6 +52,8 @@ func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/balancerStatus", a.balancerStatus)
 	g.POST("/balancerOverride", a.balancerOverride)
 	g.POST("/routeTest", a.routeTest)
+	g.POST("/dedicated/egress/upsert", a.upsertDedicatedEgress)
+	g.POST("/dedicated/egress/remove", a.removeDedicatedEgress)
 
 	// Outbound subscription (remote outbound lists)
 	g.GET("/outbound-subs", a.listOutboundSubs)
@@ -62,6 +64,36 @@ func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
 	g.DELETE("/outbound-subs/:id", a.deleteOutboundSub)
 	g.POST("/outbound-subs/:id/del", a.deleteOutboundSub) // POST alias for clients that can't send DELETE
 	g.POST("/outbound-subs/parse", a.parseOutboundSubURL) // preview without saving
+}
+
+func (a *XraySettingController) upsertDedicatedEgress(c *gin.Context) {
+	var spec service.DedicatedEgressSpec
+	if err := c.ShouldBindJSON(&spec); err != nil {
+		jsonMsg(c, "Invalid dedicated egress request", err)
+		return
+	}
+	result, err := a.XrayService.UpsertDedicatedEgress(spec)
+	if err != nil {
+		jsonMsg(c, "Failed to apply dedicated egress", err)
+		return
+	}
+	jsonObj(c, result, nil)
+}
+
+func (a *XraySettingController) removeDedicatedEgress(c *gin.Context) {
+	var request struct {
+		Tag string `json:"tag"`
+	}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		jsonMsg(c, "Invalid dedicated egress request", err)
+		return
+	}
+	result, err := a.XrayService.RemoveDedicatedEgress(request.Tag)
+	if err != nil {
+		jsonMsg(c, "Failed to remove dedicated egress", err)
+		return
+	}
+	jsonObj(c, result, nil)
 }
 
 // getXraySetting retrieves the Xray configuration template, inbound tags, and outbound test URL.
