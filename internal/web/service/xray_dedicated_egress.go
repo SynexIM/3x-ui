@@ -56,7 +56,14 @@ func (s *XrayService) UpsertDedicatedEgress(spec DedicatedEgressSpec) (Dedicated
 	if err := s.RestartXray(false); err != nil {
 		return DedicatedEgressResult{}, err
 	}
-	return DedicatedEgressResult{Tag: spec.Tag, OutboundPresent: true, RoutePresent: true}, nil
+	outboundPresent, routePresent, err := s.readDedicatedEgressPresence(spec.Tag)
+	if err != nil {
+		return DedicatedEgressResult{}, err
+	}
+	if !outboundPresent || !routePresent {
+		return DedicatedEgressResult{}, fmt.Errorf("dedicated egress readback incomplete for tag %q", spec.Tag)
+	}
+	return DedicatedEgressResult{Tag: spec.Tag, OutboundPresent: outboundPresent, RoutePresent: routePresent}, nil
 }
 
 // RemoveDedicatedEgress removes only the tagged dedicated outbound and its
@@ -81,7 +88,27 @@ func (s *XrayService) RemoveDedicatedEgress(tag string) (DedicatedEgressResult, 
 	if err := s.RestartXray(false); err != nil {
 		return DedicatedEgressResult{}, err
 	}
+	outboundPresent, routePresent, err := s.readDedicatedEgressPresence(tag)
+	if err != nil {
+		return DedicatedEgressResult{}, err
+	}
+	if outboundPresent || routePresent {
+		return DedicatedEgressResult{}, fmt.Errorf("dedicated egress remove readback incomplete for tag %q", tag)
+	}
 	return DedicatedEgressResult{Tag: tag}, nil
+}
+
+// readDedicatedEgressPresence reads the persisted Xray template after the
+// reconcile has completed. The endpoint must not report success based only on
+// SaveXraySetting/RestartXray returning nil: a future Xray or storage change
+// could otherwise leave a partial outbound/route while the platform records a
+// successful capability probe.
+func (s *XrayService) readDedicatedEgressPresence(tag string) (bool, bool, error) {
+	template, err := s.settingService.GetXrayConfigTemplate()
+	if err != nil {
+		return false, false, err
+	}
+	return dedicatedEgressPresence(template, tag)
 }
 
 func validateDedicatedEgressSpec(spec DedicatedEgressSpec) error {
@@ -190,6 +217,46 @@ func removeDedicatedEgressConfig(raw string, tag string) (string, error) {
 	}
 	config["routing"] = routingJSON
 	return marshalConfig(config)
+}
+
+func dedicatedEgressPresence(raw string, tag string) (bool, bool, error) {
+	var config map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &config); err != nil {
+		return false, false, common.NewError("dedicated egress config is invalid:", err)
+	}
+
+	outboundPresent := false
+	if rawOutbounds, ok := config["outbounds"]; ok && len(rawOutbounds) > 0 {
+		var outbounds []map[string]interface{}
+		if err := json.Unmarshal(rawOutbounds, &outbounds); err != nil {
+			return false, false, common.NewError("dedicated egress outbounds are invalid:", err)
+		}
+		for _, outbound := range outbounds {
+			if value, ok := outbound["tag"].(string); ok && value == tag {
+				outboundPresent = true
+				break
+			}
+		}
+	}
+
+	routing, err := routingObject(config)
+	if err != nil {
+		return false, false, err
+	}
+	routePresent := false
+	if rules, ok := routing["rules"].([]interface{}); ok {
+		for _, rawRule := range rules {
+			rule, ok := rawRule.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if value, ok := rule["outboundTag"].(string); ok && value == tag {
+				routePresent = true
+				break
+			}
+		}
+	}
+	return outboundPresent, routePresent, nil
 }
 
 func routingObject(config map[string]json.RawMessage) (map[string]interface{}, error) {

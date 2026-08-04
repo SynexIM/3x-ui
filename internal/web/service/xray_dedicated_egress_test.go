@@ -58,3 +58,17 @@ func TestRemoveDedicatedEgressConfigLeavesUnrelatedRoutes(t *testing.T) {
 		t.Fatalf("unexpected remaining config: %s", result)
 	}
 }
+
+func TestDedicatedEgressPresenceRequiresBothOutboundAndRoute(t *testing.T) {
+	complete := `{"outbounds":[{"tag":"dedicated-order-1","protocol":"socks"}],"routing":{"rules":[{"type":"field","outboundTag":"dedicated-order-1"}]}}`
+	outboundOnly := `{"outbounds":[{"tag":"dedicated-order-1","protocol":"socks"}],"routing":{"rules":[]}}`
+
+	outboundPresent, routePresent, err := dedicatedEgressPresence(complete, "dedicated-order-1")
+	if err != nil || !outboundPresent || !routePresent {
+		t.Fatalf("complete presence = (%v, %v, %v), want (true, true, nil)", outboundPresent, routePresent, err)
+	}
+	outboundPresent, routePresent, err = dedicatedEgressPresence(outboundOnly, "dedicated-order-1")
+	if err != nil || !outboundPresent || routePresent {
+		t.Fatalf("partial presence = (%v, %v, %v), want (true, false, nil)", outboundPresent, routePresent, err)
+	}
+}
