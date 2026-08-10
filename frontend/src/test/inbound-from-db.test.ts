@@ -232,8 +232,50 @@ describe('getInboundClients with schema-shaped inbound', () => {
     expect(getInboundClients(inbound)).toBeNull();
   });
 
-  it('returns null for non-client protocols (http/mixed/tun/tunnel)', () => {
-    for (const protocol of ['http', 'mixed', 'tun', 'tunnel']) {
+  it('returns Mixed clients', () => {
+    const inbound = inboundFromDb({
+      ...BASE_DB_FIELDS,
+      protocol: 'mixed',
+      settings: {
+        auth: 'password',
+        clients: [{ email: 'mixed-user', password: 'secret' }],
+        udp: false,
+        ip: '127.0.0.1',
+      },
+      streamSettings: '',
+    });
+    expect(getInboundClients(inbound)).toHaveLength(1);
+  });
+
+  it('generates per-client Mixed SOCKS, HTTP, and Telegram links', () => {
+    const inbound = inboundFromDb({
+      ...BASE_DB_FIELDS,
+      port: 1080,
+      protocol: 'mixed',
+      settings: {
+        auth: 'password',
+        clients: [{ email: 'alice@example.test', password: 'p@ss word' }],
+        udp: false,
+        ip: '127.0.0.1',
+      },
+      streamSettings: '',
+    });
+    const links = genAllLinks({
+      inbound,
+      client: getInboundClients(inbound)![0],
+      fallbackHostname: 'proxy.example.test',
+    });
+    expect(links.map((entry) => entry.remark)).toEqual(['SOCKS5', 'HTTP', 'Telegram']);
+    expect(links[0].link).toBe(
+      'socks5://alice%40example.test:p%40ss%20word@proxy.example.test:1080',
+    );
+    expect(links[1].link).toBe(
+      'http://alice%40example.test:p%40ss%20word@proxy.example.test:1080',
+    );
+  });
+
+  it('returns null for non-client protocols (http/tun/tunnel)', () => {
+    for (const protocol of ['http', 'tun', 'tunnel']) {
       const inbound = inboundFromDb({
         ...BASE_DB_FIELDS,
         protocol,

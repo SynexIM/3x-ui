@@ -1,11 +1,18 @@
 package xray
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"maps"
+	"math/big"
 	"net"
 	"net/http"
 	"net/url"
@@ -15,6 +22,39 @@ import (
 	"testing"
 	"time"
 )
+
+func writeXrayE2ECertificate(t *testing.T) (string, string) {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generate E2E key: %v", err)
+	}
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "xray-e2e.test"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		DNSNames:     []string{"xray-e2e.test"},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("create E2E certificate: %v", err)
+	}
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		t.Fatalf("marshal E2E key: %v", err)
+	}
+	dir := t.TempDir()
+	certPath := filepath.Join(dir, "cert.pem")
+	keyPath := filepath.Join(dir, "key.pem")
+	if err := os.WriteFile(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0o600); err != nil {
+		t.Fatalf("write E2E certificate: %v", err)
+	}
+	if err := os.WriteFile(keyPath, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}), 0o600); err != nil {
+		t.Fatalf("write E2E key: %v", err)
+	}
+	return certPath, keyPath
+}
 
 // e2eCore is a real xray-core process plus a connected panel API client.
 type e2eCore struct {
@@ -147,6 +187,7 @@ func panelUser(email string, fields map[string]any) map[string]any {
 // core for every protocol it builds accounts for, pinning the error texts
 // IsUserExistsErr and IsMissingHandlerErr match on.
 func TestXrayAPI_E2E_Users(t *testing.T) {
+	certPath, keyPath := writeXrayE2ECertificate(t)
 	c := startE2ECore(t, []any{
 		map[string]any{
 			"listen": "127.0.0.1", "port": freePort(t), "protocol": "vmess", "tag": "vmess-in",
@@ -180,6 +221,23 @@ func TestXrayAPI_E2E_Users(t *testing.T) {
 				"clients": []any{map[string]any{"password": ssKey(32, 9), "email": "seed-ss2022"}},
 			},
 		},
+		map[string]any{
+			"listen": "127.0.0.1", "port": freePort(t), "protocol": "hysteria", "tag": "hysteria-in",
+			"settings": map[string]any{
+				"version": 2,
+				"clients": []any{map[string]any{"auth": "seed-auth", "email": "seed-hysteria"}},
+			},
+			"streamSettings": map[string]any{
+				"network": "hysteria", "security": "tls",
+				"hysteriaSettings": map[string]any{"version": 2, "udpIdleTimeout": 60},
+				"tlsSettings": map[string]any{
+					"certificates": []any{map[string]any{
+						"certificateFile": certPath,
+						"keyFile":         keyPath,
+					}},
+				},
+			},
+		},
 	})
 
 	tests := []struct {
@@ -190,31 +248,43 @@ func TestXrayAPI_E2E_Users(t *testing.T) {
 		// rejectsDuplicateEmail is false for the legacy shadowsocks inbound,
 		// whose validator does not dedupe emails at all.
 		rejectsDuplicateEmail bool
+		reportsMissingUser    bool
 	}{
 		{
 			name: "vmess", protocol: "vmess", tag: "vmess-in",
 			user:                  panelUser("e2e-vmess", map[string]any{"id": "b831381d-6324-4d53-ad4f-8cda48b30821", "security": "auto"}),
 			rejectsDuplicateEmail: true,
+			reportsMissingUser:    true,
 		},
 		{
 			name: "vless", protocol: "vless", tag: "vless-in",
 			user:                  panelUser("e2e-vless", map[string]any{"id": "b831381d-6324-4d53-ad4f-8cda48b30822", "flow": "xtls-rprx-vision"}),
 			rejectsDuplicateEmail: true,
+			reportsMissingUser:    true,
 		},
 		{
 			name: "trojan", protocol: "trojan", tag: "trojan-in",
 			user:                  panelUser("e2e-trojan", map[string]any{"password": "e2e-pw"}),
 			rejectsDuplicateEmail: true,
+			reportsMissingUser:    true,
 		},
 		{
 			name: "shadowsocks legacy", protocol: "shadowsocks", tag: "ss-in",
 			user:                  panelUser("e2e-ss", map[string]any{"password": "e2e-pw", "cipher": "aes-256-gcm"}),
 			rejectsDuplicateEmail: false,
+			reportsMissingUser:    true,
 		},
 		{
 			name: "shadowsocks 2022", protocol: "shadowsocks", tag: "ss2022-in",
 			user:                  panelUser("e2e-ss2022", map[string]any{"password": ssKey(32, 40), "cipher": "2022-blake3-aes-256-gcm"}),
 			rejectsDuplicateEmail: true,
+			reportsMissingUser:    true,
+		},
+		{
+			name: "hysteria 2", protocol: "hysteria", tag: "hysteria-in",
+			user:                  panelUser("e2e-hysteria", map[string]any{"auth": "e2e-auth"}),
+			rejectsDuplicateEmail: false,
+			reportsMissingUser:    false,
 		},
 	}
 
@@ -240,6 +310,9 @@ func TestXrayAPI_E2E_Users(t *testing.T) {
 
 			if err := c.api.RemoveUser(tt.tag, email); err != nil {
 				t.Fatalf("RemoveUser: %v", err)
+			}
+			if !tt.reportsMissingUser {
+				return
 			}
 			err := c.api.RemoveUser(tt.tag, email)
 			if err == nil {

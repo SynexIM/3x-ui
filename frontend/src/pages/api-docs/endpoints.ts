@@ -130,7 +130,7 @@ export const sections: readonly Section[] = [
         method: 'GET',
         path: '/panel/api/inbounds/allLinks',
         summary:
-          'Return every protocol URL (vless://, vmess://, trojan://, ss://, hysteria://, mtproto) across all inbounds and all of their clients. Links are rendered through the subscription engine, so the configured remark template (name-only display part) is applied per client — the same output the client info/QR pages use. Protocols without a URL form (socks, http, mixed, wireguard, dokodemo, tunnel) contribute nothing. Used by the panel’s "Export all inbound links" action.',
+          'Return every protocol URL (vless://, vmess://, trojan://, ss://, hysteria://, mtproto, socks5://, http://) across all inbounds and all of their clients. Links are rendered through the subscription engine, so the configured remark template (name-only display part) is applied per client — the same output the client info/QR pages use. Protocols without a URL form contribute nothing. Used by the panel’s "Export all inbound links" action.',
         response:
           '{\n  "success": true,\n  "obj": [\n    "vless://uuid@host:443?security=reality&...#Germany-alice",\n    "vmess://eyJ2IjoyLC..."\n  ]\n}',
       },
@@ -889,7 +889,7 @@ export const sections: readonly Section[] = [
         method: 'GET',
         path: '/panel/api/clients/subLinks/:subId',
         summary:
-          'Return every protocol URL (vless://, vmess://, trojan://, ss://, hysteria://, hy2://) for clients matching the subscription ID. Same result set as /sub/<subId>, but as a JSON array — no base64. When an inbound has streamSettings.externalProxy set, one URL is emitted per external proxy. Empty array when the subId has no enabled clients.',
+          'Return every protocol URL (vless://, vmess://, trojan://, ss://, hysteria://, hy2://, socks5://, http://) for clients matching the subscription ID. Same result set as /sub/<subId>, but as a JSON array — no base64. Mixed also emits a Telegram proxy link. When an inbound has streamSettings.externalProxy set, one URL is emitted per external proxy. Empty array when the subId has no enabled clients.',
         params: [
           { name: 'subId', in: 'path', type: 'string', desc: "Subscription ID, taken from the client's subId field." },
         ],
@@ -900,7 +900,7 @@ export const sections: readonly Section[] = [
         method: 'GET',
         path: '/panel/api/clients/links/:email',
         summary:
-          "Return every URL for one client across all attached inbounds — the same strings the Copy URL button copies in the panel UI. Supported protocols: vmess, vless, trojan, shadowsocks, hysteria. If streamSettings.externalProxy is set, returns one URL per external proxy. Protocols without a URL form (socks, http, mixed, wireguard, dokodemo, tunnel) contribute nothing.",
+          "Return every URL for one client across all attached inbounds — the same strings the Copy URL button copies in the panel UI. Supported protocols: vmess, vless, trojan, shadowsocks, hysteria, mixed. Mixed returns SOCKS5, HTTP, and Telegram proxy links. If streamSettings.externalProxy is set, returns one URL per external proxy. Protocols without a URL form contribute nothing.",
         params: [
           { name: 'email', in: 'path', type: 'string', desc: 'Client email (unique identifier).' },
         ],

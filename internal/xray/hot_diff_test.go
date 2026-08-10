@@ -211,6 +211,33 @@ func TestComputeHotDiff_ClientOnlyChangeUsesUserOps(t *testing.T) {
 	}
 }
 
+func TestComputeHotDiff_HysteriaClientChangeUsesNativeUserOps(t *testing.T) {
+	oldCfg := makeHotConfig()
+	oldCfg.InboundConfigs[1].Protocol = "hysteria"
+	oldCfg.InboundConfigs[1].Settings = json_util.RawMessage(
+		`{"version":2,"clients":[{"email":"alice","auth":"old-auth"}]}`,
+	)
+	newCfg := makeHotConfig()
+	newCfg.InboundConfigs[1].Protocol = "hysteria"
+	newCfg.InboundConfigs[1].Settings = json_util.RawMessage(
+		`{"version":2,"clients":[{"email":"alice","auth":"new-auth"}]}`,
+	)
+
+	diff, ok := ComputeHotDiff(oldCfg, newCfg)
+	if !ok {
+		t.Fatal("Hysteria client change must be hot-applicable")
+	}
+	if len(diff.RemovedInboundTags) != 0 || len(diff.AddedInbounds) != 0 {
+		t.Fatalf("Hysteria client change must keep its handler: %+v", diff)
+	}
+	if len(diff.RemovedUsers) != 1 || len(diff.AddedUsers) != 1 {
+		t.Fatalf("expected one native remove/add user pair: %+v", diff)
+	}
+	if diff.AddedUsers[0].User["auth"] != "new-auth" {
+		t.Fatalf("new Hysteria auth missing from user operation: %+v", diff.AddedUsers[0])
+	}
+}
+
 func TestComputeHotDiff_ClientChangeFallsBackToReplace(t *testing.T) {
 	cases := []struct {
 		name   string

@@ -184,6 +184,48 @@ describe('transportless streamSettings (wireguard / tunnel)', () => {
 });
 
 describe('formValuesToWirePayload', () => {
+  it('migrates legacy Mixed accounts into unified clients on edit', () => {
+    const values = rawInboundToFormValues({
+      ...vlessRow,
+      protocol: 'mixed',
+      settings: {
+        auth: 'password',
+        accounts: [{ user: 'alice', pass: 'secret' }],
+        udp: true,
+        ip: '127.0.0.1',
+      },
+    });
+    const parsed = JSON.parse(formValuesToWirePayload(values).settings);
+    expect(parsed.accounts).toBeUndefined();
+    expect(parsed.clients).toEqual([
+      expect.objectContaining({ email: 'alice', password: 'secret', enable: true }),
+    ]);
+  });
+
+  it('projects Mixed clients through the protocol whitelist', () => {
+    const values = rawInboundToFormValues({
+      ...vlessRow,
+      protocol: 'mixed',
+      settings: {
+        auth: 'password',
+        clients: [{
+          email: 'alice',
+          password: 'secret',
+          enable: true,
+          id: 'must-not-leak',
+          auth: 'must-not-leak',
+        }],
+        udp: false,
+        ip: '127.0.0.1',
+      },
+    });
+    const client = JSON.parse(formValuesToWirePayload(values).settings).clients[0];
+    expect(client.email).toBe('alice');
+    expect(client.password).toBe('secret');
+    expect(client.id).toBeUndefined();
+    expect(client.auth).toBeUndefined();
+  });
+
   it('stringifies settings/streamSettings/sniffing with empty-array/default pruning', () => {
     const values = rawInboundToFormValues(vlessRow);
     const payload = formValuesToWirePayload(values);

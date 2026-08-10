@@ -126,10 +126,7 @@ describe('createDefault*InboundSettings factories', () => {
     expect(s.auth).toBe('password');
     expect(s.udp).toBe(false);
     expect(s.ip).toBe('127.0.0.1');
-    const accounts = s.accounts ?? [];
-    expect(accounts).toHaveLength(1);
-    expect(accounts[0].user.length).toBe(8);
-    expect(accounts[0].pass.length).toBe(12);
+    expect(s.clients).toEqual([]);
     expect(MixedInboundSettingsSchema.parse(s)).toEqual(s);
   });
 

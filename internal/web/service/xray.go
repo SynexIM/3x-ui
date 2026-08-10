@@ -230,6 +230,10 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				if flow != "" {
 					entry["flow"] = flow
 				}
+			case model.Mixed:
+				if c.Password != "" {
+					entry["password"] = c.Password
+				}
 			case model.Shadowsocks:
 				if c.Password != "" {
 					entry["password"] = c.Password
@@ -381,7 +385,72 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		injectNodeEgresses(xrayConfig, nodes)
 	}
 
+	ensureHotReloadableDefaultOutbound(xrayConfig)
+
 	return xrayConfig, nil
+}
+
+const internalDefaultOutboundTag = "xui-internal-default"
+
+// Keep Xray's immutable first outbound private; a final rule makes the user's
+// first outbound the hot-switchable effective default. The bootstrap fails closed.
+func ensureHotReloadableDefaultOutbound(cfg *xray.Config) {
+	var outbounds []any
+	if len(cfg.OutboundConfigs) == 0 || json.Unmarshal(cfg.OutboundConfigs, &outbounds) != nil || len(outbounds) == 0 {
+		return
+	}
+	first, ok := outbounds[0].(map[string]any)
+	if !ok {
+		return
+	}
+	defaultTag, _ := first["tag"].(string)
+	if defaultTag == "" {
+		logger.Warning("hot default outbound: first user outbound has no tag; keeping legacy restart behavior")
+		return
+	}
+	for _, raw := range outbounds {
+		outbound, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		if tag, _ := outbound["tag"].(string); tag == internalDefaultOutboundTag {
+			logger.Warning("hot default outbound: reserved tag collision; keeping legacy restart behavior")
+			return
+		}
+	}
+
+	bootstrap := map[string]any{
+		"protocol": "blackhole",
+		"settings": map[string]any{},
+		"tag":      internalDefaultOutboundTag,
+	}
+	outbounds = append([]any{bootstrap}, outbounds...)
+	encodedOutbounds, err := json.MarshalIndent(outbounds, "", "  ")
+	if err != nil {
+		return
+	}
+
+	routing := map[string]any{}
+	if len(cfg.RouterConfig) > 0 {
+		if err := json.Unmarshal(cfg.RouterConfig, &routing); err != nil {
+			logger.Warning("hot default outbound: routing section is invalid; keeping legacy restart behavior:", err)
+			return
+		}
+	}
+	rules, _ := routing["rules"].([]any)
+	rules = append(rules, map[string]any{
+		"type":        "field",
+		"network":     "tcp,udp",
+		"outboundTag": defaultTag,
+	})
+	routing["rules"] = rules
+	encodedRouting, err := json.Marshal(routing)
+	if err != nil {
+		return
+	}
+
+	cfg.OutboundConfigs = json_util.RawMessage(encodedOutbounds)
+	cfg.RouterConfig = json_util.RawMessage(encodedRouting)
 }
 
 // PanelEgressInboundTag is the tag of the loopback SOCKS inbound injected into
@@ -1139,13 +1208,19 @@ func (s *XrayService) tryHotApply(process *xray.Process, newCfg *xray.Config) bo
 			return false
 		}
 	}
+	// Install new tags before routing switches; replace existing tags afterwards
+	// so the effective-default rule never points at a missing handler.
+	changedOutboundTags := make(map[string]bool, len(diff.RemovedOutboundTags))
 	for _, tag := range diff.RemovedOutboundTags {
-		if err := hotAPI.DelOutbound(tag); err != nil && !xray.IsMissingHandlerErr(err) {
-			logger.Info("hot apply: remove outbound [", tag, "] failed:", err)
-			return false
-		}
+		changedOutboundTags[tag] = true
 	}
+	var changedOutbounds [][]byte
 	for _, ob := range diff.AddedOutbounds {
+		tag := handlerTag(ob)
+		if changedOutboundTags[tag] {
+			changedOutbounds = append(changedOutbounds, ob)
+			continue
+		}
 		if err := addOutboundReconciling(&hotAPI, ob); err != nil {
 			logger.Info("hot apply: add outbound failed:", err)
 			return false
@@ -1169,9 +1244,31 @@ func (s *XrayService) tryHotApply(process *xray.Process, newCfg *xray.Config) bo
 			return false
 		}
 	}
+	for _, tag := range diff.RemovedOutboundTags {
+		if err := hotAPI.DelOutbound(tag); err != nil && !xray.IsMissingHandlerErr(err) {
+			logger.Info("hot apply: remove outbound [", tag, "] failed:", err)
+			return false
+		}
+	}
+	for _, ob := range changedOutbounds {
+		if err := addOutboundReconciling(&hotAPI, ob); err != nil {
+			logger.Info("hot apply: replace outbound failed:", err)
+			return false
+		}
+	}
 
 	process.SetConfig(newCfg)
 	return true
+}
+
+func handlerTag(raw []byte) string {
+	var meta struct {
+		Tag string `json:"tag"`
+	}
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		return ""
+	}
+	return meta.Tag
 }
 
 // addUserReconciling adds a user, and on an email conflict (the user was

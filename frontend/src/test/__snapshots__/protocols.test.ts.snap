@@ -46,13 +46,22 @@ exports[`InboundSettingsSchema fixtures > parses mixed-basic byte-stably 1`] = `
 {
   "protocol": "mixed",
   "settings": {
-    "accounts": [
+    "auth": "password",
+    "clients": [
       {
-        "pass": "sockspass",
-        "user": "socksuser",
+        "comment": "",
+        "email": "socksuser",
+        "enable": true,
+        "expiryTime": 0,
+        "group": "",
+        "limitIp": 0,
+        "password": "sockspass",
+        "reset": 0,
+        "subId": "",
+        "tgId": 0,
+        "totalGB": 0,
       },
     ],
-    "auth": "password",
     "ip": "127.0.0.1",
     "udp": true,
   },

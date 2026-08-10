@@ -350,6 +350,10 @@ func (i *Inbound) GenXrayInboundConfig() *xray.InboundConfig {
 		if converted, ok := WireguardClientsToPeers(settings); ok {
 			settings = converted
 		}
+	case Mixed:
+		if converted, ok := MixedClientsToAccounts(settings); ok {
+			settings = converted
+		}
 	case Hysteria:
 		if healed, ok := HealHysteriaVersion(settings); ok {
 			settings = healed
@@ -477,6 +481,48 @@ func WireguardClientsToPeers(settings string) (string, bool) {
 	}
 	delete(parsed, "clients")
 	parsed["peers"] = peers
+	out, err := json.MarshalIndent(parsed, "", "  ")
+	if err != nil {
+		return settings, false
+	}
+	return string(out), true
+}
+
+// MixedClientsToAccounts compiles the panel's canonical client representation
+// into the static username/password map Xray's mixed SOCKS handler consumes.
+func MixedClientsToAccounts(settings string) (string, bool) {
+	if settings == "" {
+		return settings, false
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(settings), &parsed); err != nil {
+		return settings, false
+	}
+	clients, ok := parsed["clients"].([]any)
+	if !ok {
+		return settings, false
+	}
+	accounts := make([]any, 0, len(clients))
+	for _, raw := range clients {
+		client, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		if enabled, exists := client["enable"].(bool); exists && !enabled {
+			continue
+		}
+		email, _ := client["email"].(string)
+		password, _ := client["password"].(string)
+		if email == "" || password == "" {
+			continue
+		}
+		accounts = append(accounts, map[string]any{"user": email, "pass": password})
+	}
+	delete(parsed, "clients")
+	parsed["accounts"] = accounts
+	if len(accounts) > 0 {
+		parsed["auth"] = "password"
+	}
 	out, err := json.MarshalIndent(parsed, "", "  ")
 	if err != nil {
 		return settings, false

@@ -83,6 +83,34 @@ func (l *Local) UpdateInbound(ctx context.Context, oldIb, newIb *model.Inbound) 
 	return l.AddInbound(ctx, newIb)
 }
 
+// Mixed has static accounts and no UserManager API, so client changes replace
+// only that handler while the Xray process and unrelated handlers stay alive.
+func (l *Local) reloadInbound(ib *model.Inbound) error {
+	body, err := json.MarshalIndent(ib.GenXrayInboundConfig(), "", "  ")
+	if err != nil {
+		return err
+	}
+	return l.withAPI(func(api *xray.XrayAPI) error {
+		if err := api.DelInbound(ib.Tag); err != nil && !xray.IsMissingHandlerErr(err) {
+			return err
+		}
+		if !ib.Enable {
+			return nil
+		}
+		if err := api.AddInbound(body); err != nil {
+			if l.deps.SetNeedRestart != nil {
+				l.deps.SetNeedRestart()
+			}
+			return err
+		}
+		return nil
+	})
+}
+
+func requiresInboundReloadForUserMutation(protocol model.Protocol) bool {
+	return protocol == model.Mixed
+}
+
 // updateMtprotoInbound applies an inbound update without the Del+Add sequence
 // the xray path uses: Remove would drop the manager's fingerprint state, which
 // is what lets Ensure keep the running mtg process (and its live connections)
@@ -116,6 +144,9 @@ func (l *Local) AddUser(_ context.Context, ib *model.Inbound, userMap map[string
 	if ib.Protocol == model.MTProto {
 		return nil
 	}
+	if requiresInboundReloadForUserMutation(ib.Protocol) {
+		return l.reloadInbound(ib)
+	}
 	return l.withAPI(func(api *xray.XrayAPI) error {
 		return api.AddUser(string(ib.Protocol), ib.Tag, userMap)
 	})
@@ -124,6 +155,9 @@ func (l *Local) AddUser(_ context.Context, ib *model.Inbound, userMap map[string
 func (l *Local) RemoveUser(_ context.Context, ib *model.Inbound, email string) error {
 	if ib.Protocol == model.MTProto {
 		return nil
+	}
+	if requiresInboundReloadForUserMutation(ib.Protocol) {
+		return l.reloadInbound(ib)
 	}
 	return l.withAPI(func(api *xray.XrayAPI) error {
 		return api.RemoveUser(ib.Tag, email)
@@ -167,6 +201,9 @@ func (l *Local) DeleteClient(context.Context, string) error {
 }
 
 func (l *Local) UpdateUser(ctx context.Context, ib *model.Inbound, oldEmail string, payload model.Client) error {
+	if requiresInboundReloadForUserMutation(ib.Protocol) {
+		return l.reloadInbound(ib)
+	}
 	if oldEmail != "" {
 		if err := l.RemoveUser(ctx, ib, oldEmail); err != nil && !strings.Contains(err.Error(), "not found") {
 			return err

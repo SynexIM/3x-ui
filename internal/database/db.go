@@ -131,6 +131,9 @@ func initModels() error {
 	if err := migrateLegacySocksInboundsToMixed(); err != nil {
 		return err
 	}
+	if err := migrateMixedAccountsToClients(); err != nil {
+		return err
+	}
 	if err := migrateShadowsocksRemovedCiphers(); err != nil {
 		return err
 	}
@@ -782,6 +785,126 @@ func migrateLegacySocksInboundsToMixed() error {
 	}
 	if res.RowsAffected > 0 {
 		log.Printf("Migrated %d legacy socks inbound(s) to mixed", res.RowsAffected)
+	}
+	return nil
+}
+
+// migrateMixedAccountsToClients is idempotent; credential conflicts stay
+// untouched and are reported again instead of silently changing passwords.
+func migrateMixedAccountsToClients() error {
+	var inbounds []model.Inbound
+	if err := db.Where("protocol = ?", model.Mixed).Find(&inbounds).Error; err != nil {
+		return err
+	}
+	for _, inbound := range inbounds {
+		var settings map[string]any
+		if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
+			log.Printf("MixedAccountsToClients: skip inbound %d (invalid settings json): %v", inbound.Id, err)
+			continue
+		}
+		if _, alreadyCanonical := settings["clients"]; alreadyCanonical {
+			continue
+		}
+		accounts, ok := settings["accounts"].([]any)
+		if !ok || len(accounts) == 0 {
+			continue
+		}
+
+		type credential struct {
+			email    string
+			password string
+		}
+		credentials := make([]credential, 0, len(accounts))
+		seen := map[string]string{}
+		conflict := ""
+		for _, raw := range accounts {
+			account, ok := raw.(map[string]any)
+			if !ok {
+				conflict = "malformed account"
+				break
+			}
+			email, _ := account["user"].(string)
+			password, _ := account["pass"].(string)
+			email = strings.TrimSpace(email)
+			if email == "" || password == "" {
+				conflict = "empty username or password"
+				break
+			}
+			if previous, exists := seen[email]; exists {
+				if previous != password {
+					conflict = fmt.Sprintf("duplicate username %q has different passwords", email)
+					break
+				}
+				continue
+			}
+			seen[email] = password
+			var existing model.ClientRecord
+			err := db.Where("email = ?", email).First(&existing).Error
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+			if err == nil && existing.Password != "" && existing.Password != password {
+				conflict = fmt.Sprintf("client %q already exists with a different password", email)
+				break
+			}
+			credentials = append(credentials, credential{email: email, password: password})
+		}
+		if conflict != "" {
+			log.Printf("MixedAccountsToClients: inbound %d requires manual migration: %s", inbound.Id, conflict)
+			continue
+		}
+
+		err := db.Transaction(func(tx *gorm.DB) error {
+			clientObjs := make([]any, 0, len(credentials))
+			for _, cred := range credentials {
+				var row model.ClientRecord
+				err := tx.Where("email = ?", cred.email).First(&row).Error
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					client := model.Client{
+						Email:    cred.email,
+						Password: cred.password,
+						Enable:   true,
+						SubID:    random.NumLower(16),
+					}
+					row = *client.ToRecord()
+					if err := tx.Create(&row).Error; err != nil {
+						return err
+					}
+				} else if err != nil {
+					return err
+				} else if row.Password == "" {
+					row.Password = cred.password
+					row.Enable = true
+					if row.SubID == "" {
+						row.SubID = random.NumLower(16)
+					}
+					if err := tx.Save(&row).Error; err != nil {
+						return err
+					}
+				}
+				link := model.ClientInbound{ClientId: row.Id, InboundId: inbound.Id}
+				if err := tx.Where("client_id = ? AND inbound_id = ?", row.Id, inbound.Id).
+					FirstOrCreate(&link).Error; err != nil {
+					return err
+				}
+				clientObjs = append(clientObjs, row.ToClient())
+			}
+			delete(settings, "accounts")
+			settings["clients"] = clientObjs
+			if len(clientObjs) > 0 {
+				settings["auth"] = "password"
+			}
+			blob, err := json.Marshal(settings)
+			if err != nil {
+				return err
+			}
+			return tx.Model(&model.Inbound{}).Where("id = ?", inbound.Id).
+				Update("settings", string(blob)).Error
+		})
+		if err != nil {
+			return err
+		}
+		log.Printf("Migrated %d Mixed account(s) to unified clients for inbound %d", len(credentials), inbound.Id)
 	}
 	return nil
 }

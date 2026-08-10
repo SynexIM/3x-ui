@@ -26,11 +26,16 @@ func TestSyncInbound_PreservesCredentialsAcrossProtocols(t *testing.T) {
 	if err := db.Create(hysteriaInbound).Error; err != nil {
 		t.Fatalf("create hysteria inbound: %v", err)
 	}
+	mixedInbound := &model.Inbound{Tag: "mixed-in", Enable: true, Port: 10003, Protocol: model.Mixed}
+	if err := db.Create(mixedInbound).Error; err != nil {
+		t.Fatalf("create Mixed inbound: %v", err)
+	}
 
 	svc := ClientService{}
 	const sharedEmail = "shared@example.com"
 	const wantUUID = "ce8d33df-3a64-4f10-8f9b-91c3a8e0c001"
 	const wantAuth = "h2-auth-token"
+	const wantPassword = "mixed-password"
 	const wantFlow = "xtls-rprx-vision"
 
 	vlessClient := model.Client{Email: sharedEmail, ID: wantUUID, Enable: true, Flow: wantFlow}
@@ -42,6 +47,10 @@ func TestSyncInbound_PreservesCredentialsAcrossProtocols(t *testing.T) {
 	if err := svc.SyncInbound(nil, hysteriaInbound.Id, []model.Client{hysteriaClient}); err != nil {
 		t.Fatalf("hysteria SyncInbound: %v", err)
 	}
+	mixedClient := model.Client{Email: sharedEmail, Password: wantPassword, Enable: true}
+	if err := svc.SyncInbound(nil, mixedInbound.Id, []model.Client{mixedClient}); err != nil {
+		t.Fatalf("Mixed SyncInbound: %v", err)
+	}
 
 	var row model.ClientRecord
 	if err := db.Where("email = ?", sharedEmail).First(&row).Error; err != nil {
@@ -52,6 +61,9 @@ func TestSyncInbound_PreservesCredentialsAcrossProtocols(t *testing.T) {
 	}
 	if row.Auth != wantAuth {
 		t.Errorf("Auth not persisted: got %q, want %q", row.Auth, wantAuth)
+	}
+	if row.Password != wantPassword {
+		t.Errorf("Mixed password not persisted: got %q, want %q", row.Password, wantPassword)
 	}
 
 	vlessList, err := svc.ListForInbound(nil, vlessInbound.Id)
@@ -68,6 +80,13 @@ func TestSyncInbound_PreservesCredentialsAcrossProtocols(t *testing.T) {
 	}
 	if len(hysteriaList) != 1 || hysteriaList[0].Flow != "" {
 		t.Errorf("Hysteria inbound should report empty flow, got %#v", hysteriaList)
+	}
+	mixedList, err := svc.ListForInbound(nil, mixedInbound.Id)
+	if err != nil {
+		t.Fatalf("ListForInbound(Mixed): %v", err)
+	}
+	if len(mixedList) != 1 || mixedList[0].Password != wantPassword {
+		t.Errorf("Mixed inbound should report its password, got %#v", mixedList)
 	}
 }
 
