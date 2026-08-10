@@ -2,6 +2,8 @@ import type { InboundFormValues, ShareAddrStrategy, TrafficReset } from '@/schem
 import type { InboundSettings } from '@/schemas/protocols/inbound';
 import {
   HysteriaClientSchema,
+  MixedInboundSettingsSchema,
+  MixedClientSchema,
   MtprotoClientSchema,
   ShadowsocksClientSchema,
   TrojanClientSchema,
@@ -161,7 +163,11 @@ function stripTlsCertUseFile(stream: Record<string, unknown>): void {
 
 export function rawInboundToFormValues(row: RawInboundRow): InboundFormValues {
   const protocol = (row.protocol || 'vless') as InboundSettings['protocol'];
-  const settings = coerceJsonObject(row.settings) as InboundSettings['settings'];
+  let settings = coerceJsonObject(row.settings) as InboundSettings['settings'];
+  if (protocol === 'mixed') {
+    const parsed = MixedInboundSettingsSchema.safeParse(settings);
+    if (parsed.success) settings = parsed.data;
+  }
   const rawStream = coerceJsonObject(row.streamSettings);
   const streamSettings = Object.keys(rawStream).length > 0
     ? (rawStream as StreamSettings)
@@ -253,6 +259,7 @@ function clientSchemaForProtocol(protocol: string): z.ZodType | null {
     case 'trojan': return TrojanClientSchema;
     case 'shadowsocks': return ShadowsocksClientSchema;
     case 'hysteria': return HysteriaClientSchema;
+    case 'mixed': return MixedClientSchema;
     case 'wireguard': return WireguardClientSchema;
     case 'mtproto': return MtprotoClientSchema;
     default: return null;

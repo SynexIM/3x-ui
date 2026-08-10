@@ -58,14 +58,17 @@ func (s *XraySettingService) CheckXrayConfig(XrayTemplateConfig string) error {
 			coreVersion = process.GetXrayVersion()
 		}
 		for _, outbound := range outbounds {
+			tagged := struct {
+				Tag string `json:"tag"`
+			}{}
+			_ = json.Unmarshal(outbound, &tagged)
+			if tagged.Tag == internalDefaultOutboundTag {
+				return common.NewErrorf("outbound tag %q is reserved by the panel", internalDefaultOutboundTag)
+			}
 			if err := xray.ValidateOutboundConfig(outbound); err != nil {
 				if shouldSkipLegacyUnencryptedOutboundRejection(coreVersion, err) {
 					continue
 				}
-				tagged := struct {
-					Tag string `json:"tag"`
-				}{}
-				_ = json.Unmarshal(outbound, &tagged)
 				return common.NewError("xray core rejects outbound \""+tagged.Tag+"\":", err)
 			}
 		}

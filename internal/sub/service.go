@@ -470,7 +470,7 @@ func (s *SubService) getInboundsBySubId(subId string) ([]*model.Inbound, error) 
 		JOIN client_inbounds ON client_inbounds.inbound_id = inbounds.id
 		JOIN clients ON clients.id = client_inbounds.client_id
 		WHERE
-			inbounds.protocol in ('vmess','vless','trojan','shadowsocks','hysteria','wireguard','mtproto')
+			inbounds.protocol in ('vmess','vless','trojan','shadowsocks','hysteria','wireguard','mtproto','mixed')
 			AND clients.sub_id = ? AND inbounds.enable = ?
 	)`, subId, true).Order("sub_sort_index ASC").Order("id ASC").Find(&inbounds).Error
 	if err != nil {
@@ -601,10 +601,6 @@ func mergeStreamFromMaster(childStream, masterStream string) string {
 	return string(out)
 }
 
-// GetLink dispatches to the protocol-specific generator for one (inbound, client)
-// pair. Returns "" when the inbound's protocol doesn't produce a subscription URL
-// (socks, http, mixed, wireguard, dokodemo, tunnel). The returned string may
-// contain multiple `\n`-separated URLs when the inbound has externalProxy set.
 func (s *SubService) GetLink(inbound *model.Inbound, email string) string {
 	switch inbound.Protocol {
 	case "vmess":
@@ -619,10 +615,36 @@ func (s *SubService) GetLink(inbound *model.Inbound, email string) string {
 		return s.genHysteriaLink(inbound, email)
 	case "mtproto":
 		return s.genMtprotoLink(inbound, email)
+	case "mixed":
+		return s.genMixedLink(inbound, email)
 	case "wireguard":
 		return s.genWireguardLink(inbound, email)
 	}
 	return ""
+}
+
+func (s *SubService) genMixedLink(inbound *model.Inbound, email string) string {
+	if inbound.Protocol != model.Mixed {
+		return ""
+	}
+	client, ok := s.clientForLink(inbound, email)
+	if !ok || client.Password == "" {
+		return ""
+	}
+	address := s.resolveInboundAddress(inbound)
+	authority := encodeUserinfo(client.Email) + ":" + encodeUserinfo(client.Password) +
+		"@" + joinHostPort(address, inbound.Port)
+	params := map[string]string{
+		"server": address,
+		"port":   strconv.Itoa(inbound.Port),
+		"user":   client.Email,
+		"pass":   client.Password,
+	}
+	return strings.Join([]string{
+		"socks5://" + authority,
+		"http://" + authority,
+		buildLinkWithParams("https://t.me/socks", params, ""),
+	}, "\n")
 }
 
 // genWireguardLink builds a per-client wireguard:// share link mirroring the

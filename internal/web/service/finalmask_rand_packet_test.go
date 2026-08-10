@@ -110,6 +110,44 @@ func TestDropEmptyRandPacketsIgnoresMissingFinalMask(t *testing.T) {
 // TestHealedConfigsBuildInXray closes the loop on both heals: the rows xray
 // refuses outright must build once the panel has healed them.
 func TestHealedConfigsBuildInXray(t *testing.T) {
+	t.Run("mixed unified client", func(t *testing.T) {
+		in := model.Inbound{
+			Protocol: model.Mixed,
+			Port:     1080,
+			Listen:   "127.0.0.1",
+			Tag:      "in-mixed",
+			Settings: `{"auth":"password","clients":[{"email":"alice","password":"secret","enable":true}],"udp":true,"ip":"127.0.0.1"}`,
+		}
+		raw, err := json.Marshal(in.GenXrayInboundConfig())
+		if err != nil {
+			t.Fatalf("marshal generated Mixed inbound: %v", err)
+		}
+		var generated map[string]any
+		if err := json.Unmarshal(raw, &generated); err != nil {
+			t.Fatalf("decode generated Mixed inbound: %v", err)
+		}
+		assertXrayAccepts(t, "the compiled Mixed client", buildGoldenInbound(t, generated))
+	})
+
+	t.Run("mixed with no clients", func(t *testing.T) {
+		in := model.Inbound{
+			Protocol: model.Mixed,
+			Port:     1081,
+			Listen:   "127.0.0.1",
+			Tag:      "in-mixed-empty",
+			Settings: `{"auth":"password","clients":[],"udp":false,"ip":"127.0.0.1"}`,
+		}
+		raw, err := json.Marshal(in.GenXrayInboundConfig())
+		if err != nil {
+			t.Fatalf("marshal empty Mixed inbound: %v", err)
+		}
+		var generated map[string]any
+		if err := json.Unmarshal(raw, &generated); err != nil {
+			t.Fatalf("decode empty Mixed inbound: %v", err)
+		}
+		assertXrayAccepts(t, "an empty password-auth Mixed inbound", buildGoldenInbound(t, generated))
+	})
+
 	t.Run("hysteria v1 row", func(t *testing.T) {
 		in := model.Inbound{
 			Protocol:       model.Hysteria,

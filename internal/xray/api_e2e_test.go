@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -55,8 +58,13 @@ func TestXrayAPI_E2E(t *testing.T) {
 		},
 		"policy": map[string]any{
 			"levels": map[string]any{
-				"0": map[string]any{"statsUserOnline": true},
+				"0": map[string]any{
+					"statsUserUplink":   true,
+					"statsUserDownlink": true,
+					"statsUserOnline":   true,
+				},
 			},
+			"system": map[string]any{"statsInboundUplink": true, "statsInboundDownlink": true},
 		},
 		"stats": map[string]any{},
 	}
@@ -132,6 +140,85 @@ func TestXrayAPI_E2E(t *testing.T) {
 	}
 	if !IsMissingHandlerErr(err) {
 		t.Fatalf("missing inbound error not matched by IsMissingHandlerErr: %q", err)
+	}
+
+	// Mixed lacks UserManager, so replace only its handler and prove the core
+	// process and API handler remain alive.
+	mixedPort := freePort(t)
+	mixedInbound := fmt.Appendf(nil,
+		`{"listen":"127.0.0.1","port":%d,"protocol":"mixed","settings":{"auth":"password","accounts":[{"user":"alice","pass":"old-secret"}]},"tag":"mixed-in"}`,
+		mixedPort)
+	if err := api.AddInbound(mixedInbound); err != nil {
+		t.Fatalf("AddInbound(Mixed): %v", err)
+	}
+	waitForPort(t, mixedPort)
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("mixed-ok"))
+	}))
+	defer target.Close()
+	requestThroughMixed := func(password string) error {
+		proxyURL := &url.URL{
+			Scheme: "http",
+			Host:   fmt.Sprintf("127.0.0.1:%d", mixedPort),
+			User:   url.UserPassword("alice", password),
+		}
+		client := &http.Client{
+			Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)},
+			Timeout:   5 * time.Second,
+		}
+		resp, err := client.Get(target.URL)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("proxy status %s", resp.Status)
+		}
+		return nil
+	}
+	if err := requestThroughMixed("old-secret"); err != nil {
+		t.Fatalf("request through original Mixed credentials: %v", err)
+	}
+
+	corePID := cmd.Process.Pid
+	if err := api.DelInbound("mixed-in"); err != nil {
+		t.Fatalf("DelInbound(Mixed): %v", err)
+	}
+	mixedInbound = fmt.Appendf(nil,
+		`{"listen":"127.0.0.1","port":%d,"protocol":"mixed","settings":{"auth":"password","accounts":[{"user":"alice","pass":"new-secret"}]},"tag":"mixed-in"}`,
+		mixedPort)
+	if err := api.AddInbound(mixedInbound); err != nil {
+		t.Fatalf("re-add Mixed inbound: %v", err)
+	}
+	if cmd.Process.Pid != corePID || cmd.ProcessState != nil {
+		t.Fatalf("Mixed handler replacement restarted or stopped the core: pid=%d want=%d state=%v",
+			cmd.Process.Pid, corePID, cmd.ProcessState)
+	}
+	waitForPort(t, mixedPort)
+	if err := requestThroughMixed("new-secret"); err != nil {
+		t.Fatalf("request through reloaded Mixed credentials: %v", err)
+	}
+
+	// Mixed uses the Client email as username; traffic under that identity drives
+	// quota, expiry, and IP-limit accounting.
+	_, _, _ = api.GetTraffic() // establish the delta baseline
+	var mixedTraffic bool
+	for attempt := 0; attempt < 2 && !mixedTraffic; attempt++ {
+		if err := requestThroughMixed("new-secret"); err != nil {
+			t.Fatalf("request through reloaded Mixed inbound: %v", err)
+		}
+		_, clients, err := api.GetTraffic()
+		if err != nil {
+			t.Fatalf("GetTraffic after Mixed request: %v", err)
+		}
+		for _, client := range clients {
+			if client.Email == "alice" && client.Up+client.Down > 0 {
+				mixedTraffic = true
+			}
+		}
+	}
+	if !mixedTraffic {
+		t.Fatal("Mixed traffic was not attributed to unified client alice")
 	}
 
 	// --- online-stats API ---
@@ -228,6 +315,30 @@ func TestXrayAPI_E2E(t *testing.T) {
 	}
 	if info.Override != "" {
 		t.Fatalf("override after clear = %q, want empty", info.Override)
+	}
+
+	for _, targetTag := range []string{"blocked", "direct"} {
+		defaultRouting := fmt.Appendf(nil, `{
+			"domainStrategy":"AsIs",
+			"rules":[
+				{"type":"field","inboundTag":["api"],"outboundTag":"api"},
+				{"type":"field","network":"tcp,udp","outboundTag":%q}
+			]
+		}`, targetTag)
+		if err := api.ApplyRoutingConfig(defaultRouting); err != nil {
+			t.Fatalf("hot-switch effective default to %s: %v", targetTag, err)
+		}
+		res, err := api.TestRoute(RouteTestRequest{Domain: "default.example", Port: 443, Network: "tcp"})
+		if err != nil {
+			t.Fatalf("TestRoute(effective default %s): %v", targetTag, err)
+		}
+		if !res.Matched || res.OutboundTag != targetTag {
+			t.Fatalf("effective default route = %+v, want %s", res, targetTag)
+		}
+		if cmd.Process.Pid != corePID || cmd.ProcessState != nil {
+			t.Fatalf("effective default switch restarted Xray: pid=%d want=%d state=%v",
+				cmd.Process.Pid, corePID, cmd.ProcessState)
+		}
 	}
 }
 

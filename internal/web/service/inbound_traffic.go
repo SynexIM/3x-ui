@@ -338,6 +338,7 @@ func (s *InboundService) autoRenewClients(tx *gorm.DB) (bool, int64, error) {
 		protocol string
 		tag      string
 		client   map[string]any
+		inbound  *model.Inbound
 	}
 
 	// Resolve the inbounds to renew through the client_inbounds link rather than
@@ -411,10 +412,12 @@ func (s *InboundService) autoRenewClients(tx *gorm.DB) (bool, int64, error) {
 						protocol string
 						tag      string
 						client   map[string]any
+						inbound  *model.Inbound
 					}{
 						protocol: string(inbounds[inbound_index].Protocol),
 						tag:      inbounds[inbound_index].Tag,
 						client:   apiUserFromClient(c, cipher),
+						inbound:  inbounds[inbound_index],
 					})
 			}
 			clients[client_index] = any(c)
@@ -457,7 +460,20 @@ func (s *InboundService) autoRenewClients(tx *gorm.DB) (bool, int64, error) {
 		if err1 != nil {
 			return true, int64(len(traffics)), nil
 		}
+		reloadedMixed := map[int]bool{}
 		for _, clientToAdd := range clientsToAdd {
+			if clientToAdd.inbound.Protocol == model.Mixed {
+				if reloadedMixed[clientToAdd.inbound.Id] {
+					continue
+				}
+				reloadedMixed[clientToAdd.inbound.Id] = true
+				rt, rtErr := s.runtimeFor(clientToAdd.inbound)
+				if rtErr != nil ||
+					rt.UpdateInbound(context.Background(), clientToAdd.inbound, clientToAdd.inbound) != nil {
+					needRestart = true
+				}
+				continue
+			}
 			err1 = s.xrayApi.AddUser(clientToAdd.protocol, clientToAdd.tag, clientToAdd.client)
 			if err1 != nil {
 				needRestart = true

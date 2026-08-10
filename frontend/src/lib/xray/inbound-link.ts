@@ -1051,11 +1051,6 @@ export function preferPublicHost(browserHost: string, publicHost: string): strin
   return publicHost && isLoopbackHost(browserHost) ? publicHost : browserHost;
 }
 
-// Returns the client array for protocols that have one. SS returns its
-// clients only in 2022-blake3 multi-user mode (matches the legacy
-// `this.clients` getter, which used isSSMultiUser to gate). Returns null
-// for SS single-user, http, mixed, tunnel, wireguard, hysteria2-without-
-// clients, and any protocol without a clients array.
 type ClientShape = { id?: string; security?: VmessSecurity; flow?: VlessClient['flow']; password?: string; auth?: string; secret?: string; email?: string; subId?: string };
 
 // Mirror of the Go subKey: the stable per-client identity spx derivation
@@ -1073,6 +1068,8 @@ export function getInboundClients(inbound: Inbound): ClientShape[] | null {
     case 'trojan':
       return (inbound.settings.clients ?? []) as ClientShape[];
     case 'hysteria':
+      return (inbound.settings.clients ?? []) as ClientShape[];
+    case 'mixed':
       return (inbound.settings.clients ?? []) as ClientShape[];
     case 'mtproto':
       return (inbound.settings.clients ?? []) as ClientShape[];
@@ -1095,10 +1092,6 @@ export interface GenLinkInput {
   externalProxy?: ExternalProxyEntry | null;
 }
 
-// Per-protocol dispatcher matching the legacy `genLink` switch. Returns
-// '' for protocols that don't have client-based share links (wireguard
-// goes through genWireguardLinks/Configs separately, http/mixed/tunnel
-// don't have share URLs).
 export function genLink(input: GenLinkInput): string {
   const { inbound, address, port = inbound.port, forceTls = 'same', remark = '', client, externalProxy = null } = input;
   switch (inbound.protocol) {
@@ -1174,6 +1167,20 @@ export function genAllLinks(input: GenAllLinksInput): GenAllLinksEntry[] {
   const addr = resolveAddr(inbound, hostOverride, fallbackHostname);
   const port = inbound.port;
 
+  if (inbound.protocol === 'mixed') {
+    const user = encodeURIComponent(client.email ?? '');
+    const password = encodeURIComponent(client.password ?? '');
+    const authority = `${user}:${password}@${formatUrlHost(addr)}:${port}`;
+    return [
+      { remark: 'SOCKS5', link: `socks5://${authority}` },
+      { remark: 'HTTP', link: `http://${authority}` },
+      {
+        remark: 'Telegram',
+        link: `https://t.me/socks?server=${encodeURIComponent(addr)}&port=${port}&user=${user}&pass=${password}`,
+      },
+    ];
+  }
+
   const composeRemark = (proxyRemark: string): string =>
     [remark, proxyRemark].filter((x) => x.length > 0).join('-');
 
@@ -1206,11 +1213,6 @@ export interface GenInboundLinksInput {
   fallbackHostname: string;
 }
 
-// Top-level entrypoint that produces the full \r\n-joined block a user
-// pastes into a client. Iterates per-client for protocols with clients,
-// falls back to a single SS link for single-user 2022-blake3-chacha20,
-// and emits per-peer .conf blocks for wireguard. Returns '' for the
-// other clientless protocols (http, mixed, tunnel).
 export function genInboundLinks(input: GenInboundLinksInput): string {
   const {
     inbound,

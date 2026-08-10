@@ -660,11 +660,8 @@ func buildUserAccount(protocolName string, user map[string]any) (*serial.TypedMe
 	}
 }
 
-// AddUser adds a user to an inbound in the Xray core using the specified
-// protocol and user data. On a legacy shadowsocks inbound the add first drops
-// any existing holder of the email: that is the one inbound whose validator
-// does not reject a duplicate email, and a later removal would then drop just
-// one of the two registrations, leaving a disabled client able to connect.
+// Legacy Shadowsocks and Hysteria validators accept duplicate emails, so remove
+// first to keep retries idempotent and later disable/delete authoritative.
 func (x *XrayAPI) AddUser(Protocol string, inboundTag string, user map[string]any) error {
 	userEmail, err := getRequiredUserString(user, "email")
 	if err != nil {
@@ -684,7 +681,7 @@ func (x *XrayAPI) AddUser(Protocol string, inboundTag string, user map[string]an
 	}
 	client := *x.HandlerServiceClient
 
-	if account.Type == legacyShadowsocksAccountType {
+	if account.Type == legacyShadowsocksAccountType || Protocol == "hysteria" {
 		_ = x.RemoveUser(inboundTag, userEmail)
 	}
 

@@ -270,3 +270,63 @@ func TestGenXrayInboundConfig_OmitsInboundXmuxButDbRowUnchanged(t *testing.T) {
 		t.Fatal("inbound row streamSettings must still carry xmux for subscriptions")
 	}
 }
+
+func TestMixedClientsToAccounts_CompilesEnabledClientsOnly(t *testing.T) {
+	settings := `{
+		"auth":"noauth",
+		"udp":true,
+		"ip":"127.0.0.1",
+		"clients":[
+			{"email":"alice@example.test","password":"alice-secret","enable":true},
+			{"email":"disabled@example.test","password":"disabled-secret","enable":false}
+		]
+	}`
+	out, changed := MixedClientsToAccounts(settings)
+	if !changed {
+		t.Fatal("expected unified clients to compile to Xray accounts")
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatalf("compiled settings are invalid JSON: %v", err)
+	}
+	if _, exists := parsed["clients"]; exists {
+		t.Fatalf("panel-only clients must not reach Xray: %s", out)
+	}
+	if parsed["auth"] != "password" {
+		t.Fatalf("enabled credentials must force password auth: %#v", parsed["auth"])
+	}
+	accounts, ok := parsed["accounts"].([]any)
+	if !ok || len(accounts) != 1 {
+		t.Fatalf("expected exactly one enabled account, got %#v", parsed["accounts"])
+	}
+	account := accounts[0].(map[string]any)
+	if account["user"] != "alice@example.test" || account["pass"] != "alice-secret" {
+		t.Fatalf("unexpected compiled account: %#v", account)
+	}
+	if parsed["udp"] != true || parsed["ip"] != "127.0.0.1" {
+		t.Fatalf("unrelated Mixed settings were not preserved: %#v", parsed)
+	}
+}
+
+func TestMixedClientsToAccounts_PreservesLegacyAccounts(t *testing.T) {
+	settings := `{"auth":"password","accounts":[{"user":"legacy","pass":"secret"}],"udp":false}`
+	out, changed := MixedClientsToAccounts(settings)
+	if changed || out != settings {
+		t.Fatalf("legacy rows must pass through until migrated, changed=%v out=%s", changed, out)
+	}
+}
+
+func TestGenXrayInboundConfig_CompilesMixedClientsWithoutMutatingRow(t *testing.T) {
+	settings := `{"auth":"password","clients":[{"email":"alice","password":"secret","enable":true}],"udp":false}`
+	in := Inbound{Protocol: Mixed, Port: 1080, Tag: "mixed-in", Settings: settings}
+	cfg := in.GenXrayInboundConfig()
+	if strings.Contains(string(cfg.Settings), `"clients"`) {
+		t.Fatalf("Xray config must not contain panel clients: %s", cfg.Settings)
+	}
+	if !strings.Contains(string(cfg.Settings), `"user": "alice"`) {
+		t.Fatalf("Xray config must contain the compiled account: %s", cfg.Settings)
+	}
+	if in.Settings != settings {
+		t.Fatal("runtime compilation must not mutate the database row")
+	}
+}

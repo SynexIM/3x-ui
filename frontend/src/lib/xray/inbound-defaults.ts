@@ -196,7 +196,7 @@ export function createDefaultHttpInboundSettings(): HttpInboundSettings {
 export function createDefaultMixedInboundSettings(): MixedInboundSettings {
   return {
     auth: 'password',
-    accounts: [{ user: RandomUtil.randomLowerAndNum(8), pass: RandomUtil.randomLowerAndNum(12) }],
+    clients: [],
     udp: false,
     ip: '127.0.0.1',
   };

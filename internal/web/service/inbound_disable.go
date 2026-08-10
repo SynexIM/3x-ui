@@ -122,12 +122,14 @@ func (s *InboundService) disableInvalidClients(tx *gorm.DB) (bool, int64, error)
 		NodeID    *int `gorm:"column:node_id"`
 		Tag       string
 		Email     string
+		Protocol  model.Protocol
 	}
 	var targets []target
 	if len(depletedEmails) > 0 {
 		err = tx.Raw(`
 			SELECT inbounds.id AS inbound_id, inbounds.node_id AS node_id,
-			       inbounds.tag AS tag, clients.email AS email
+			       inbounds.tag AS tag, inbounds.protocol AS protocol,
+			       clients.email AS email
 			FROM clients
 			JOIN client_inbounds ON client_inbounds.client_id = clients.id
 			JOIN inbounds        ON inbounds.id = client_inbounds.inbound_id
@@ -156,6 +158,9 @@ func (s *InboundService) disableInvalidClients(tx *gorm.DB) (bool, int64, error)
 	if process := currentXrayProcess(); process != nil && len(localTargets) > 0 {
 		_ = s.xrayApi.Init(process.GetAPIPort())
 		for _, t := range localTargets {
+			if t.Protocol == model.Mixed {
+				continue
+			}
 			err1 := s.xrayApi.RemoveUser(t.Tag, t.Email)
 			if err1 == nil {
 				logger.Debug("Client disabled by api:", t.Email)
@@ -170,8 +175,17 @@ func (s *InboundService) disableInvalidClients(tx *gorm.DB) (bool, int64, error)
 	}
 
 	for inboundID, emails := range localByInbound {
-		if _, _, mErr := s.markClientsDisabledInSettings(tx, inboundID, emails); mErr != nil {
+		oldIb, newIb, mErr := s.markClientsDisabledInSettings(tx, inboundID, emails)
+		if mErr != nil {
 			logger.Warning("disableInvalidClients: settings.JSON sync failed for inbound", inboundID, ":", mErr)
+			continue
+		}
+		if newIb.Protocol == model.Mixed && currentXrayProcess() != nil {
+			rt, rtErr := s.runtimeFor(newIb)
+			if rtErr != nil || rt.UpdateInbound(context.Background(), oldIb, newIb) != nil {
+				logger.Warning("disableInvalidClients: Mixed handler reload failed for inbound", inboundID)
+				needRestart = true
+			}
 		}
 	}
 
