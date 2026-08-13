@@ -31,11 +31,17 @@ if [ -z "$MTG_MULTI_VER" ]; then
     exit 1
 fi
 mkdir -p build/bin
+# Build the Xray core from OUR fork instead of downloading an upstream release.
+# An upstream binary silently ignores every per-user limit key the panel writes.
+XRAY_REPO="${XRAY_REPO:-https://github.com/SynexIM/xray-core.git}"
+XRAY_REF="${XRAY_REF:-main}"
+XRAY_OUT="$(pwd)/build/bin/xray-linux-${FNAME}"
+rm -rf /tmp/xray-src
+git clone --depth 1 --branch "$XRAY_REF" "$XRAY_REPO" /tmp/xray-src || exit 1
+(cd /tmp/xray-src && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -buildid=" -o "$XRAY_OUT" ./main) || exit 1
+rm -rf /tmp/xray-src
+chmod +x "$XRAY_OUT"
 cd build/bin
-curl -sfLRO "https://github.com/XTLS/Xray-core/releases/download/v26.7.28/Xray-linux-${ARCH}.zip"
-unzip "Xray-linux-${ARCH}.zip"
-rm -f "Xray-linux-${ARCH}.zip" geoip.dat geosite.dat
-mv xray "xray-linux-${FNAME}"
 # mtg-multi (MTProto sidecar) ships prebuilt release binaries for every target
 # we package, so download and unpack the matching one instead of compiling.
 case $FNAME in

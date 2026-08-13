@@ -20,6 +20,7 @@ RUN apk --no-cache --update add \
   build-base \
   gcc \
   curl \
+  git \
   unzip
 
 COPY . .
@@ -27,8 +28,21 @@ COPY --from=frontend /src/internal/web/dist ./internal/web/dist
 
 ENV CGO_ENABLED=1
 ENV CGO_CFLAGS="-D_LARGEFILE64_SOURCE"
-RUN go build -ldflags "-w -s" -o build/x-ui main.go
-RUN ./DockerInit.sh "$TARGETARCH"
+ENV GOPRIVATE=github.com/SynexIM/*
+ENV GOFLAGS=-mod=mod
+
+# The panel and the Xray core both come from private forks, so both steps need
+# the same credential; keep them in one RUN so the token never lands in a layer.
+#   docker build --secret id=gh_token,env=GH_TOKEN .
+RUN --mount=type=secret,id=gh_token \
+  sh -eu -c '\
+    if [ -s /run/secrets/gh_token ]; then \
+      export GIT_CONFIG_COUNT=1 \
+        GIT_CONFIG_KEY_0="url.https://x-access-token:$(cat /run/secrets/gh_token)@github.com/.insteadOf" \
+        GIT_CONFIG_VALUE_0="https://github.com/"; \
+    fi; \
+    go build -ldflags "-w -s" -o build/x-ui main.go; \
+    ./DockerInit.sh "$TARGETARCH"'
 
 # ========================================================
 # Stage: Final Image of 3x-ui
