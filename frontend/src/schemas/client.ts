@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { RATE_UNITS, BURST_UNITS, rateToBps, committedExceedsPeak } from '@/lib/clients/rate-limit';
+
 const nullableStringArray = z.array(z.string()).nullable().transform((v) => v ?? []);
 const nullableNumberArray = z.array(z.number()).nullable().transform((v) => v ?? []);
 
@@ -39,6 +41,11 @@ export const ClientRecordSchema = z.object({
   keepAlive: z.number().optional(),
   secret: z.string().optional(),
   adTag: z.string().optional(),
+  bandwidth_bps: z.number().optional(),
+  committed_bps: z.number().optional(),
+  committed_burst_bytes: z.number().optional(),
+  rateUnit: z.string().optional(),
+  burstUnit: z.string().optional(),
   createdAt: z.number().optional(),
   updatedAt: z.number().optional(),
 }).loose();
@@ -209,11 +216,30 @@ export const ClientFormSchema = z.object({
   comment: z.string(),
   enable: z.boolean(),
   inboundIds: z.array(z.number()),
+  // Blank (0) means unlimited; the unit is stored so the form reopens with the
+  // number the operator typed instead of a converted one.
+  peakRate: z.number().min(0),
+  committedRate: z.number().min(0),
+  rateUnit: z.enum(RATE_UNITS),
+  burstSize: z.number().min(0),
+  burstUnit: z.enum(BURST_UNITS),
 });
 
-export const ClientCreateFormSchema = ClientFormSchema.extend({
-  inboundIds: z.array(z.number()).min(1, 'pages.clients.selectInbound'),
-});
+// xray-core ignores a committed rate at or above the peak, so saving one would
+// be a setting that silently does nothing.
+const refineRateLimits = <T extends z.ZodType<ClientFormValues>>(schema: T) =>
+  schema.refine(
+    (v) => !committedExceedsPeak(rateToBps(v.peakRate, v.rateUnit), rateToBps(v.committedRate, v.rateUnit)),
+    { message: 'pages.clients.committedAbovePeak', path: ['committedRate'] },
+  );
+
+export const ClientFormRefinedSchema = refineRateLimits(ClientFormSchema);
+
+export const ClientCreateFormSchema = refineRateLimits(
+  ClientFormSchema.extend({
+    inboundIds: z.array(z.number()).min(1, 'pages.clients.selectInbound'),
+  }),
+);
 
 export const ClientBulkAdjustFormSchema = z
   .object({

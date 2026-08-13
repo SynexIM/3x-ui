@@ -33,7 +33,13 @@ import { FormField } from '@/components/form/rhf';
 import { TLS_FLOW_CONTROL } from '@/schemas/primitives';
 import type { ClientRecord, InboundOption, ExternalLink, ExternalLinkInput } from '@/hooks/useClients';
 import { useFail2banStatusQuery, getLimitIpNotice } from '@/api/queries/useFail2banStatusQuery';
-import { ClientFormSchema, ClientCreateFormSchema, type ClientFormValues } from '@/schemas/client';
+import { ClientFormRefinedSchema, ClientCreateFormSchema, type ClientFormValues } from '@/schemas/client';
+import {
+  RATE_UNITS, BURST_UNITS, DEFAULT_RATE_UNIT, DEFAULT_BURST_UNIT,
+  rateToBps, bpsToRate, burstToBytes, bytesToBurst,
+  normalizeRateUnit, normalizeBurstUnit, committedExceedsPeak,
+  type RateUnit, type BurstUnit,
+} from '@/lib/clients/rate-limit';
 
 const FLOW_OPTIONS = Object.values(TLS_FLOW_CONTROL);
 const VMESS_SECURITY_OPTIONS = ['auto', 'aes-128-gcm', 'chacha20-poly1305'] as const;
@@ -104,6 +110,11 @@ type Values = ClientFormValues & {
   wgAllowedIPs: string;
   secret: string;
   adTag: string;
+  peakRate: number;
+  committedRate: number;
+  rateUnit: RateUnit;
+  burstSize: number;
+  burstUnit: BurstUnit;
 };
 
 const EMPTY: Values = {
@@ -133,6 +144,11 @@ const EMPTY: Values = {
   wgAllowedIPs: '',
   secret: '',
   adTag: '',
+  peakRate: 0,
+  committedRate: 0,
+  rateUnit: DEFAULT_RATE_UNIT,
+  burstSize: 0,
+  burstUnit: DEFAULT_BURST_UNIT,
 };
 
 function toExternalLinkRows(links: ExternalLink[] | undefined): ExternalLinkRow[] {
@@ -192,6 +208,15 @@ export default function ClientFormModal({
   const auth = useWatch({ control: methods.control, name: 'auth' });
   const wgPrivateKey = useWatch({ control: methods.control, name: 'wgPrivateKey' });
   const limitIp = useWatch({ control: methods.control, name: 'limitIp' });
+  const peakRate = useWatch({ control: methods.control, name: 'peakRate' });
+  const committedRate = useWatch({ control: methods.control, name: 'committedRate' });
+  const rateUnit = useWatch({ control: methods.control, name: 'rateUnit' });
+  const burstSize = useWatch({ control: methods.control, name: 'burstSize' });
+  const burstUnit = useWatch({ control: methods.control, name: 'burstUnit' });
+  const committedTooHigh = committedExceedsPeak(
+    rateToBps(Number(peakRate) || 0, rateUnit ?? DEFAULT_RATE_UNIT),
+    rateToBps(Number(committedRate) || 0, rateUnit ?? DEFAULT_RATE_UNIT),
+  );
   const {
     fields: externalLinkFields,
     append: appendExternalLink,
@@ -218,6 +243,8 @@ export default function ClientFormModal({
 
     if (isEdit && client) {
       const et = Number(client.expiryTime) || 0;
+      const seedRateUnit = normalizeRateUnit(client.rateUnit);
+      const seedBurstUnit = normalizeBurstUnit(client.burstUnit);
       const seed: Values = {
         ...EMPTY,
         email: client.email || '',
@@ -245,6 +272,11 @@ export default function ClientFormModal({
         wgAllowedIPs: client.allowedIPs || '',
         secret: client.secret || '',
         adTag: client.adTag || '',
+        peakRate: bpsToRate(Number(client.bandwidth_bps) || 0, seedRateUnit),
+        committedRate: bpsToRate(Number(client.committed_bps) || 0, seedRateUnit),
+        rateUnit: seedRateUnit,
+        burstSize: bytesToBurst(Number(client.committed_burst_bytes) || 0, seedBurstUnit),
+        burstUnit: seedBurstUnit,
       };
       if (et < 0) {
         seed.delayedStart = true;
@@ -476,7 +508,7 @@ export default function ClientFormModal({
 
   async function onSubmit() {
     const values = methods.getValues();
-    const schema = isEdit ? ClientFormSchema : ClientCreateFormSchema;
+    const schema = isEdit ? ClientFormRefinedSchema : ClientCreateFormSchema;
     const validated = schema.safeParse({
       email: values.email,
       subId: values.subId,
@@ -496,6 +528,11 @@ export default function ClientFormModal({
       comment: values.comment,
       enable: values.enable,
       inboundIds: values.inboundIds,
+      peakRate: values.peakRate,
+      committedRate: values.committedRate,
+      rateUnit: values.rateUnit,
+      burstSize: values.burstSize,
+      burstUnit: values.burstUnit,
     });
     if (!validated.success) {
       const issue = validated.error.issues[0];
@@ -522,6 +559,11 @@ export default function ClientFormModal({
       group: values.group,
       comment: values.comment,
       enable: !!values.enable,
+      bandwidth_bps: rateToBps(Number(values.peakRate) || 0, values.rateUnit),
+      committed_bps: rateToBps(Number(values.committedRate) || 0, values.rateUnit),
+      committed_burst_bytes: burstToBytes(Number(values.burstSize) || 0, values.burstUnit),
+      rateUnit: values.rateUnit,
+      burstUnit: values.burstUnit,
     };
     const reverseTagValue = showReverseTag ? (values.reverseTag || '').trim() : '';
     if (reverseTagValue) {
@@ -675,6 +717,67 @@ export default function ClientFormModal({
                                 </Space.Compact>
                               </span>
                             </Tooltip>
+                          </Form.Item>
+                        </Col>
+                      </Row>
+
+                      <Row gutter={16}>
+                        <Col xs={24} md={8}>
+                          <Form.Item label={t('pages.clients.peakRate')} tooltip={t('pages.clients.peakRateDesc')}>
+                            <Space.Compact style={{ display: 'flex' }}>
+                              <InputNumber
+                                value={peakRate}
+                                min={0}
+                                step={1}
+                                placeholder={t('pages.clients.rateUnlimited')}
+                                style={{ flex: 1 }}
+                                onChange={(v) => methods.setValue('peakRate', Number(v) || 0)}
+                              />
+                              <Select
+                                value={rateUnit ?? DEFAULT_RATE_UNIT}
+                                style={{ width: 100 }}
+                                options={RATE_UNITS.map((u) => ({ value: u, label: u }))}
+                                onChange={(v) => methods.setValue('rateUnit', v)}
+                              />
+                            </Space.Compact>
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={8}>
+                          <Form.Item
+                            label={t('pages.clients.committedRate')}
+                            tooltip={t('pages.clients.committedRateDesc')}
+                            validateStatus={committedTooHigh ? 'error' : undefined}
+                            help={committedTooHigh ? t('pages.clients.committedAbovePeak') : undefined}
+                          >
+                            <InputNumber
+                              value={committedRate}
+                              min={0}
+                              step={1}
+                              addonAfter={rateUnit ?? DEFAULT_RATE_UNIT}
+                              placeholder={t('pages.clients.rateUnlimited')}
+                              style={{ width: '100%' }}
+                              onChange={(v) => methods.setValue('committedRate', Number(v) || 0)}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={8}>
+                          <Form.Item label={t('pages.clients.burstSize')} tooltip={t('pages.clients.burstSizeDesc')}>
+                            <Space.Compact style={{ display: 'flex' }}>
+                              <InputNumber
+                                value={burstSize}
+                                min={0}
+                                step={1}
+                                placeholder={t('pages.clients.burstAuto')}
+                                style={{ flex: 1 }}
+                                onChange={(v) => methods.setValue('burstSize', Number(v) || 0)}
+                              />
+                              <Select
+                                value={burstUnit ?? DEFAULT_BURST_UNIT}
+                                style={{ width: 80 }}
+                                options={BURST_UNITS.map((u) => ({ value: u, label: u }))}
+                                onChange={(v) => methods.setValue('burstUnit', v)}
+                              />
+                            </Space.Compact>
                           </Form.Item>
                         </Col>
                       </Row>
