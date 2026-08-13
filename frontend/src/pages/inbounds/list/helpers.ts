@@ -72,6 +72,8 @@ export function isInboundMultiUser(record: { protocol: string; settings: unknown
     case 'vless':
     case 'trojan':
     case 'hysteria':
+    case 'mixed':
+    case 'http':
     case 'mtproto':
     case 'wireguard':
       return true;

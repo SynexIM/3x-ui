@@ -2,6 +2,7 @@ import type { InboundFormValues, ShareAddrStrategy, TrafficReset } from '@/schem
 import type { InboundSettings } from '@/schemas/protocols/inbound';
 import {
   HysteriaClientSchema,
+  HttpClientSchema,
   MixedInboundSettingsSchema,
   MixedClientSchema,
   MtprotoClientSchema,
@@ -260,6 +261,7 @@ function clientSchemaForProtocol(protocol: string): z.ZodType | null {
     case 'shadowsocks': return ShadowsocksClientSchema;
     case 'hysteria': return HysteriaClientSchema;
     case 'mixed': return MixedClientSchema;
+    case 'http': return HttpClientSchema;
     case 'wireguard': return WireguardClientSchema;
     case 'mtproto': return MtprotoClientSchema;
     default: return null;

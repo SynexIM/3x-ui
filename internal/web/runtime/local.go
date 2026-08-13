@@ -108,7 +108,7 @@ func (l *Local) reloadInbound(ib *model.Inbound) error {
 }
 
 func requiresInboundReloadForUserMutation(protocol model.Protocol) bool {
-	return protocol == model.Mixed
+	return protocol == model.Mixed || protocol == model.HTTP
 }
 
 // updateMtprotoInbound applies an inbound update without the Del+Add sequence

@@ -330,3 +330,28 @@ func TestGenXrayInboundConfig_CompilesMixedClientsWithoutMutatingRow(t *testing.
 		t.Fatal("runtime compilation must not mutate the database row")
 	}
 }
+
+func TestGenXrayInboundConfigCompilesHTTPClientsWithLimits(t *testing.T) {
+	settings := `{"clients":[{"email":"alice","password":"secret","enable":true,"bandwidth_bps":100000000,"committed_bps":10000000,"committed_burst_bytes":5000000}],"allowTransparent":false}`
+	in := Inbound{Protocol: HTTP, Port: 8080, Tag: "http-in", Settings: settings}
+	cfg := in.GenXrayInboundConfig()
+	if strings.Contains(string(cfg.Settings), `"clients"`) {
+		t.Fatalf("Xray config must not contain panel clients: %s", cfg.Settings)
+	}
+	var parsed struct {
+		Accounts []map[string]any `json:"accounts"`
+	}
+	if err := json.Unmarshal(cfg.Settings, &parsed); err != nil {
+		t.Fatalf("compiled HTTP settings are invalid: %v", err)
+	}
+	if len(parsed.Accounts) != 1 ||
+		parsed.Accounts[0]["user"] != "alice" ||
+		parsed.Accounts[0]["bandwidth_bps"] != float64(100_000_000) ||
+		parsed.Accounts[0]["committed_bps"] != float64(10_000_000) ||
+		parsed.Accounts[0]["committed_burst_bytes"] != float64(5_000_000) {
+		t.Fatalf("HTTP client or limits lost: %#v", parsed.Accounts)
+	}
+	if in.Settings != settings {
+		t.Fatal("runtime compilation must not mutate the database row")
+	}
+}

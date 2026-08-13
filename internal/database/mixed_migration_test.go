@@ -88,3 +88,37 @@ func TestMigrateMixedAccountsToClientsLeavesCredentialConflictUntouched(t *testi
 		t.Fatalf("conflicting inbound must not gain partial links: %d", links)
 	}
 }
+
+func TestMigrateHTTPAccountsToClients(t *testing.T) {
+	initWGMigrationDB(t)
+	inbound := &model.Inbound{
+		UserId:   1,
+		Port:     8080,
+		Protocol: model.HTTP,
+		Tag:      "http-legacy",
+		Settings: `{"accounts":[{"user":"alice-http","pass":"secret"}],"allowTransparent":true}`,
+	}
+	if err := db.Create(inbound).Error; err != nil {
+		t.Fatalf("create HTTP inbound: %v", err)
+	}
+
+	if err := migrateHTTPAccountsToClients(); err != nil {
+		t.Fatalf("migrateHTTPAccountsToClients: %v", err)
+	}
+
+	settings := reloadInboundSettings(t, inbound.Id)
+	if _, exists := settings["accounts"]; exists {
+		t.Fatalf("legacy HTTP accounts must be removed: %#v", settings)
+	}
+	clients, ok := settings["clients"].([]any)
+	if !ok || len(clients) != 1 {
+		t.Fatalf("expected one HTTP client: %#v", settings["clients"])
+	}
+	client := clients[0].(map[string]any)
+	if client["email"] != "alice-http" || client["password"] != "secret" {
+		t.Fatalf("HTTP credential changed during migration: %#v", client)
+	}
+	if settings["allowTransparent"] != true {
+		t.Fatalf("unrelated HTTP setting changed: %#v", settings)
+	}
+}

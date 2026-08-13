@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ClientRateLimitShape } from './client-limits';
 
 export const MixedAuthSchema = z.enum(['password', 'noauth']);
 export type MixedAuth = z.infer<typeof MixedAuthSchema>;
@@ -10,6 +11,7 @@ export const MixedAccountSchema = z.object({
 export type MixedAccount = z.infer<typeof MixedAccountSchema>;
 
 export const MixedClientSchema = z.object({
+  ...ClientRateLimitShape,
   password: z.string().min(1),
   email: z.string().min(1),
   limitIp: z.number().int().min(0).default(0),

@@ -1071,6 +1071,8 @@ export function getInboundClients(inbound: Inbound): ClientShape[] | null {
       return (inbound.settings.clients ?? []) as ClientShape[];
     case 'mixed':
       return (inbound.settings.clients ?? []) as ClientShape[];
+    case 'http':
+      return (inbound.settings.clients ?? []) as ClientShape[];
     case 'mtproto':
       return (inbound.settings.clients ?? []) as ClientShape[];
     case 'shadowsocks': {
@@ -1179,6 +1181,14 @@ export function genAllLinks(input: GenAllLinksInput): GenAllLinksEntry[] {
         link: `https://t.me/socks?server=${encodeURIComponent(addr)}&port=${port}&user=${user}&pass=${password}`,
       },
     ];
+  }
+  if (inbound.protocol === 'http') {
+    const user = encodeURIComponent(client.email ?? '');
+    const password = encodeURIComponent(client.password ?? '');
+    return [{
+      remark: 'HTTP',
+      link: `http://${user}:${password}@${formatUrlHost(addr)}:${port}`,
+    }];
   }
 
   const composeRemark = (proxyRemark: string): string =>

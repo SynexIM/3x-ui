@@ -71,8 +71,7 @@ describe('inboundFromDb', () => {
       sniffing: '',
     };
     const inbound = inboundFromDb(raw);
-    // http settings has its own schema defaults (accounts: [], allowTransparent: false)
-    expect(inbound.settings).toEqual(expect.objectContaining({ accounts: [] }));
+    expect(inbound.settings).toEqual(expect.objectContaining({ clients: [] }));
     expect(inbound.streamSettings).toEqual({});
     expect(inbound.sniffing).toEqual({});
   });
@@ -274,8 +273,31 @@ describe('getInboundClients with schema-shaped inbound', () => {
     );
   });
 
-  it('returns null for non-client protocols (http/tun/tunnel)', () => {
-    for (const protocol of ['http', 'tun', 'tunnel']) {
+  it('parses HTTP clients and generates an HTTP proxy link', () => {
+    const inbound = inboundFromDb({
+      ...BASE_DB_FIELDS,
+      port: 8080,
+      protocol: 'http',
+      settings: {
+        clients: [{ email: 'alice@example.test', password: 'p@ss word' }],
+        allowTransparent: false,
+      },
+      streamSettings: '',
+    });
+    const clients = getInboundClients(inbound);
+    expect(clients).toHaveLength(1);
+    expect(genAllLinks({
+      inbound,
+      client: clients![0],
+      fallbackHostname: 'proxy.example.test',
+    })).toEqual([{
+      remark: 'HTTP',
+      link: 'http://alice%40example.test:p%40ss%20word@proxy.example.test:8080',
+    }]);
+  });
+
+  it('returns null for non-client protocols (tun/tunnel)', () => {
+    for (const protocol of ['tun', 'tunnel']) {
       const inbound = inboundFromDb({
         ...BASE_DB_FIELDS,
         protocol,

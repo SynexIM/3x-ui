@@ -43,6 +43,11 @@ interface ClientBase {
   subId: string;
   comment: string;
   reset: number;
+  bandwidth_bps: number;
+  committed_bps: number;
+  committed_burst_bytes: number;
+  rateUnit: 'Mbps';
+  burstUnit: 'MB';
 }
 
 function clientBase(seed: ClientBaseSeed = {}): ClientBase {
@@ -56,6 +61,11 @@ function clientBase(seed: ClientBaseSeed = {}): ClientBase {
     subId: seed.subId ?? RandomUtil.randomLowerAndNum(16),
     comment: seed.comment ?? '',
     reset: seed.reset ?? 0,
+    bandwidth_bps: 0,
+    committed_bps: 0,
+    committed_burst_bytes: 0,
+    rateUnit: 'Mbps',
+    burstUnit: 'MB',
   };
 }
 
@@ -188,7 +198,7 @@ export function createDefaultHysteriaInboundSettings(
 
 export function createDefaultHttpInboundSettings(): HttpInboundSettings {
   return {
-    accounts: [{ user: RandomUtil.randomLowerAndNum(8), pass: RandomUtil.randomLowerAndNum(12) }],
+    clients: [],
     allowTransparent: false,
   };
 }

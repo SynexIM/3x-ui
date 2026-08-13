@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { FlowSchema, SniffingSchema } from '@/schemas/primitives';
+import { ClientRateLimitShape } from './client-limits';
 
 export const VlessFallbackSchema = z.object({
   name: z.string().default(''),
@@ -12,6 +13,7 @@ export const VlessFallbackSchema = z.object({
 export type VlessFallback = z.infer<typeof VlessFallbackSchema>;
 
 export const VlessClientSchema = z.object({
+  ...ClientRateLimitShape,
   id: z.string().min(1),
   email: z.string().min(1),
   flow: FlowSchema.default(''),

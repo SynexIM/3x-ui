@@ -14,11 +14,16 @@ exports[`InboundSchema (full) fixtures > parses hysteria-tls byte-stably 1`] = `
     "clients": [
       {
         "auth": "hyst-v1-auth-XYZ",
+        "bandwidth_bps": 0,
+        "burstUnit": "MB",
         "comment": "",
+        "committed_bps": 0,
+        "committed_burst_bytes": 0,
         "email": "gina@example.test",
         "enable": true,
         "expiryTime": 0,
         "limitIp": 0,
+        "rateUnit": "Mbps",
         "reset": 0,
         "subId": "hy1-001",
         "tgId": 0,
@@ -97,13 +102,18 @@ exports[`InboundSchema (full) fixtures > parses shadowsocks-tcp-2022 byte-stably
   "settings": {
     "clients": [
       {
+        "bandwidth_bps": 0,
+        "burstUnit": "MB",
         "comment": "",
+        "committed_bps": 0,
+        "committed_burst_bytes": 0,
         "email": "frank@example.test",
         "enable": true,
         "expiryTime": 0,
         "limitIp": 0,
         "method": "",
         "password": "dGVzdC1jbGllbnQtcGFzc3dvcmQtMQ==",
+        "rateUnit": "Mbps",
         "reset": 0,
         "subId": "ss-001",
         "tgId": 0,
@@ -159,12 +169,17 @@ exports[`InboundSchema (full) fixtures > parses trojan-ws-tls byte-stably 1`] = 
   "settings": {
     "clients": [
       {
+        "bandwidth_bps": 0,
+        "burstUnit": "MB",
         "comment": "",
+        "committed_bps": 0,
+        "committed_burst_bytes": 0,
         "email": "eve@example.test",
         "enable": true,
         "expiryTime": 0,
         "limitIp": 0,
         "password": "trojan-test-pw-XYZ",
+        "rateUnit": "Mbps",
         "reset": 0,
         "subId": "trj-001",
         "tgId": 0,
@@ -248,13 +263,18 @@ exports[`InboundSchema (full) fixtures > parses vless-tcp-reality byte-stably 1`
   "settings": {
     "clients": [
       {
+        "bandwidth_bps": 0,
+        "burstUnit": "MB",
         "comment": "",
+        "committed_bps": 0,
+        "committed_burst_bytes": 0,
         "email": "dave@example.test",
         "enable": true,
         "expiryTime": 0,
         "flow": "xtls-rprx-vision",
         "id": "22222222-3333-4444-9555-666666666666",
         "limitIp": 0,
+        "rateUnit": "Mbps",
         "reset": 0,
         "subId": "vless-reality-001",
         "tgId": 0,
@@ -334,13 +354,18 @@ exports[`InboundSchema (full) fixtures > parses vless-ws-tls byte-stably 1`] = `
   "settings": {
     "clients": [
       {
+        "bandwidth_bps": 0,
+        "burstUnit": "MB",
         "comment": "",
+        "committed_bps": 0,
+        "committed_burst_bytes": 0,
         "email": "alice@example.test",
         "enable": true,
         "expiryTime": 0,
         "flow": "",
         "id": "8c14d6f7-2e3b-4a91-9d24-3f7a6b8c1e02",
         "limitIp": 0,
+        "rateUnit": "Mbps",
         "reset": 0,
         "subId": "abc123def",
         "tgId": 0,
@@ -426,13 +451,18 @@ exports[`InboundSchema (full) fixtures > parses vless-ws-tls-pinned byte-stably 
   "settings": {
     "clients": [
       {
+        "bandwidth_bps": 0,
+        "burstUnit": "MB",
         "comment": "",
+        "committed_bps": 0,
+        "committed_burst_bytes": 0,
         "email": "alice@example.test",
         "enable": true,
         "expiryTime": 0,
         "flow": "",
         "id": "8c14d6f7-2e3b-4a91-9d24-3f7a6b8c1e02",
         "limitIp": 0,
+        "rateUnit": "Mbps",
         "reset": 0,
         "subId": "abc123def",
         "tgId": 0,
@@ -522,12 +552,17 @@ exports[`InboundSchema (full) fixtures > parses vmess-tcp-tls byte-stably 1`] = 
     "clients": [
       {
         "alterId": 0,
+        "bandwidth_bps": 0,
+        "burstUnit": "MB",
         "comment": "",
+        "committed_bps": 0,
+        "committed_burst_bytes": 0,
         "email": "carol@example.test",
         "enable": true,
         "expiryTime": 0,
         "id": "11111111-2222-4333-8444-555555555555",
         "limitIp": 0,
+        "rateUnit": "Mbps",
         "reset": 0,
         "security": "auto",
         "subId": "vmess-001",

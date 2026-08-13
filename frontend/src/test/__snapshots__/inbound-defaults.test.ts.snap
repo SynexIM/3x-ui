@@ -60,11 +60,16 @@ exports[`createDefault*InboundSettings factories > wireguard 1`] = `
 exports[`createDefaultHysteriaClient > produces a Zod-valid client 1`] = `
 {
   "auth": "fixed-hyst-auth",
+  "bandwidth_bps": 0,
+  "burstUnit": "MB",
   "comment": "",
+  "committed_bps": 0,
+  "committed_burst_bytes": 0,
   "email": "fixture@example.test",
   "enable": true,
   "expiryTime": 0,
   "limitIp": 0,
+  "rateUnit": "Mbps",
   "reset": 0,
   "subId": "fixed-sub-id-1234",
   "tgId": 0,
@@ -74,13 +79,18 @@ exports[`createDefaultHysteriaClient > produces a Zod-valid client 1`] = `
 
 exports[`createDefaultShadowsocksClient > produces a Zod-valid client 1`] = `
 {
+  "bandwidth_bps": 0,
+  "burstUnit": "MB",
   "comment": "",
+  "committed_bps": 0,
+  "committed_burst_bytes": 0,
   "email": "fixture@example.test",
   "enable": true,
   "expiryTime": 0,
   "limitIp": 0,
   "method": "",
   "password": "ZmFrZS1zcy1wYXNzd29yZA==",
+  "rateUnit": "Mbps",
   "reset": 0,
   "subId": "fixed-sub-id-1234",
   "tgId": 0,
@@ -90,12 +100,17 @@ exports[`createDefaultShadowsocksClient > produces a Zod-valid client 1`] = `
 
 exports[`createDefaultTrojanClient > produces a Zod-valid client 1`] = `
 {
+  "bandwidth_bps": 0,
+  "burstUnit": "MB",
   "comment": "",
+  "committed_bps": 0,
+  "committed_burst_bytes": 0,
   "email": "fixture@example.test",
   "enable": true,
   "expiryTime": 0,
   "limitIp": 0,
   "password": "fixed-trojan-pw",
+  "rateUnit": "Mbps",
   "reset": 0,
   "subId": "fixed-sub-id-1234",
   "tgId": 0,
@@ -105,13 +120,18 @@ exports[`createDefaultTrojanClient > produces a Zod-valid client 1`] = `
 
 exports[`createDefaultVlessClient > produces a Zod-valid client 1`] = `
 {
+  "bandwidth_bps": 0,
+  "burstUnit": "MB",
   "comment": "",
+  "committed_bps": 0,
+  "committed_burst_bytes": 0,
   "email": "fixture@example.test",
   "enable": true,
   "expiryTime": 0,
   "flow": "",
   "id": "11111111-2222-4333-8444-555555555555",
   "limitIp": 0,
+  "rateUnit": "Mbps",
   "reset": 0,
   "subId": "fixed-sub-id-1234",
   "tgId": 0,
@@ -122,12 +142,17 @@ exports[`createDefaultVlessClient > produces a Zod-valid client 1`] = `
 exports[`createDefaultVmessClient > produces a Zod-valid client 1`] = `
 {
   "alterId": 0,
+  "bandwidth_bps": 0,
+  "burstUnit": "MB",
   "comment": "",
+  "committed_bps": 0,
+  "committed_burst_bytes": 0,
   "email": "fixture@example.test",
   "enable": true,
   "expiryTime": 0,
   "id": "aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee",
   "limitIp": 0,
+  "rateUnit": "Mbps",
   "reset": 0,
   "security": "auto",
   "subId": "fixed-sub-id-1234",

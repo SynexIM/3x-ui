@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ClientRateLimitShape } from './client-limits';
 
 // mtg's [domain-fronting] section: where the sidecar forwards non-Telegram
 // traffic (e.g. an NGINX fake site). All optional — omitted keys fall back to
@@ -16,6 +17,7 @@ export type MtprotoDomainFronting = z.infer<typeof MtprotoDomainFrontingSchema>;
 // backend rebuilds on save. `fakeTlsDomain` is stored on the inbound as the
 // default domain used when generating a new client's secret.
 export const MtprotoClientSchema = z.object({
+  ...ClientRateLimitShape,
   secret: z.string().default(''),
   adTag: z
     .string()

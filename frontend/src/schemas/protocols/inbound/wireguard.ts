@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ClientRateLimitShape } from './client-limits';
 
 export const WireguardDomainStrategySchema = z.enum([
   'ForceIP',
@@ -39,6 +40,7 @@ export type WireguardInboundPeer = z.infer<typeof WireguardInboundPeerSchema>;
 // when left blank). Keys are optional on the wire — the backend generates them
 // when absent.
 export const WireguardClientSchema = z.object({
+  ...ClientRateLimitShape,
   privateKey: z.string().optional(),
   publicKey: z.string().optional(),
   preSharedKey: z.string().optional(),

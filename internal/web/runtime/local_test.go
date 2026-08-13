@@ -12,6 +12,7 @@ func TestRequiresInboundReloadForUserMutation(t *testing.T) {
 		want     bool
 	}{
 		{protocol: model.Mixed, want: true},
+		{protocol: model.HTTP, want: true},
 		{protocol: model.VLESS, want: false},
 		{protocol: model.VMESS, want: false},
 		{protocol: model.Trojan, want: false},

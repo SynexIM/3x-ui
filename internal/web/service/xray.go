@@ -251,6 +251,10 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				if c.Password != "" {
 					entry["password"] = c.Password
 				}
+			case model.HTTP:
+				if c.Password != "" {
+					entry["password"] = c.Password
+				}
 			case model.Shadowsocks:
 				if c.Password != "" {
 					entry["password"] = c.Password

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ClientRateLimitShape } from './client-limits';
 
 export const TrojanFallbackSchema = z.object({
   name: z.string().default(''),
@@ -10,6 +11,7 @@ export const TrojanFallbackSchema = z.object({
 export type TrojanFallback = z.infer<typeof TrojanFallbackSchema>;
 
 export const TrojanClientSchema = z.object({
+  ...ClientRateLimitShape,
   password: z.string().min(1),
   email: z.string().min(1),
   limitIp: z.number().int().min(0).default(0),

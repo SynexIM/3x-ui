@@ -102,6 +102,7 @@ func TestGeneratedConfigCarriesRateLimitsForEveryProtocol(t *testing.T) {
 		{"shadowsocks", model.Shadowsocks, 44104, `{"clients":[],"method":"2022-blake3-aes-128-gcm","password":"IdG0eY+zbGDpTEBGKcCSXpuMXNiPUFcbZTHDWbBGb5w="}`, "clients"},
 		{"hysteria", model.Hysteria, 44105, `{"clients":[],"version":2}`, "clients"},
 		{"mixed", model.Mixed, 44106, `{"clients":[]}`, "accounts"},
+		{"http", model.HTTP, 44107, `{"clients":[],"allowTransparent":false}`, "accounts"},
 	}
 
 	for i, c := range cases {

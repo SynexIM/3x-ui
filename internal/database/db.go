@@ -134,6 +134,9 @@ func initModels() error {
 	if err := migrateMixedAccountsToClients(); err != nil {
 		return err
 	}
+	if err := migrateHTTPAccountsToClients(); err != nil {
+		return err
+	}
 	if err := migrateShadowsocksRemovedCiphers(); err != nil {
 		return err
 	}
@@ -818,14 +821,23 @@ func migrateLegacySocksInboundsToMixed() error {
 // migrateMixedAccountsToClients is idempotent; credential conflicts stay
 // untouched and are reported again instead of silently changing passwords.
 func migrateMixedAccountsToClients() error {
+	return migrateProxyAccountsToClients(model.Mixed, "MixedAccountsToClients", true)
+}
+
+func migrateHTTPAccountsToClients() error {
+	return migrateProxyAccountsToClients(model.HTTP, "HTTPAccountsToClients", false)
+}
+
+// migrateProxyAccountsToClients moves static proxy credentials to global clients.
+func migrateProxyAccountsToClients(protocol model.Protocol, logPrefix string, forcePasswordAuth bool) error {
 	var inbounds []model.Inbound
-	if err := db.Where("protocol = ?", model.Mixed).Find(&inbounds).Error; err != nil {
+	if err := db.Where("protocol = ?", protocol).Find(&inbounds).Error; err != nil {
 		return err
 	}
 	for _, inbound := range inbounds {
 		var settings map[string]any
 		if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
-			log.Printf("MixedAccountsToClients: skip inbound %d (invalid settings json): %v", inbound.Id, err)
+			log.Printf("%s: skip inbound %d (invalid settings json): %v", logPrefix, inbound.Id, err)
 			continue
 		}
 		if _, alreadyCanonical := settings["clients"]; alreadyCanonical {
@@ -876,7 +888,7 @@ func migrateMixedAccountsToClients() error {
 			credentials = append(credentials, credential{email: email, password: password})
 		}
 		if conflict != "" {
-			log.Printf("MixedAccountsToClients: inbound %d requires manual migration: %s", inbound.Id, conflict)
+			log.Printf("%s: inbound %d requires manual migration: %s", logPrefix, inbound.Id, conflict)
 			continue
 		}
 
@@ -917,7 +929,7 @@ func migrateMixedAccountsToClients() error {
 			}
 			delete(settings, "accounts")
 			settings["clients"] = clientObjs
-			if len(clientObjs) > 0 {
+			if forcePasswordAuth && len(clientObjs) > 0 {
 				settings["auth"] = "password"
 			}
 			blob, err := json.Marshal(settings)
@@ -930,7 +942,7 @@ func migrateMixedAccountsToClients() error {
 		if err != nil {
 			return err
 		}
-		log.Printf("Migrated %d Mixed account(s) to unified clients for inbound %d", len(credentials), inbound.Id)
+		log.Printf("Migrated %d %s account(s) to unified clients for inbound %d", len(credentials), protocol, inbound.Id)
 	}
 	return nil
 }

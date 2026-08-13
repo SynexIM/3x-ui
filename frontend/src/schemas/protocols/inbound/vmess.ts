@@ -1,8 +1,10 @@
 import { z } from 'zod';
 
 import { VmessSecuritySchema } from '../shared/vmess';
+import { ClientRateLimitShape } from './client-limits';
 
 export const VmessClientSchema = z.object({
+  ...ClientRateLimitShape,
   id: z.string().min(1),
   security: VmessSecuritySchema.default('auto'),
   alterId: z.number().int().min(0).default(0),

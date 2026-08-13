@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { SSMethodSchema } from '../shared/shadowsocks';
+import { ClientRateLimitShape } from './client-limits';
 
 export const SSNetworkSchema = z.enum(['tcp', 'udp', 'tcp,udp']);
 export type SSNetwork = z.infer<typeof SSNetworkSchema>;
@@ -10,6 +11,7 @@ export type SSNetwork = z.infer<typeof SSNetworkSchema>;
 // 2022-blake3 multi-user setup each client provides its own password (and
 // optionally a per-client method).
 export const ShadowsocksClientSchema = z.object({
+  ...ClientRateLimitShape,
   method: z.string().default(''),
   password: z.string().default(''),
   email: z.string().min(1),

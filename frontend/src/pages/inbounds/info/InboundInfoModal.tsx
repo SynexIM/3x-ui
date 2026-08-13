@@ -750,24 +750,6 @@ export default function InboundInfoModal({
         </dl>
       )}
 
-      {dbInbound.isHTTP && Array.isArray(inbound.settings?.accounts) && (inbound.settings!.accounts as unknown[]).length > 0 && (
-        <dl className="info-list info-list-block">
-          {(inbound.settings!.accounts as { user: string; pass: string }[]).map((account, idx) => (
-            <div key={idx} className="info-row">
-              <dt>{t('username')} #{idx + 1}</dt>
-              <dd className="account-row">
-                <Tag color="green" className="value-tag">{account.user}</Tag>
-                <span className="account-sep">:</span>
-                <Tag className="value-tag">{account.pass}</Tag>
-                <Tooltip title={t('copy')}>
-                  <Button size="small" icon={<CopyOutlined />} aria-label={t('copy')} onClick={() => copyText(`${account.user}:${account.pass}`, t)} />
-                </Tooltip>
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
       {dbInbound.isWireguard && inbound.settings && (
         <>
           <dl className="info-list info-list-block">
