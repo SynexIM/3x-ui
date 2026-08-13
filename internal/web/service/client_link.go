@@ -54,6 +54,13 @@ func applyClientRecordMerge(row *model.ClientRecord, incoming *model.ClientRecor
 	row.KeepAlive = incoming.KeepAlive
 	row.SubID = incoming.SubID
 	row.LimitIP = incoming.LimitIP
+	// Unconditional, like the other quota scalars: clearing a limit in the form
+	// must actually clear it (blank = unlimited).
+	row.BandwidthBps = incoming.BandwidthBps
+	row.CommittedBps = incoming.CommittedBps
+	row.CommittedBurstBytes = incoming.CommittedBurstBytes
+	row.RateUnit = incoming.RateUnit
+	row.BurstUnit = incoming.BurstUnit
 	row.TotalGB = incoming.TotalGB
 	row.ExpiryTime = incoming.ExpiryTime
 	row.Enable = incoming.Enable

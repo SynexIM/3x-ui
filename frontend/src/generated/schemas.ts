@@ -1006,9 +1006,26 @@ export const SCHEMAS: Record<string, unknown> = {
         "description": "Auth password (Hysteria)",
         "type": "string"
       },
+      "bandwidth_bps": {
+        "description": "PIR/CIR/CBS per-user limits, 0 = unlimited. The json names are xray's\nprotocol.User field names verbatim — renaming silently drops the limit.",
+        "format": "int64",
+        "type": "integer"
+      },
+      "burstUnit": {
+        "description": "MB / GB",
+        "type": "string"
+      },
       "comment": {
         "description": "Client comment",
         "type": "string"
+      },
+      "committed_bps": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "committed_burst_bytes": {
+        "format": "int64",
+        "type": "integer"
       },
       "created_at": {
         "description": "Creation timestamp",
@@ -1058,6 +1075,10 @@ export const SCHEMAS: Record<string, unknown> = {
         "type": "string"
       },
       "publicKey": {
+        "type": "string"
+      },
+      "rateUnit": {
+        "description": "Display units the operator picked, so reopening the form shows the number\nthey typed. camelCase keeps them clearly out of xray's snake_case set.\nMbps / Kbps / MB/s / KB/s",
         "type": "string"
       },
       "reset": {
@@ -1150,8 +1171,24 @@ export const SCHEMAS: Record<string, unknown> = {
       "auth": {
         "type": "string"
       },
+      "bandwidth_bps": {
+        "description": "Per-client limits (see Client). One line = one client, so all five\nprotocols it is attached to share the same tier.",
+        "format": "int64",
+        "type": "integer"
+      },
+      "burstUnit": {
+        "type": "string"
+      },
       "comment": {
         "type": "string"
+      },
+      "committed_bps": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "committed_burst_bytes": {
+        "format": "int64",
+        "type": "integer"
       },
       "createdAt": {
         "format": "int64",
@@ -1194,6 +1231,9 @@ export const SCHEMAS: Record<string, unknown> = {
       "publicKey": {
         "type": "string"
       },
+      "rateUnit": {
+        "type": "string"
+      },
       "reset": {
         "type": "integer"
       },
@@ -1227,7 +1267,11 @@ export const SCHEMAS: Record<string, unknown> = {
       "adTag",
       "allowedIPs",
       "auth",
+      "bandwidth_bps",
+      "burstUnit",
       "comment",
+      "committed_bps",
+      "committed_burst_bytes",
       "createdAt",
       "email",
       "enable",
@@ -1241,6 +1285,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "preSharedKey",
       "privateKey",
       "publicKey",
+      "rateUnit",
       "reset",
       "reverse",
       "secret",

@@ -146,6 +146,9 @@ func initModels() error {
 	if err := migrateSyncOrphanColumns(); err != nil {
 		return err
 	}
+	if err := migrateClientRateLimitColumns(); err != nil {
+		return err
+	}
 	if IsPostgres() {
 		if err := resyncPostgresSequences(db, models); err != nil {
 			log.Printf("Error resyncing postgres sequences: %v", err)
@@ -310,6 +313,29 @@ func migrateSyncOrphanColumns() error {
 		return nil
 	}
 	return db.Exec("UPDATE clients SET sync_orphaned_at = 0 WHERE sync_orphaned_at IS NULL").Error
+}
+
+// migrateClientRateLimitColumns backfills the PIR/CIR/CBS columns AutoMigrate
+// adds: SQLite leaves pre-existing rows NULL, and NULL is not "unlimited".
+func migrateClientRateLimitColumns() error {
+	cols := []string{"bandwidth_bps", "committed_bps", "committed_burst_bytes"}
+	for _, col := range cols {
+		if !db.Migrator().HasColumn(&model.ClientRecord{}, col) {
+			continue
+		}
+		if err := db.Exec("UPDATE clients SET " + col + " = 0 WHERE " + col + " IS NULL").Error; err != nil {
+			return err
+		}
+	}
+	for _, col := range []string{"rate_unit", "burst_unit"} {
+		if !db.Migrator().HasColumn(&model.ClientRecord{}, col) {
+			continue
+		}
+		if err := db.Exec("UPDATE clients SET " + col + " = '' WHERE " + col + " IS NULL").Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func migrateHostVerifyPeerCertByNameColumn() error {

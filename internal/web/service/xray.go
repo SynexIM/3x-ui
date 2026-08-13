@@ -139,6 +139,20 @@ func RemoveIndex(s []any, index int) []any {
 }
 
 // GetXrayConfig retrieves and builds the Xray configuration from settings and inbounds.
+// addClientRateLimits writes the three xray limit keys onto an emitted client
+// object. Zero means unlimited and is left out so configs stay diff-clean.
+func addClientRateLimits(entry map[string]any, c model.Client) {
+	if c.BandwidthBps > 0 {
+		entry["bandwidth_bps"] = c.BandwidthBps
+	}
+	if c.CommittedBps > 0 {
+		entry["committed_bps"] = c.CommittedBps
+	}
+	if c.CommittedBurstBytes > 0 {
+		entry["committed_burst_bytes"] = c.CommittedBurstBytes
+	}
+}
+
 func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	templateConfig, err := s.settingService.GetXrayConfigTemplate()
 	if err != nil {
@@ -205,6 +219,9 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				flow = "xtls-rprx-vision"
 			}
 			entry := map[string]any{"email": c.Email}
+			// Limits ride on every protocol that has users; xray reads them off
+			// protocol.User, so one assignment covers vless/vmess/trojan/ss/hy2.
+			addClientRateLimits(entry, c)
 			switch inbound.Protocol {
 			case model.VLESS:
 				if c.ID != "" {

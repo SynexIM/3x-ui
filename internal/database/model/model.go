@@ -490,6 +490,21 @@ func WireguardClientsToPeers(settings string) (string, bool) {
 
 // MixedClientsToAccounts compiles the panel's canonical client representation
 // into the static username/password map Xray's mixed SOCKS handler consumes.
+// copyClientRateLimits moves the three xray limit keys from a panel client
+// object onto a protocol-specific account object, skipping absent/zero ones.
+func copyClientRateLimits(from, to map[string]any) {
+	for _, key := range ClientRateLimitKeys {
+		v, ok := from[key]
+		if !ok || v == nil {
+			continue
+		}
+		if n, isNum := v.(float64); isNum && n == 0 {
+			continue
+		}
+		to[key] = v
+	}
+}
+
 func MixedClientsToAccounts(settings string) (string, bool) {
 	if settings == "" {
 		return settings, false
@@ -516,7 +531,11 @@ func MixedClientsToAccounts(settings string) (string, bool) {
 		if email == "" || password == "" {
 			continue
 		}
-		accounts = append(accounts, map[string]any{"user": email, "pass": password})
+		account := map[string]any{"user": email, "pass": password}
+		// Mixed accounts are xray SocksAccounts; the limit keys are identical,
+		// so dropping them here would silently unlimit only this protocol.
+		copyClientRateLimits(client, account)
+		accounts = append(accounts, account)
 	}
 	delete(parsed, "clients")
 	parsed["accounts"] = accounts
@@ -928,6 +947,17 @@ type Client struct {
 	Reset        int            `json:"reset" form:"reset"`           // Reset period in days
 	CreatedAt    int64          `json:"created_at,omitempty"`         // Creation timestamp
 	UpdatedAt    int64          `json:"updated_at,omitempty"`         // Last update timestamp
+
+	// PIR/CIR/CBS per-user limits, 0 = unlimited. The json names are xray's
+	// protocol.User field names verbatim — renaming silently drops the limit.
+	BandwidthBps        uint64 `json:"bandwidth_bps,omitempty" form:"bandwidth_bps"`
+	CommittedBps        uint64 `json:"committed_bps,omitempty" form:"committed_bps"`
+	CommittedBurstBytes uint64 `json:"committed_burst_bytes,omitempty" form:"committed_burst_bytes"`
+
+	// Display units the operator picked, so reopening the form shows the number
+	// they typed. camelCase keeps them clearly out of xray's snake_case set.
+	RateUnit  string `json:"rateUnit,omitempty" form:"rateUnit"`   // Mbps / Kbps / MB/s / KB/s
+	BurstUnit string `json:"burstUnit,omitempty" form:"burstUnit"` // MB / GB
 }
 
 type ClientRecord struct {
@@ -957,10 +987,21 @@ type ClientRecord struct {
 	Reset        int    `json:"reset" gorm:"default:0"`
 	CreatedAt    int64  `json:"createdAt" gorm:"autoCreateTime:milli"`
 	UpdatedAt    int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
+	// Per-client limits (see Client). One line = one client, so all five
+	// protocols it is attached to share the same tier.
+	BandwidthBps        uint64 `json:"bandwidth_bps" gorm:"column:bandwidth_bps;default:0"`
+	CommittedBps        uint64 `json:"committed_bps" gorm:"column:committed_bps;default:0"`
+	CommittedBurstBytes uint64 `json:"committed_burst_bytes" gorm:"column:committed_burst_bytes;default:0"`
+	RateUnit            string `json:"rateUnit" gorm:"column:rate_unit;default:''"`
+	BurstUnit           string `json:"burstUnit" gorm:"column:burst_unit;default:''"`
 	// Owned solely by the node-snapshot sweep, which soft-orphans instead of
 	// deleting; orphans from any other cause stay at zero and are never reaped.
 	SyncOrphanedAt int64 `json:"-" gorm:"column:sync_orphaned_at;default:0"`
 }
+
+// ClientRateLimitKeys are the xray-facing limit keys, in one place so every
+// emit path (config.json, mixed accounts, runtime AddUser) stays in sync.
+var ClientRateLimitKeys = []string{"bandwidth_bps", "committed_bps", "committed_burst_bytes"}
 
 func (ClientRecord) TableName() string { return "clients" }
 
@@ -1125,6 +1166,12 @@ func (c *Client) ToRecord() *ClientRecord {
 		CreatedAt:  c.CreatedAt,
 		UpdatedAt:  c.UpdatedAt,
 
+		BandwidthBps:        c.BandwidthBps,
+		CommittedBps:        c.CommittedBps,
+		CommittedBurstBytes: c.CommittedBurstBytes,
+		RateUnit:            c.RateUnit,
+		BurstUnit:           c.BurstUnit,
+
 		PrivateKey:   c.PrivateKey,
 		PublicKey:    c.PublicKey,
 		AllowedIPs:   strings.Join(c.AllowedIPs, ","),
@@ -1177,6 +1224,12 @@ func (r *ClientRecord) ToClient() *Client {
 		Reset:      r.Reset,
 		CreatedAt:  r.CreatedAt,
 		UpdatedAt:  r.UpdatedAt,
+
+		BandwidthBps:        r.BandwidthBps,
+		CommittedBps:        r.CommittedBps,
+		CommittedBurstBytes: r.CommittedBurstBytes,
+		RateUnit:            r.RateUnit,
+		BurstUnit:           r.BurstUnit,
 
 		PrivateKey:   r.PrivateKey,
 		PublicKey:    r.PublicKey,

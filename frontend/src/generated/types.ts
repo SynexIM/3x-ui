@@ -245,7 +245,11 @@ export interface Client {
   adTag?: string;
   allowedIPs?: string[];
   auth?: string;
+  bandwidth_bps?: number;
+  burstUnit?: string;
   comment: string;
+  committed_bps?: number;
+  committed_burst_bytes?: number;
   created_at?: number;
   email: string;
   enable: boolean;
@@ -259,6 +263,7 @@ export interface Client {
   preSharedKey?: string;
   privateKey?: string;
   publicKey?: string;
+  rateUnit?: string;
   reset: number;
   reverse?: ClientReverse | null;
   secret?: string;
@@ -280,7 +285,11 @@ export interface ClientRecord {
   adTag: string;
   allowedIPs: string;
   auth: string;
+  bandwidth_bps: number;
+  burstUnit: string;
   comment: string;
+  committed_bps: number;
+  committed_burst_bytes: number;
   createdAt: number;
   email: string;
   enable: boolean;
@@ -294,6 +303,7 @@ export interface ClientRecord {
   preSharedKey: string;
   privateKey: string;
   publicKey: string;
+  rateUnit: string;
   reset: number;
   reverse: unknown;
   secret: string;
