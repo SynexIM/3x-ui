@@ -36,10 +36,14 @@ mkdir -p build/bin
 XRAY_REPO="${XRAY_REPO:-https://github.com/SynexIM/xray-core.git}"
 XRAY_REF="${XRAY_REF:-main}"
 XRAY_OUT="$(pwd)/build/bin/xray-linux-${FNAME}"
-rm -rf /tmp/xray-src
-git clone --depth 1 --branch "$XRAY_REF" "$XRAY_REPO" /tmp/xray-src || exit 1
-(cd /tmp/xray-src && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -buildid=" -o "$XRAY_OUT" ./main) || exit 1
-rm -rf /tmp/xray-src
+if [ -n "${XRAY_SOURCE_DIR:-}" ]; then
+    (cd "$XRAY_SOURCE_DIR" && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -buildid=" -o "$XRAY_OUT" ./main) || exit 1
+else
+    rm -rf /tmp/xray-src
+    git clone --depth 1 --branch "$XRAY_REF" "$XRAY_REPO" /tmp/xray-src || exit 1
+    (cd /tmp/xray-src && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -buildid=" -o "$XRAY_OUT" ./main) || exit 1
+    rm -rf /tmp/xray-src
+fi
 chmod +x "$XRAY_OUT"
 cd build/bin
 # mtg-multi (MTProto sidecar) ships prebuilt release binaries for every target

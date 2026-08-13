@@ -1,3 +1,5 @@
+ARG XRAY_SOURCE=scratch
+
 # ========================================================
 # Stage: Frontend (Vite)
 # ========================================================
@@ -9,12 +11,16 @@ COPY frontend/ ./
 COPY internal/web/translation /src/internal/web/translation
 RUN npm run build
 
+FROM ${XRAY_SOURCE} AS xray-source
+
 # ========================================================
 # Stage: Builder
 # ========================================================
 FROM golang:1.26-alpine AS builder
 WORKDIR /app
 ARG TARGETARCH
+ARG XRAY_REPO=https://github.com/SynexIM/xray-core.git
+ARG XRAY_REF=main
 
 RUN apk --no-cache --update add \
   build-base \
@@ -35,14 +41,20 @@ ENV GOFLAGS=-mod=mod
 # the same credential; keep them in one RUN so the token never lands in a layer.
 #   docker build --secret id=gh_token,env=GH_TOKEN .
 RUN --mount=type=secret,id=gh_token \
+  --mount=type=bind,from=xray-source,source=/,target=/tmp/xray-source,ro \
   sh -eu -c '\
     if [ -s /run/secrets/gh_token ]; then \
       export GIT_CONFIG_COUNT=1 \
         GIT_CONFIG_KEY_0="url.https://x-access-token:$(cat /run/secrets/gh_token)@github.com/.insteadOf" \
         GIT_CONFIG_VALUE_0="https://github.com/"; \
     fi; \
+    if [ -f /tmp/xray-source/go.mod ]; then \
+      cp -a /tmp/xray-source /tmp/xray-local; \
+      go mod edit -replace github.com/xtls/xray-core=/tmp/xray-local; \
+      export XRAY_SOURCE_DIR=/tmp/xray-local; \
+    fi; \
     go build -ldflags "-w -s" -o build/x-ui main.go; \
-    ./DockerInit.sh "$TARGETARCH"'
+    XRAY_REPO="$XRAY_REPO" XRAY_REF="$XRAY_REF" ./DockerInit.sh "$TARGETARCH"'
 
 # ========================================================
 # Stage: Final Image of 3x-ui
