@@ -660,6 +660,39 @@ func buildUserAccount(protocolName string, user map[string]any) (*serial.TypedMe
 	}
 }
 
+// applyUserRateLimits copies the panel's PIR/CIR/CBS keys onto the proto user.
+// Without it a hot-added client runs unlimited until the next full restart.
+func applyUserRateLimits(u *protocol.User, src map[string]any) *protocol.User {
+	u.BandwidthBps = uint64Field(src, "bandwidth_bps")
+	u.CommittedBps = uint64Field(src, "committed_bps")
+	u.CommittedBurstBytes = uint64Field(src, "committed_burst_bytes")
+	return u
+}
+
+func uint64Field(src map[string]any, key string) uint64 {
+	switch v := src[key].(type) {
+	case float64:
+		if v > 0 && v <= math.MaxUint64 {
+			return uint64(v)
+		}
+	case uint64:
+		return v
+	case int64:
+		if v > 0 {
+			return uint64(v)
+		}
+	case int:
+		if v > 0 {
+			return uint64(v)
+		}
+	case json.Number:
+		if n, err := v.Int64(); err == nil && n > 0 {
+			return uint64(n)
+		}
+	}
+	return 0
+}
+
 // Legacy Shadowsocks and Hysteria validators accept duplicate emails, so remove
 // first to keep retries idempotent and later disable/delete authoritative.
 func (x *XrayAPI) AddUser(Protocol string, inboundTag string, user map[string]any) error {
@@ -690,10 +723,10 @@ func (x *XrayAPI) AddUser(Protocol string, inboundTag string, user map[string]an
 	_, err = client.AlterInbound(ctx, &command.AlterInboundRequest{
 		Tag: inboundTag,
 		Operation: serial.ToTypedMessage(&command.AddUserOperation{
-			User: &protocol.User{
+			User: applyUserRateLimits(&protocol.User{
 				Email:   userEmail,
 				Account: account,
-			},
+			}, user),
 		}),
 	})
 	return err

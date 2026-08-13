@@ -41,23 +41,15 @@ func (d *HotDiff) Empty() bool {
 		d.RoutingConfig == nil
 }
 
-// ComputeHotDiff compares two generated configs and returns the API operations
-// that transform a running instance from oldCfg to newCfg. ok is false when
-// the change touches anything that has no runtime reload API (log, dns,
-// policy, ...) and therefore requires a full process restart.
-func ComputeHotDiff(oldCfg, newCfg *Config) (*HotDiff, bool) {
-	if oldCfg == nil || newCfg == nil {
-		return nil, false
-	}
+type staticSection struct {
+	name     string
+	old, new json_util.RawMessage
+}
 
-	// Sections without a reload API must be semantically identical.
-	// Comparison is whitespace-insensitive: a template save that merely
-	// reformats the JSON (frontend textarea, API clients) must not be
-	// mistaken for a real change that forces a restart.
-	static := []struct {
-		name     string
-		old, new json_util.RawMessage
-	}{
+// staticSections lists the config sections Xray cannot reload at runtime, so a
+// change in any of them means a full restart — every client on the node drops.
+func staticSections(oldCfg, newCfg *Config) []staticSection {
+	return []staticSection{
 		{"log", oldCfg.LogConfig, newCfg.LogConfig},
 		{"dns", oldCfg.DNSConfig, newCfg.DNSConfig},
 		{"transport", oldCfg.Transport, newCfg.Transport},
@@ -72,7 +64,26 @@ func ComputeHotDiff(oldCfg, newCfg *Config) (*HotDiff, bool) {
 		{"geodata", oldCfg.Geodata, newCfg.Geodata},
 		{"env", oldCfg.Env, newCfg.Env},
 	}
-	for _, section := range static {
+}
+
+func hotDiffStaticSectionNames() map[string]bool {
+	names := map[string]bool{}
+	for _, s := range staticSections(&Config{}, &Config{}) {
+		names[s.name] = true
+	}
+	return names
+}
+
+// ComputeHotDiff compares two generated configs and returns the API operations
+// that transform a running instance from oldCfg to newCfg. ok is false when
+// the change touches anything that has no runtime reload API (log, dns,
+// policy, ...) and therefore requires a full process restart.
+func ComputeHotDiff(oldCfg, newCfg *Config) (*HotDiff, bool) {
+	if oldCfg == nil || newCfg == nil {
+		return nil, false
+	}
+
+	for _, section := range staticSections(oldCfg, newCfg) {
 		if !rawEqualNormalized(section.old, section.new) {
 			logger.Debug("hot diff: section [", section.name, "] changed and has no reload API")
 			return nil, false
