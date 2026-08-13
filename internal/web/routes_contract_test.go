@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,6 +16,14 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/global"
 )
+
+var rateLimitContractFields = []string{
+	"bandwidth_bps",
+	"committed_bps",
+	"committed_burst_bytes",
+	"rateUnit",
+	"burstUnit",
+}
 
 /*
 frontend/src/pages/api-docs/endpoints.ts is a hand-maintained registry: an
@@ -136,4 +145,56 @@ func TestRouteRegistryContract(t *testing.T) {
 			t.Error(fmt.Errorf("endpoints.ts documents %s but the server does not register it — remove or fix the entry", route))
 		}
 	})
+}
+
+func TestClientRateLimitDocumentationContract(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("..", "..", "frontend", "src", "pages", "api-docs", "endpoints.ts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	for _, path := range []string{
+		"/panel/api/clients/add",
+		"/panel/api/clients/update/:email",
+		"/panel/api/clients/bulkCreate",
+	} {
+		start := strings.Index(text, "path: '"+path+"'")
+		if start < 0 {
+			t.Fatalf("client endpoint %s is absent from endpoints.ts", path)
+		}
+		end := strings.Index(text[start+1:], "\n      {")
+		if end < 0 {
+			end = len(text) - start
+		}
+		segment := text[start : start+1+end]
+		for _, field := range rateLimitContractFields {
+			if !strings.Contains(segment, field) {
+				t.Errorf("%s does not document client field %s", path, field)
+			}
+		}
+	}
+
+	raw, err := os.ReadFile(filepath.Join("..", "..", "frontend", "public", "openapi.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var spec struct {
+		Components struct {
+			Schemas map[string]struct {
+				Properties map[string]json.RawMessage `json:"properties"`
+			} `json:"schemas"`
+		} `json:"components"`
+	}
+	if err := json.Unmarshal(raw, &spec); err != nil {
+		t.Fatal(err)
+	}
+	client, ok := spec.Components.Schemas["Client"]
+	if !ok {
+		t.Fatal("generated OpenAPI has no Client schema")
+	}
+	for _, field := range rateLimitContractFields {
+		if _, ok := client.Properties[field]; !ok {
+			t.Errorf("generated OpenAPI Client schema is missing %s", field)
+		}
+	}
 }
