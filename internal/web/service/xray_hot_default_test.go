@@ -45,7 +45,7 @@ func TestEnsureHotReloadableDefaultOutbound(t *testing.T) {
 	}
 }
 
-func TestHotDefaultRuleStaysAfterDedicatedEgressRules(t *testing.T) {
+func TestHotDefaultRuleStaysAfterPanelAndNodeEgressRules(t *testing.T) {
 	cfg := hotDefaultConfig(
 		`[{"protocol":"freedom","tag":"direct"},{"protocol":"blackhole","tag":"blocked"}]`,
 		`{"domainStrategy":"AsIs","rules":[]}`,
