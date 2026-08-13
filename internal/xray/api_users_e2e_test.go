@@ -103,7 +103,7 @@ func startE2ECore(t *testing.T, inbounds []any) *e2eCore {
 	cfg := map[string]any{
 		"log": map[string]any{"loglevel": "warning"},
 		"api": map[string]any{
-			"services": []string{"HandlerService", "StatsService", "RoutingService"},
+			"services": []string{"HandlerService", "StatsService", "RoutingService", "ReverseService"},
 			"tag":      "api",
 		},
 		"inbounds": all,
@@ -124,6 +124,10 @@ func startE2ECore(t *testing.T, inbounds []any) *e2eCore {
 			"system": map[string]any{"statsInboundUplink": true, "statsInboundDownlink": true},
 		},
 		"stats": map[string]any{},
+		"reverse": map[string]any{
+			"bridges": []any{},
+			"portals": []any{},
+		},
 	}
 	raw, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
@@ -152,6 +156,43 @@ func startE2ECore(t *testing.T, inbounds []any) *e2eCore {
 	}
 	t.Cleanup(api.Close)
 	return &e2eCore{api: api, cmd: cmd, port: apiPort}
+}
+
+func TestXrayAPI_E2E_Reverse(t *testing.T) {
+	c := startE2ECore(t, nil)
+
+	if err := c.api.AddReverseBridge(ReverseEntry{Tag: "bridge-a", Domain: "a.reverse"}); err != nil {
+		t.Fatalf("AddReverseBridge: %v", err)
+	}
+	if err := c.api.AddReversePortal(ReverseEntry{Tag: "portal-a", Domain: "a.reverse"}); err != nil {
+		t.Fatalf("AddReversePortal: %v", err)
+	}
+	bridges, portals, err := c.api.ListReverse()
+	if err != nil {
+		t.Fatalf("ListReverse: %v", err)
+	}
+	if len(bridges) != 1 || bridges[0].Tag != "bridge-a" {
+		t.Fatalf("running bridges = %v", bridges)
+	}
+	if len(portals) != 1 || portals[0].Tag != "portal-a" {
+		t.Fatalf("running portals = %v", portals)
+	}
+	if err := c.api.RemoveReverseBridge("bridge-a"); err != nil {
+		t.Fatalf("RemoveReverseBridge: %v", err)
+	}
+	if err := c.api.RemoveReversePortal("portal-a"); err != nil {
+		t.Fatalf("RemoveReversePortal: %v", err)
+	}
+	bridges, portals, err = c.api.ListReverse()
+	if err != nil {
+		t.Fatalf("ListReverse after removal: %v", err)
+	}
+	if len(bridges) != 0 || len(portals) != 0 {
+		t.Fatalf("reverse removal left runtime entries: bridges=%v portals=%v", bridges, portals)
+	}
+	if !c.alive() {
+		t.Fatal("core exited during reverse hot mutations")
+	}
 }
 
 // ssKey builds a base64 shadowsocks-2022 key of the given byte length.

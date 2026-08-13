@@ -12,6 +12,25 @@ func TestRemoveUserGuardsNilHandlerClient(t *testing.T) {
 	}
 }
 
+func TestReverseAPIGuardsNilClient(t *testing.T) {
+	api := &XrayAPI{}
+	if err := api.AddReverseBridge(ReverseEntry{Tag: "bridge", Domain: "x"}); err == nil {
+		t.Fatal("AddReverseBridge with an uninitialized client must fail")
+	}
+	if err := api.RemoveReverseBridge("bridge"); err == nil {
+		t.Fatal("RemoveReverseBridge with an uninitialized client must fail")
+	}
+	if err := api.AddReversePortal(ReverseEntry{Tag: "portal", Domain: "x"}); err == nil {
+		t.Fatal("AddReversePortal with an uninitialized client must fail")
+	}
+	if err := api.RemoveReversePortal("portal"); err == nil {
+		t.Fatal("RemoveReversePortal with an uninitialized client must fail")
+	}
+	if _, _, err := api.ListReverse(); err == nil {
+		t.Fatal("ListReverse with an uninitialized client must fail")
+	}
+}
+
 func TestGetRequiredUserString_Present(t *testing.T) {
 	user := map[string]any{"email": "alice@example.com"}
 	got, err := getRequiredUserString(user, "email")

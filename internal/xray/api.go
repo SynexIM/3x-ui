@@ -21,6 +21,8 @@ import (
 	wgutil "github.com/mhsanaei/3x-ui/v3/internal/util/wireguard"
 
 	"github.com/xtls/xray-core/app/proxyman/command"
+	"github.com/xtls/xray-core/app/reverse"
+	reverseService "github.com/xtls/xray-core/app/reverse/command"
 	routerService "github.com/xtls/xray-core/app/router/command"
 	statsService "github.com/xtls/xray-core/app/stats/command"
 	xnet "github.com/xtls/xray-core/common/net"
@@ -52,6 +54,7 @@ type XrayAPI struct {
 	HandlerServiceClient *command.HandlerServiceClient
 	StatsServiceClient   *statsService.StatsServiceClient
 	RoutingServiceClient *routerService.RoutingServiceClient
+	ReverseServiceClient *reverseService.ReverseServiceClient
 	grpcClient           *grpc.ClientConn
 	isConnected          bool
 	StatsLastValues      map[string]int64
@@ -106,10 +109,12 @@ func (x *XrayAPI) Init(apiPort int) error {
 	hsClient := command.NewHandlerServiceClient(conn)
 	ssClient := statsService.NewStatsServiceClient(conn)
 	rsClient := routerService.NewRoutingServiceClient(conn)
+	reverseClient := reverseService.NewReverseServiceClient(conn)
 
 	x.HandlerServiceClient = &hsClient
 	x.StatsServiceClient = &ssClient
 	x.RoutingServiceClient = &rsClient
+	x.ReverseServiceClient = &reverseClient
 
 	return nil
 }
@@ -122,7 +127,76 @@ func (x *XrayAPI) Close() {
 	x.HandlerServiceClient = nil
 	x.StatsServiceClient = nil
 	x.RoutingServiceClient = nil
+	x.ReverseServiceClient = nil
 	x.isConnected = false
+}
+
+// AddReverseBridge adds a bridge to the running reverse app.
+func (x *XrayAPI) AddReverseBridge(entry ReverseEntry) error {
+	if x.ReverseServiceClient == nil {
+		return common.NewError("xray ReverseServiceClient is not initialized")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), handlerRPCTimeout)
+	defer cancel()
+	_, err := (*x.ReverseServiceClient).AddBridge(ctx, &reverseService.AddBridgeRequest{
+		Bridge: &reverse.BridgeConfig{Tag: entry.Tag, Domain: entry.Domain},
+	})
+	return err
+}
+
+// RemoveReverseBridge removes a bridge from the running reverse app.
+func (x *XrayAPI) RemoveReverseBridge(tag string) error {
+	if x.ReverseServiceClient == nil {
+		return common.NewError("xray ReverseServiceClient is not initialized")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), handlerRPCTimeout)
+	defer cancel()
+	_, err := (*x.ReverseServiceClient).RemoveBridge(ctx, &reverseService.RemoveBridgeRequest{Tag: tag})
+	return err
+}
+
+// AddReversePortal adds a portal to the running reverse app.
+func (x *XrayAPI) AddReversePortal(entry ReverseEntry) error {
+	if x.ReverseServiceClient == nil {
+		return common.NewError("xray ReverseServiceClient is not initialized")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), handlerRPCTimeout)
+	defer cancel()
+	_, err := (*x.ReverseServiceClient).AddPortal(ctx, &reverseService.AddPortalRequest{
+		Portal: &reverse.PortalConfig{Tag: entry.Tag, Domain: entry.Domain},
+	})
+	return err
+}
+
+// RemoveReversePortal removes a portal from the running reverse app.
+func (x *XrayAPI) RemoveReversePortal(tag string) error {
+	if x.ReverseServiceClient == nil {
+		return common.NewError("xray ReverseServiceClient is not initialized")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), handlerRPCTimeout)
+	defer cancel()
+	_, err := (*x.ReverseServiceClient).RemovePortal(ctx, &reverseService.RemovePortalRequest{Tag: tag})
+	return err
+}
+
+// ListReverse returns the bridge and portal configuration active in the core.
+func (x *XrayAPI) ListReverse() (bridges, portals []ReverseEntry, err error) {
+	if x.ReverseServiceClient == nil {
+		return nil, nil, common.NewError("xray ReverseServiceClient is not initialized")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), handlerRPCTimeout)
+	defer cancel()
+	response, err := (*x.ReverseServiceClient).ListReverse(ctx, &reverseService.ListReverseRequest{})
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, bridge := range response.GetBridges() {
+		bridges = append(bridges, ReverseEntry{Tag: bridge.GetTag(), Domain: bridge.GetDomain()})
+	}
+	for _, portal := range response.GetPortals() {
+		portals = append(portals, ReverseEntry{Tag: portal.GetTag(), Domain: portal.GetDomain()})
+	}
+	return bridges, portals, nil
 }
 
 // handlerRPCTimeout bounds per-call gRPC handler operations (add/remove inbound,

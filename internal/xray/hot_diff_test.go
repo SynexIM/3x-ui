@@ -26,6 +26,7 @@ func makeHotConfig() *Config {
 		Policy:          json_util.RawMessage(`{}`),
 		API:             json_util.RawMessage(`{"services":["HandlerService","StatsService","RoutingService"],"tag":"api"}`),
 		Stats:           json_util.RawMessage(`{}`),
+		Reverse:         json_util.RawMessage(`{"bridges":[],"portals":[]}`),
 		Metrics:         json_util.RawMessage(`{}`),
 		InboundConfigs: []InboundConfig{
 			{
@@ -43,6 +44,50 @@ func makeHotConfig() *Config {
 				Settings: json_util.RawMessage(`{"clients":[]}`),
 			},
 		},
+	}
+}
+
+func TestComputeHotDiff_ReverseAddRemoveAndChange(t *testing.T) {
+	oldCfg := makeHotConfig()
+	oldCfg.Reverse = json_util.RawMessage(`{
+		"bridges":[{"tag":"bridge-keep","domain":"keep.old"},{"tag":"bridge-remove","domain":"remove"}],
+		"portals":[{"tag":"portal-change","domain":"change.old"}]
+	}`)
+	newCfg := makeHotConfig()
+	newCfg.Reverse = json_util.RawMessage(`{
+		"bridges":[{"tag":"bridge-keep","domain":"keep.old"},{"tag":"bridge-add","domain":"add"}],
+		"portals":[{"tag":"portal-change","domain":"change.new"}]
+	}`)
+
+	diff, ok := ComputeHotDiff(oldCfg, newCfg)
+	if !ok {
+		t.Fatal("reverse mutations on an existing app must be hot-appliable")
+	}
+	if len(diff.RemovedBridges) != 1 || diff.RemovedBridges[0] != "bridge-remove" {
+		t.Fatalf("removed bridges = %v", diff.RemovedBridges)
+	}
+	if len(diff.AddedBridges) != 1 || diff.AddedBridges[0].Tag != "bridge-add" {
+		t.Fatalf("added bridges = %v", diff.AddedBridges)
+	}
+	if len(diff.RemovedPortals) != 1 || diff.RemovedPortals[0] != "portal-change" {
+		t.Fatalf("removed portals = %v", diff.RemovedPortals)
+	}
+	if len(diff.AddedPortals) != 1 || diff.AddedPortals[0].Domain != "change.new" {
+		t.Fatalf("added portals = %v", diff.AddedPortals)
+	}
+}
+
+func TestComputeHotDiff_ReverseRejectsInvalidOrDuplicateTags(t *testing.T) {
+	for _, raw := range []string{
+		`{"bridges":[{"tag":"","domain":"x"}]}`,
+		`{"bridges":[{"tag":"dup","domain":"a"},{"tag":"dup","domain":"b"}]}`,
+		`{"portals":[{"tag":"dup","domain":"a"},{"tag":"dup","domain":"b"}]}`,
+	} {
+		newCfg := makeHotConfig()
+		newCfg.Reverse = json_util.RawMessage(raw)
+		if _, ok := ComputeHotDiff(makeHotConfig(), newCfg); ok {
+			t.Fatalf("invalid reverse config must force safe restart: %s", raw)
+		}
 	}
 }
 

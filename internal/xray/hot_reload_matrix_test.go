@@ -47,6 +47,7 @@ func matrixConfig() *Config {
 		Policy:          json_util.RawMessage(`{"levels":{"0":{"statsUserUplink":true}}}`),
 		API:             json_util.RawMessage(`{"tag":"api","services":["HandlerService","StatsService"]}`),
 		Stats:           json_util.RawMessage(`{}`),
+		Reverse:         json_util.RawMessage(`{"bridges":[],"portals":[]}`),
 		Metrics:         json_util.RawMessage(`{}`),
 	}
 }
@@ -146,7 +147,7 @@ func TestHotReloadMatrix(t *testing.T) {
 		},
 		{
 			change: "change the reverse section",
-			hot:    false,
+			hot:    true,
 			apply: func(c *Config) {
 				c.Reverse = json_util.RawMessage(`{"bridges":[{"tag":"bridge","domain":"reverse.internal"}]}`)
 			},
@@ -208,23 +209,21 @@ func TestHotReloadMatrix(t *testing.T) {
 	}
 }
 
-// The reverse section is the one entry that should move: xray-core gained
-// app/reverse/command, so bridges/portals can be altered without a restart.
-func TestReverseStillForcesRestart(t *testing.T) {
+func TestFirstReverseEnableStillForcesRestart(t *testing.T) {
 	oldCfg := matrixConfig()
+	oldCfg.Reverse = nil
 	newCfg := matrixConfig()
 	newCfg.Reverse = json_util.RawMessage(`{"bridges":[{"tag":"bridge","domain":"reverse.internal"}]}`)
 
 	if _, hot := ComputeHotDiff(oldCfg, newCfg); hot {
-		t.Skip("reverse is now hot-applied — delete this test and flip the matrix row")
+		t.Fatal("first reverse enable must restart because the running core has no reverse app")
 	}
-	t.Log("reverse changes still restart Xray; the core exposes app/reverse/command, the panel does not use it yet")
 }
 
 // Guard the shape of the promise, not just its contents: a new section added to
 // Config with no reload API must land in the restart column on purpose.
 func TestEverySectionWithoutReloadAPIIsListed(t *testing.T) {
-	want := []string{"log", "dns", "transport", "policy", "api", "stats", "reverse", "fakedns", "observatory", "burstObservatory", "metrics", "geodata", "env"}
+	want := []string{"log", "dns", "transport", "policy", "api", "stats", "fakedns", "observatory", "burstObservatory", "metrics", "geodata", "env"}
 	src := hotDiffStaticSectionNames()
 	for _, name := range want {
 		if !src[name] {

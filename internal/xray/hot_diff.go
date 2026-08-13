@@ -20,6 +20,16 @@ type HotDiff struct {
 	RemovedOutboundTags []string
 	AddedOutbounds      [][]byte
 	RoutingConfig       []byte // full new routing section; nil when unchanged
+	RemovedBridges      []string
+	AddedBridges        []ReverseEntry
+	RemovedPortals      []string
+	AddedPortals        []ReverseEntry
+}
+
+// ReverseEntry is the stable identity and destination of one bridge or portal.
+type ReverseEntry struct {
+	Tag    string `json:"tag"`
+	Domain string `json:"domain"`
 }
 
 // UserOp is a per-user AlterInbound operation; User is nil for removals.
@@ -38,6 +48,10 @@ func (d *HotDiff) Empty() bool {
 		len(d.AddedUsers) == 0 &&
 		len(d.RemovedOutboundTags) == 0 &&
 		len(d.AddedOutbounds) == 0 &&
+		len(d.RemovedBridges) == 0 &&
+		len(d.AddedBridges) == 0 &&
+		len(d.RemovedPortals) == 0 &&
+		len(d.AddedPortals) == 0 &&
 		d.RoutingConfig == nil
 }
 
@@ -56,7 +70,6 @@ func staticSections(oldCfg, newCfg *Config) []staticSection {
 		{"policy", oldCfg.Policy, newCfg.Policy},
 		{"api", oldCfg.API, newCfg.API},
 		{"stats", oldCfg.Stats, newCfg.Stats},
-		{"reverse", oldCfg.Reverse, newCfg.Reverse},
 		{"fakedns", oldCfg.FakeDNS, newCfg.FakeDNS},
 		{"observatory", oldCfg.Observatory, newCfg.Observatory},
 		{"burstObservatory", oldCfg.BurstObservatory, newCfg.BurstObservatory},
@@ -92,6 +105,10 @@ func ComputeHotDiff(oldCfg, newCfg *Config) (*HotDiff, bool) {
 
 	diff := &HotDiff{}
 
+	if ok := diffReverse(oldCfg, newCfg, diff); !ok {
+		logger.Debug("hot diff: reverse changed but the running core has no reverse app")
+		return nil, false
+	}
 	if ok := diffInbounds(oldCfg, newCfg, diff); !ok {
 		logger.Debug("hot diff: inbound change is not API-applicable")
 		return nil, false
@@ -106,6 +123,86 @@ func ComputeHotDiff(oldCfg, newCfg *Config) (*HotDiff, bool) {
 	}
 
 	return diff, true
+}
+
+type reverseConfig struct {
+	Bridges []ReverseEntry `json:"bridges"`
+	Portals []ReverseEntry `json:"portals"`
+}
+
+func diffReverse(oldCfg, newCfg *Config, diff *HotDiff) bool {
+	if rawEqualNormalized(oldCfg.Reverse, newCfg.Reverse) {
+		return true
+	}
+
+	oldReverse, oldEnabled, ok := parseReverse(oldCfg.Reverse)
+	if !ok {
+		return false
+	}
+	newReverse, newEnabled, ok := parseReverse(newCfg.Reverse)
+	if !ok {
+		return false
+	}
+	// The command service can mutate an existing reverse app, but it cannot
+	// create or remove that app from a running core instance.
+	if !oldEnabled || !newEnabled {
+		return false
+	}
+
+	if !diffReverseEntries(oldReverse.Bridges, newReverse.Bridges, &diff.RemovedBridges, &diff.AddedBridges) {
+		return false
+	}
+	return diffReverseEntries(oldReverse.Portals, newReverse.Portals, &diff.RemovedPortals, &diff.AddedPortals)
+}
+
+func parseReverse(raw json_util.RawMessage) (reverseConfig, bool, bool) {
+	if len(raw) == 0 || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		return reverseConfig{}, false, true
+	}
+	var parsed reverseConfig
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		return reverseConfig{}, false, false
+	}
+	return parsed, true, true
+}
+
+func diffReverseEntries(oldEntries, newEntries []ReverseEntry, removed *[]string, added *[]ReverseEntry) bool {
+	oldByTag := make(map[string]ReverseEntry, len(oldEntries))
+	for _, entry := range oldEntries {
+		if entry.Tag == "" {
+			return false
+		}
+		if _, exists := oldByTag[entry.Tag]; exists {
+			return false
+		}
+		oldByTag[entry.Tag] = entry
+	}
+	newByTag := make(map[string]ReverseEntry, len(newEntries))
+	for _, entry := range newEntries {
+		if entry.Tag == "" {
+			return false
+		}
+		if _, exists := newByTag[entry.Tag]; exists {
+			return false
+		}
+		newByTag[entry.Tag] = entry
+	}
+	for _, oldEntry := range oldEntries {
+		newEntry, exists := newByTag[oldEntry.Tag]
+		if exists && oldEntry == newEntry {
+			continue
+		}
+		*removed = append(*removed, oldEntry.Tag)
+		if exists {
+			*added = append(*added, newEntry)
+		}
+	}
+	for _, newEntry := range newEntries {
+		if _, exists := oldByTag[newEntry.Tag]; !exists {
+			*added = append(*added, newEntry)
+		}
+	}
+	return true
 }
 
 // diffInbounds fills diff with inbound removals/additions (a changed inbound

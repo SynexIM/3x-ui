@@ -781,12 +781,7 @@ func mergeSubscriptionOutbounds(cfg *xray.Config, prepend, appendList []any) {
 	cfg.OutboundConfigs = json_util.RawMessage(combined)
 }
 
-// ensureAPIServices guarantees the gRPC services the panel depends on are
-// listed in the generated config's api block: HandlerService and StatsService
-// have always been required for inbound/user management and traffic polling,
-// and RoutingService enables hot routing reload on templates saved before it
-// was added to the default template. The stored template itself is not
-// modified — only the generated runtime config.
+// ensureAPIServices guarantees the runtime services the panel depends on.
 func ensureAPIServices(api json_util.RawMessage) json_util.RawMessage {
 	if len(api) == 0 {
 		// No api block means the panel's API integration is deliberately
@@ -805,7 +800,7 @@ func ensureAPIServices(api json_util.RawMessage) json_util.RawMessage {
 		}
 	}
 	added := false
-	for _, name := range []string{"HandlerService", "StatsService", "RoutingService"} {
+	for _, name := range []string{"HandlerService", "StatsService", "RoutingService", "ReverseService"} {
 		if !have[name] {
 			services = append(services, name)
 			added = true
@@ -1185,11 +1180,8 @@ func (s *XrayService) RestartXray(isForce bool) error {
 }
 
 // tryHotApply attempts to reconcile the running Xray instance with newCfg
-// through the core gRPC API (HandlerService for inbounds/outbounds,
-// RoutingService for rules/balancers). It returns true when the running
-// instance now matches newCfg; on any failure it returns false and the
-// caller falls back to a full process restart, which cleans up whatever was
-// partially applied. Callers must hold the package-level lock.
+// through the core gRPC API. It returns true when the running instance now
+// matches newCfg; on failure the caller restarts to clean up partial changes.
 func (s *XrayService) tryHotApply(process *xray.Process, newCfg *xray.Config) bool {
 	oldCfg := process.GetConfig()
 	diff, ok := xray.ComputeHotDiff(oldCfg, newCfg)
@@ -1215,8 +1207,18 @@ func (s *XrayService) tryHotApply(process *xray.Process, newCfg *xray.Config) bo
 	}
 	defer hotAPI.Close()
 
-	// Removals first so changed handlers and port swaps never collide with
-	// the additions that follow.
+	for _, tag := range diff.RemovedBridges {
+		if err := hotAPI.RemoveReverseBridge(tag); err != nil {
+			logger.Info("hot apply: remove reverse bridge [", tag, "] failed:", err)
+			return false
+		}
+	}
+	for _, tag := range diff.RemovedPortals {
+		if err := hotAPI.RemoveReversePortal(tag); err != nil {
+			logger.Info("hot apply: remove reverse portal [", tag, "] failed:", err)
+			return false
+		}
+	}
 	for _, u := range diff.RemovedUsers {
 		if err := hotAPI.RemoveUser(u.Tag, u.Email); err != nil && !xray.IsMissingHandlerErr(err) {
 			logger.Info("hot apply: remove user [", u.Email, "] from [", u.Tag, "] failed:", err)
@@ -1256,6 +1258,18 @@ func (s *XrayService) tryHotApply(process *xray.Process, newCfg *xray.Config) bo
 	for _, u := range diff.AddedUsers {
 		if err := addUserReconciling(&hotAPI, u); err != nil {
 			logger.Info("hot apply: add user [", u.Email, "] to [", u.Tag, "] failed:", err)
+			return false
+		}
+	}
+	for _, entry := range diff.AddedBridges {
+		if err := hotAPI.AddReverseBridge(entry); err != nil {
+			logger.Info("hot apply: add reverse bridge [", entry.Tag, "] failed:", err)
+			return false
+		}
+	}
+	for _, entry := range diff.AddedPortals {
+		if err := hotAPI.AddReversePortal(entry); err != nil {
+			logger.Info("hot apply: add reverse portal [", entry.Tag, "] failed:", err)
 			return false
 		}
 	}

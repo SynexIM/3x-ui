@@ -4,7 +4,8 @@
       "HandlerService",
       "LoggerService",
       "StatsService",
-      "RoutingService"
+      "RoutingService",
+      "ReverseService"
     ],
     "tag": "api"
   },
