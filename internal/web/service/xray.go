@@ -1179,6 +1179,37 @@ func (s *XrayService) RestartXray(isForce bool) error {
 	return nil
 }
 
+// ApplyDesiredConfigHotOnly reconciles the database-authored config with the
+// running process and refuses the operation if that would require a restart.
+//
+// Client services persist before calling the runtime API. Therefore their
+// local needRestart boolean alone is not enough: after a failed runtime write,
+// an identical retry can find the database already changed and otherwise look
+// like a no-op. This method always compares against the process's last proven
+// config snapshot. tryHotApply advances that snapshot only after every runtime
+// operation succeeds, so failed client writes remain retryable without ever
+// falling back to a process restart.
+func (s *XrayService) ApplyDesiredConfigHotOnly() error {
+	lock.Lock()
+	defer lock.Unlock()
+
+	desired, err := s.GetXrayConfig()
+	if err != nil {
+		return err
+	}
+	process := currentXrayProcess()
+	if process == nil || !process.IsRunning() {
+		return errors.New("xray is not running; refusing to report a client mutation as applied")
+	}
+	if process.GetConfig().Equals(desired) {
+		return nil
+	}
+	if !s.tryHotApply(process, desired) {
+		return errors.New("client mutation could not be hot-applied; Xray restart is forbidden on the provisioning path")
+	}
+	return nil
+}
+
 // tryHotApply attempts to reconcile the running Xray instance with newCfg
 // through the core gRPC API. It returns true when the running instance now
 // matches newCfg; on failure the caller restarts to clean up partial changes.

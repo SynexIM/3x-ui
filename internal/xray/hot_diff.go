@@ -267,7 +267,7 @@ func diffInbounds(oldCfg, newCfg *Config, diff *HotDiff) bool {
 }
 
 var userDiffableProtocols = map[string]struct{}{
-	"vless": {}, "vmess": {}, "trojan": {}, "hysteria": {},
+	"vless": {}, "vmess": {}, "trojan": {}, "mixed": {}, "shadowsocks": {}, "hysteria": {},
 }
 
 // diffInboundUsers emits per-user AlterInbound ops when two same-tag inbounds
@@ -284,11 +284,11 @@ func diffInboundUsers(oldIb, newIb *InboundConfig, diff *HotDiff) bool {
 		!rawEqualNormalized(oldIb.Sniffing, newIb.Sniffing) {
 		return false
 	}
-	oldClients, oldRest, ok := splitSettingsClients(oldIb.Settings)
+	oldClients, oldRest, ok := splitSettingsUsers(oldIb.Protocol, oldIb.Settings)
 	if !ok {
 		return false
 	}
-	newClients, newRest, ok := splitSettingsClients(newIb.Settings)
+	newClients, newRest, ok := splitSettingsUsers(newIb.Protocol, newIb.Settings)
 	if !ok {
 		return false
 	}
@@ -318,19 +318,55 @@ type clientEntry struct {
 	norm []byte
 }
 
+func splitSettingsUsers(
+	protocolName string,
+	raw json_util.RawMessage,
+) (map[string]clientEntry, []byte, bool) {
+	usersKey := "clients"
+	emailKey := "email"
+	switch protocolName {
+	case "mixed":
+		usersKey = "accounts"
+		emailKey = "user"
+	case "shadowsocks":
+		// The account builder needs the inbound-level method to select the
+		// correct legacy/2022 typed account for each live user operation.
+		return splitSettingsClientsWithInherited(raw, "method")
+	}
+	return splitSettingsEntries(raw, usersKey, emailKey, nil)
+}
+
 // splitSettingsClients indexes settings.clients by email and returns the rest of
 // the settings in canonical form; ok is false when a client has no unique email.
 func splitSettingsClients(raw json_util.RawMessage) (map[string]clientEntry, []byte, bool) {
-	if len(raw) == 0 {
+	return splitSettingsEntries(raw, "clients", "email", nil)
+}
+
+func splitSettingsClientsWithInherited(
+	raw json_util.RawMessage,
+	inheritedKey string,
+) (map[string]clientEntry, []byte, bool) {
+	settings, ok := decodeSettingsObject(raw)
+	if !ok {
 		return nil, nil, false
 	}
-	settings := map[string]any{}
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.UseNumber()
-	if err := decoder.Decode(&settings); err != nil {
+	inherited := settings[inheritedKey]
+	return splitSettingsEntries(raw, "clients", "email", map[string]any{
+		inheritedKey: inherited,
+	})
+}
+
+func splitSettingsEntries(
+	raw json_util.RawMessage,
+	usersKey string,
+	emailKey string,
+	inherited map[string]any,
+) (map[string]clientEntry, []byte, bool) {
+	settings, ok := decodeSettingsObject(raw)
+	if !ok {
 		return nil, nil, false
 	}
-	clientsRaw, hasClients := settings["clients"].([]any)
+	clientsRaw, hasClients := settings[usersKey].([]any)
 	if !hasClients {
 		return nil, nil, false
 	}
@@ -340,25 +376,48 @@ func splitSettingsClients(raw json_util.RawMessage) (map[string]clientEntry, []b
 		if !ok {
 			return nil, nil, false
 		}
-		email, _ := obj["email"].(string)
+		email, _ := obj[emailKey].(string)
 		if email == "" {
 			return nil, nil, false
 		}
 		if _, dup := clients[email]; dup {
 			return nil, nil, false
 		}
-		norm, err := json.Marshal(obj)
+		user := make(map[string]any, len(obj)+len(inherited)+1)
+		for key, value := range obj {
+			user[key] = value
+		}
+		user["email"] = email
+		for key, value := range inherited {
+			if value != nil {
+				user[key] = value
+			}
+		}
+		norm, err := json.Marshal(user)
 		if err != nil {
 			return nil, nil, false
 		}
-		clients[email] = clientEntry{user: obj, norm: norm}
+		clients[email] = clientEntry{user: user, norm: norm}
 	}
-	delete(settings, "clients")
+	delete(settings, usersKey)
 	rest, err := json.Marshal(settings)
 	if err != nil {
 		return nil, nil, false
 	}
 	return clients, rest, true
+}
+
+func decodeSettingsObject(raw json_util.RawMessage) (map[string]any, bool) {
+	if len(raw) == 0 {
+		return nil, false
+	}
+	settings := map[string]any{}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	if err := decoder.Decode(&settings); err != nil {
+		return nil, false
+	}
+	return settings, true
 }
 
 func inboundUsesReality(ib *InboundConfig) bool {

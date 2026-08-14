@@ -32,6 +32,7 @@ import (
 	hysteriaAccount "github.com/xtls/xray-core/proxy/hysteria/account"
 	"github.com/xtls/xray-core/proxy/shadowsocks"
 	"github.com/xtls/xray-core/proxy/shadowsocks_2022"
+	"github.com/xtls/xray-core/proxy/socks"
 	"github.com/xtls/xray-core/proxy/trojan"
 	"github.com/xtls/xray-core/proxy/vless"
 	"github.com/xtls/xray-core/proxy/vmess"
@@ -693,6 +694,19 @@ func buildUserAccount(protocolName string, user map[string]any) (*serial.TypedMe
 
 		return serial.ToTypedMessage(&hysteriaAccount.Account{
 			Auth: auth,
+		}), nil
+	case "mixed":
+		username, err := getRequiredUserString(user, "user")
+		if err != nil {
+			return nil, err
+		}
+		password, err := getRequiredUserString(user, "pass")
+		if err != nil {
+			return nil, err
+		}
+		return serial.ToTypedMessage(&socks.Account{
+			Username: username,
+			Password: password,
 		}), nil
 	case "wireguard":
 		pubB64, err := getRequiredUserString(user, "publicKey")

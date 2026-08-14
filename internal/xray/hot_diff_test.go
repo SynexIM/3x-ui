@@ -291,7 +291,7 @@ func TestComputeHotDiff_ClientChangeFallsBackToReplace(t *testing.T) {
 		{
 			name: "unsupported protocol",
 			mutate: func(cfg *Config) {
-				cfg.InboundConfigs[1].Protocol = "shadowsocks"
+				cfg.InboundConfigs[1].Protocol = "http"
 			},
 		},
 		{
