@@ -1,6 +1,9 @@
 package service
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"sort"
 	"strconv"
 	"strings"
@@ -66,13 +69,15 @@ type ClientPageParams struct {
 // Summary is computed across the full DB row set so dashboard counters
 // on the clients page stay stable as the user paginates/filters.
 type ClientPageResponse struct {
-	Items    []ClientSlim   `json:"items"`
-	Total    int            `json:"total"`
-	Filtered int            `json:"filtered"`
-	Page     int            `json:"page"`
-	PageSize int            `json:"pageSize"`
-	Summary  ClientsSummary `json:"summary"`
-	Groups   []string       `json:"groups"`
+	Items               []ClientSlim   `json:"items"`
+	Total               int            `json:"total"`
+	Filtered            int            `json:"filtered"`
+	Page                int            `json:"page"`
+	PageSize            int            `json:"pageSize"`
+	Summary             ClientsSummary `json:"summary"`
+	Groups              []string       `json:"groups"`
+	FilteredRevision    int64          `json:"filteredRevision"`
+	FilteredContentHash string         `json:"filteredContentHash"`
 }
 
 // ClientsSummary collects per-bucket counts plus the matching email lists so
@@ -370,9 +375,24 @@ func (s *ClientService) ListPaged(inboundSvc *InboundService, settingSvc *Settin
 	}
 
 	filtered := total
+	filteredQuery := q.from()
 	if scoped, narrowed := q.applyParams(q.from(), params, onlines); narrowed {
+		filteredQuery = scoped
 		if err := scoped.Count(&filtered).Error; err != nil {
 			return nil, err
+		}
+	}
+	var digestRows []model.ClientRecord
+	if err := filteredQuery.Order("c.id ASC").Find(&digestRows).Error; err != nil {
+		return nil, err
+	}
+	digest := sha256.New()
+	var filteredRevision int64
+	for _, record := range digestRows {
+		encoded, _ := json.Marshal(record)
+		_, _ = digest.Write(encoded)
+		if record.UpdatedAt > filteredRevision {
+			filteredRevision = record.UpdatedAt
 		}
 	}
 
@@ -391,13 +411,15 @@ func (s *ClientService) ListPaged(inboundSvc *InboundService, settingSvc *Settin
 	}
 
 	return &ClientPageResponse{
-		Items:    items,
-		Total:    int(total),
-		Filtered: int(filtered),
-		Page:     page,
-		PageSize: pageSize,
-		Summary:  summary,
-		Groups:   groups,
+		Items:               items,
+		Total:               int(total),
+		Filtered:            int(filtered),
+		Page:                page,
+		PageSize:            pageSize,
+		Summary:             summary,
+		Groups:              groups,
+		FilteredRevision:    filteredRevision,
+		FilteredContentHash: hex.EncodeToString(digest.Sum(nil)),
 	}, nil
 }
 

@@ -1,8 +1,11 @@
 package controller
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -43,6 +46,7 @@ func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
 	g.GET("/getXrayResult", a.getXrayResult)
 
 	g.POST("/", a.getXraySetting)
+	g.HEAD("/", a.headXraySetting)
 	g.POST("/warp/:action", a.warp)
 	g.POST("/nord/:action", a.nord)
 	g.POST("/update", a.updateSetting)
@@ -62,6 +66,18 @@ func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
 	g.DELETE("/outbound-subs/:id", a.deleteOutboundSub)
 	g.POST("/outbound-subs/:id/del", a.deleteOutboundSub) // POST alias for clients that can't send DELETE
 	g.POST("/outbound-subs/parse", a.parseOutboundSubURL) // preview without saving
+}
+
+func (a *XraySettingController) headXraySetting(c *gin.Context) {
+	xraySetting, err := a.SettingService.GetXrayConfigTemplate()
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	sum := sha256.Sum256([]byte(service.UnwrapXrayTemplateConfig(xraySetting)))
+	c.Header("ETag", `"`+hex.EncodeToString(sum[:])+`"`)
+	c.Header("Cache-Control", "no-store")
+	c.Status(http.StatusOK)
 }
 
 // getXraySetting retrieves the Xray configuration template, inbound tags, and outbound test URL.
