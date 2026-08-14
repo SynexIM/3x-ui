@@ -900,9 +900,12 @@ export const sections: readonly Section[] = [
         method: 'GET',
         path: '/panel/api/clients/links/:email',
         summary:
-          "Return every URL for one client across all attached inbounds — the same strings the Copy URL button copies in the panel UI. Supported protocols: vmess, vless, trojan, shadowsocks, hysteria, mixed. Mixed returns SOCKS5, HTTP, and Telegram proxy links. If streamSettings.externalProxy is set, returns one URL per external proxy. Protocols without a URL form contribute nothing.",
+          "Return every URL for one client across all attached inbounds — the same strings the Copy URL button copies in the panel UI. Supported protocols: vmess, vless, trojan, shadowsocks, hysteria, mixed. Mixed returns SOCKS5, HTTP, and Telegram proxy links. If protocol, host, and port are all supplied, return only that protocol and let 3x-ui render it with the selected customer-facing endpoint without changing the stored inbound. If streamSettings.externalProxy is set, returns one URL per external proxy. Protocols without a URL form contribute nothing.",
         params: [
           { name: 'email', in: 'path', type: 'string', desc: 'Client email (unique identifier).' },
+          { name: 'protocol', in: 'query', type: 'string', optional: true, desc: 'Delivery protocol: vless, vmess, mixed, shadowsocks, or hysteria2. Must be supplied together with host and port.' },
+          { name: 'host', in: 'query', type: 'string', optional: true, desc: 'Customer-facing ingress hostname or IP used only while rendering this response.' },
+          { name: 'port', in: 'query', type: 'integer', optional: true, desc: 'Customer-facing ingress port used only while rendering this response.' },
         ],
         response:
           '{\n  "success": true,\n  "obj": [\n    "vless://uuid@host:443?...#user1"\n  ]\n}',

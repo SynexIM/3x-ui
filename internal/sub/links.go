@@ -41,6 +41,13 @@ func (p *LinkProvider) LinksForClient(host string, inbound *model.Inbound, email
 	return splitLinkLines(svc.GetLink(inbound, email))
 }
 
+func (p *LinkProvider) LinksForClientAtEndpoint(host string, inbound *model.Inbound, email, endpointHost string, endpointPort int) []string {
+	svc := p.build(host)
+	clone := *inbound
+	svc.projectThroughFallbackMaster(&clone)
+	return splitLinkLines(svc.GetLinkAtEndpoint(&clone, email, endpointHost, endpointPort))
+}
+
 func (p *LinkProvider) LinksForInbounds(host string, inbounds []*model.Inbound) []string {
 	svc := p.build(host)
 	var out []string

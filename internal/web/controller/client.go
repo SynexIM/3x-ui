@@ -589,7 +589,34 @@ func (a *ClientController) getSubLinks(c *gin.Context) {
 }
 
 func (a *ClientController) getClientLinks(c *gin.Context) {
-	links, err := a.inboundService.GetAllClientLinks(resolveHost(c), c.Param("email"))
+	protocol := strings.TrimSpace(c.Query("protocol"))
+	endpointHost := strings.TrimSpace(c.Query("host"))
+	endpointPortRaw := strings.TrimSpace(c.Query("port"))
+	if protocol == "" && endpointHost == "" && endpointPortRaw == "" {
+		links, err := a.inboundService.GetAllClientLinks(resolveHost(c), c.Param("email"))
+		if err != nil {
+			jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
+			return
+		}
+		jsonObj(c, links, nil)
+		return
+	}
+	if protocol == "" || endpointHost == "" || endpointPortRaw == "" {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), service.ErrInvalidEndpointOverride)
+		return
+	}
+	endpointPort, err := strconv.Atoi(endpointPortRaw)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), service.ErrInvalidEndpointOverride)
+		return
+	}
+	links, err := a.inboundService.GetClientLinksAtEndpoint(
+		resolveHost(c),
+		c.Param("email"),
+		protocol,
+		endpointHost,
+		endpointPort,
+	)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
 		return

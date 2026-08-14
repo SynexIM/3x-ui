@@ -623,6 +623,18 @@ func (s *SubService) GetLink(inbound *model.Inbound, email string) string {
 	return ""
 }
 
+// GetLinkAtEndpoint keeps 3x-ui as the only share-link formatter while letting
+// a control plane choose the customer-facing ingress address for this one
+// delivery. It mutates a shallow copy only; the stored inbound and running
+// xray listener stay unchanged.
+func (s *SubService) GetLinkAtEndpoint(inbound *model.Inbound, email, host string, port int) string {
+	clone := *inbound
+	clone.ShareAddrStrategy = "custom"
+	clone.ShareAddr = host
+	clone.Port = port
+	return s.GetLink(&clone, email)
+}
+
 func (s *SubService) genMixedLink(inbound *model.Inbound, email string) string {
 	if inbound.Protocol != model.Mixed {
 		return ""
