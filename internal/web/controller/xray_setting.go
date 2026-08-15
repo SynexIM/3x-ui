@@ -53,6 +53,7 @@ func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/balancerOverride", a.balancerOverride)
 	g.POST("/routeTest", a.routeTest)
 	g.POST("/dedicated/egress/upsert", a.upsertDedicatedEgress)
+	g.POST("/dedicated/egress/observe", a.observeDedicatedEgress)
 	g.POST("/dedicated/egress/remove", a.removeDedicatedEgress)
 
 	// Outbound subscription (remote outbound lists)
@@ -75,6 +76,20 @@ func (a *XraySettingController) upsertDedicatedEgress(c *gin.Context) {
 	result, err := a.XrayService.UpsertDedicatedEgress(spec)
 	if err != nil {
 		jsonMsg(c, "Failed to apply dedicated egress", err)
+		return
+	}
+	jsonObj(c, result, nil)
+}
+
+func (a *XraySettingController) observeDedicatedEgress(c *gin.Context) {
+	var spec service.DedicatedEgressSpec
+	if err := c.ShouldBindJSON(&spec); err != nil {
+		jsonMsg(c, "Invalid dedicated egress request", err)
+		return
+	}
+	result, err := a.XrayService.ObserveDedicatedEgress(spec)
+	if err != nil {
+		jsonMsg(c, "Failed to observe dedicated egress", err)
 		return
 	}
 	jsonObj(c, result, nil)

@@ -28,6 +28,7 @@ type DedicatedEgressResult struct {
 	Tag             string `json:"tag"`
 	OutboundPresent bool   `json:"outboundPresent"`
 	RoutePresent    bool   `json:"routePresent"`
+	SpecMatches     bool   `json:"specMatches"`
 }
 
 var dedicatedEgressMu sync.Mutex
@@ -56,14 +57,27 @@ func (s *XrayService) UpsertDedicatedEgress(spec DedicatedEgressSpec) (Dedicated
 	if err := s.RestartXray(false); err != nil {
 		return DedicatedEgressResult{}, err
 	}
-	outboundPresent, routePresent, err := s.readDedicatedEgressPresence(spec.Tag)
+	result, err := s.ObserveDedicatedEgress(spec)
 	if err != nil {
 		return DedicatedEgressResult{}, err
 	}
-	if !outboundPresent || !routePresent {
+	if !result.SpecMatches {
 		return DedicatedEgressResult{}, fmt.Errorf("dedicated egress readback incomplete for tag %q", spec.Tag)
 	}
-	return DedicatedEgressResult{Tag: spec.Tag, OutboundPresent: outboundPresent, RoutePresent: routePresent}, nil
+	return result, nil
+}
+
+// ObserveDedicatedEgress compares persisted Xray state with the requested projection.
+func (s *XrayService) ObserveDedicatedEgress(spec DedicatedEgressSpec) (DedicatedEgressResult, error) {
+	spec = normalizeDedicatedEgressSpec(spec)
+	if err := validateDedicatedEgressSpec(spec); err != nil {
+		return DedicatedEgressResult{}, err
+	}
+	template, err := s.settingService.GetXrayConfigTemplate()
+	if err != nil {
+		return DedicatedEgressResult{}, err
+	}
+	return dedicatedEgressObservation(template, spec)
 }
 
 // RemoveDedicatedEgress removes only the tagged dedicated outbound and its
@@ -257,6 +271,104 @@ func dedicatedEgressPresence(raw string, tag string) (bool, bool, error) {
 		}
 	}
 	return outboundPresent, routePresent, nil
+}
+
+func dedicatedEgressObservation(raw string, spec DedicatedEgressSpec) (DedicatedEgressResult, error) {
+	var config map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &config); err != nil {
+		return DedicatedEgressResult{}, common.NewError("dedicated egress config is invalid:", err)
+	}
+
+	outboundPresent, outboundMatches, err := dedicatedOutboundMatches(config["outbounds"], spec)
+	if err != nil {
+		return DedicatedEgressResult{}, err
+	}
+	routing, err := routingObject(config)
+	if err != nil {
+		return DedicatedEgressResult{}, err
+	}
+	routePresent, routeMatches := dedicatedRouteMatches(routing["rules"], spec)
+	return DedicatedEgressResult{
+		Tag:             spec.Tag,
+		OutboundPresent: outboundPresent,
+		RoutePresent:    routePresent,
+		SpecMatches:     outboundMatches && routeMatches,
+	}, nil
+}
+
+func dedicatedOutboundMatches(raw json.RawMessage, spec DedicatedEgressSpec) (bool, bool, error) {
+	var outbounds []map[string]interface{}
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &outbounds); err != nil {
+			return false, false, common.NewError("dedicated egress outbounds are invalid:", err)
+		}
+	}
+	for _, outbound := range outbounds {
+		if stringValue(outbound["tag"]) != spec.Tag {
+			continue
+		}
+		settings, _ := outbound["settings"].(map[string]interface{})
+		servers, _ := settings["servers"].([]interface{})
+		if len(servers) != 1 {
+			return true, false, nil
+		}
+		server, _ := servers[0].(map[string]interface{})
+		users, _ := server["users"].([]interface{})
+		if len(users) != 1 {
+			return true, false, nil
+		}
+		user, _ := users[0].(map[string]interface{})
+		matches := stringValue(outbound["protocol"]) == "socks" &&
+			stringValue(server["address"]) == spec.Address &&
+			intValue(server["port"]) == spec.Port &&
+			stringValue(user["user"]) == spec.Username &&
+			stringValue(user["pass"]) == spec.Password
+		return true, matches, nil
+	}
+	return false, false, nil
+}
+
+func dedicatedRouteMatches(raw interface{}, spec DedicatedEgressSpec) (bool, bool) {
+	rules, _ := raw.([]interface{})
+	for _, rawRule := range rules {
+		rule, _ := rawRule.(map[string]interface{})
+		if stringValue(rule["outboundTag"]) != spec.Tag {
+			continue
+		}
+		matches := stringSliceEquals(rule["inboundTag"], []string{spec.InboundTag}) &&
+			stringSliceEquals(rule["user"], []string{spec.User})
+		return true, matches
+	}
+	return false, false
+}
+
+func stringValue(value interface{}) string {
+	out, _ := value.(string)
+	return out
+}
+
+func intValue(value interface{}) int {
+	switch typed := value.(type) {
+	case float64:
+		return int(typed)
+	case int:
+		return typed
+	default:
+		return 0
+	}
+}
+
+func stringSliceEquals(value interface{}, expected []string) bool {
+	raw, _ := value.([]interface{})
+	if len(raw) != len(expected) {
+		return false
+	}
+	for index, item := range raw {
+		if stringValue(item) != expected[index] {
+			return false
+		}
+	}
+	return true
 }
 
 func routingObject(config map[string]json.RawMessage) (map[string]interface{}, error) {

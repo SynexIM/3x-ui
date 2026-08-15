@@ -4,6 +4,7 @@
 .cursor/
 .specify/
 .claude/
+.codegraph/
 .cache/
 .sync*
 

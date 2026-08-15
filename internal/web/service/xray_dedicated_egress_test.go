@@ -72,3 +72,37 @@ func TestDedicatedEgressPresenceRequiresBothOutboundAndRoute(t *testing.T) {
 		t.Fatalf("partial presence = (%v, %v, %v), want (true, false, nil)", outboundPresent, routePresent, err)
 	}
 }
+
+func TestDedicatedEgressObservationDetectsConfigurationDrift(t *testing.T) {
+	spec := DedicatedEgressSpec{
+		Tag:        "dedicated-order-1",
+		InboundTag: "sv-1",
+		User:       "order-1@dedicated.local",
+		Address:    "198.51.100.10",
+		Port:       1080,
+		Username:   "user",
+		Password:   "password",
+	}
+	raw, err := upsertDedicatedEgressConfig(`{}`, spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	observed, err := dedicatedEgressObservation(raw, spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !observed.OutboundPresent || !observed.RoutePresent || !observed.SpecMatches {
+		t.Fatalf("matching observation = %#v", observed)
+	}
+
+	drifted := spec
+	drifted.Address = "198.51.100.99"
+	observed, err = dedicatedEgressObservation(raw, drifted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !observed.OutboundPresent || !observed.RoutePresent || observed.SpecMatches {
+		t.Fatalf("drifted observation = %#v", observed)
+	}
+}
