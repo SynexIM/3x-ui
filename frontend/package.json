@@ -72,7 +72,7 @@
     "lint-staged": "^17.3.0",
     "msw": "^2.15.0",
     "playwright": "^1.62.1",
-    "storybook": "^10.5.7",
+    "storybook": "^10.5.8",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.67.0",
     "vite": "8.2.1",
