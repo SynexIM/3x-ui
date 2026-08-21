@@ -124,7 +124,8 @@ jobs:
           cd x-ui/bin
 
           # Download dependencies
-          Xray_URL="https://github.com/XTLS/Xray-core/releases/download/v26.7.28/"
+          XRAY_VERSION="${XRAY_VERSION:-v26.7.28-synexim.1}"
+          Xray_URL="https://github.com/SynexIM-Labs/xray-core/releases/download/${XRAY_VERSION}/"
           if [ "${{ matrix.platform }}" == "amd64" ]; then
             fetch ${Xray_URL}Xray-linux-64.zip
             unzip Xray-linux-64.zip
@@ -185,11 +186,16 @@ jobs:
       - name: Package
         run: tar -zcvf x-ui-linux-${{ matrix.platform }}.tar.gz x-ui
 
+      - name: Create SHA256 checksum
+        run: sha256sum x-ui-linux-${{ matrix.platform }}.tar.gz > x-ui-linux-${{ matrix.platform }}.tar.gz.sha256
+
       - name: Upload files to Artifacts
         uses: actions/upload-artifact@v7
         with:
           name: x-ui-linux-${{ matrix.platform }}
-          path: ./x-ui-linux-${{ matrix.platform }}.tar.gz
+          path: |
+            ./x-ui-linux-${{ matrix.platform }}.tar.gz
+            ./x-ui-linux-${{ matrix.platform }}.tar.gz.sha256
 
       - name: Upload files to GH release
         uses: svenstaro/upload-release-action@v2
@@ -197,10 +203,10 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
-          file: x-ui-linux-${{ matrix.platform }}.tar.gz
-          asset_name: x-ui-linux-${{ matrix.platform }}.tar.gz
+          file: x-ui-linux-${{ matrix.platform }}.tar.gz*
+          file_glob: true
           overwrite: true
-          prerelease: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
 
   # =================================
   #  Windows Build
@@ -282,7 +288,8 @@ jobs:
           cd x-ui\bin
 
           # Download Xray for Windows
-          $Xray_URL = "https://github.com/XTLS/Xray-core/releases/download/v26.7.28/"
+          $xrayVersion = if ($env:XRAY_VERSION) { $env:XRAY_VERSION } else { "v26.7.28-synexim.1" }
+          $Xray_URL = "https://github.com/SynexIM-Labs/xray-core/releases/download/$xrayVersion/"
           Invoke-WebRequest @retry -Uri "${Xray_URL}Xray-windows-64.zip" -OutFile "Xray-windows-64.zip"
           Expand-Archive -Path "Xray-windows-64.zip" -DestinationPath .
           Remove-Item "Xray-windows-64.zip"
@@ -315,12 +322,15 @@ jobs:
         shell: pwsh
         run: |
           Compress-Archive -Path .\x-ui -DestinationPath "x-ui-windows-amd64.zip"
+          (Get-FileHash "x-ui-windows-amd64.zip" -Algorithm SHA256).Hash.ToLower() + "  x-ui-windows-amd64.zip" | Set-Content "x-ui-windows-amd64.zip.sha256"
 
       - name: Upload files to Artifacts
         uses: actions/upload-artifact@v7
         with:
           name: x-ui-windows-amd64
-          path: ./x-ui-windows-amd64.zip
+          path: |
+            ./x-ui-windows-amd64.zip
+            ./x-ui-windows-amd64.zip.sha256
 
       - name: Upload files to GH release
         uses: svenstaro/upload-release-action@v2
@@ -328,10 +338,10 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
-          file: x-ui-windows-amd64.zip
-          asset_name: x-ui-windows-amd64.zip
+          file: x-ui-windows-amd64.zip*
+          file_glob: true
           overwrite: true
-          prerelease: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
 
   # =================================
   #  Rolling dev channel (per-commit)
@@ -397,4 +407,4 @@ jobs:
               --target "${COMMIT}" --title "Dev build ${short}" --notes "${notes}"
           fi
 
-          retry gh release upload dev-latest dev-artifacts/*.tar.gz dev-artifacts/*.zip --clobber
+          retry gh release upload dev-latest dev-artifacts/*.tar.gz dev-artifacts/*.zip dev-artifacts/*.sha256 --clobber

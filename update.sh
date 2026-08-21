@@ -8,7 +8,7 @@ plain='\033[0m'
 
 # This is a fork. Leaving the upstream slug in every download URL would silently
 # install upstream's binary — no rate limiting, no Mixed clients, no hot reload.
-XUI_REPO="${XUI_REPO:-SynexIM/3x-ui}"
+XUI_REPO="${XUI_REPO:-SynexIM-Labs/3x-ui}"
 
 xui_folder="${XUI_MAIN_FOLDER:=/usr/local/x-ui}"
 xui_service="${XUI_SERVICE:=/etc/systemd/system}"
