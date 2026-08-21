@@ -1,4 +1,4 @@
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'WS';
+export type HttpMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'WS';
 export type ParamLocation =
   | 'path'
   | 'query'
@@ -1286,6 +1286,11 @@ export const sections: readonly Section[] = [
         response: '{\n  "success": true,\n  "obj": {\n    "xraySetting": "{...raw xray config...}",\n    "inboundTags": "[\\"in-443-tcp\\"]",\n    "clientReverseTags": "[]",\n    "outboundTestUrl": "https://www.google.com/generate_204"\n  }\n}',
       },
       {
+        method: 'HEAD',
+        path: '/panel/api/xray/',
+        summary: 'Return the SHA-256 ETag of the stored Xray template without returning the template body.',
+      },
+      {
         method: 'GET',
         path: '/panel/api/xray/getDefaultJsonConfig',
         summary: 'Return the built-in default Xray config shipped with the panel (identical to /panel/api/setting/getDefaultJsonConfig).',
@@ -1303,10 +1308,26 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/xray/update',
-        summary: 'Save the Xray JSON config template and optionally the outbound test URL. Both are sent as form fields.',
+        summary: 'Save the interactive form template, or accept one whole declarative IPVelo node projection when Content-Type is application/json. Declarative revisions are content identities: the same revision with different content is rejected.',
         params: [
           { name: 'xraySetting', in: 'body (form)', type: 'string', desc: 'Full Xray JSON config template.' },
           { name: 'outboundTestUrl', in: 'body (form)', type: 'string', desc: 'URL used for outbound reachability tests. Defaults to https://www.google.com/generate_204.' },
+          { name: 'revision', in: 'body (json)', type: 'integer', optional: true, desc: 'Positive content revision for a declarative whole-node replacement.' },
+          { name: 'requiresRestart', in: 'body (json)', type: 'boolean', optional: true, desc: 'Whether this projection is expected to require a process restart.' },
+          { name: 'config', in: 'body (json)', type: 'object', optional: true, desc: 'Whole desired inbounds, outbounds, and per-account routing projection.' },
+        ],
+      },
+      {
+        method: 'GET',
+        path: '/panel/api/xray/status',
+        summary: 'Return Xray health, measured line capacity, the applied declarative revision, and current inbound/client/outbound/rule counts.',
+      },
+      {
+        method: 'GET',
+        path: '/panel/api/xray/delivery/:email',
+        summary: 'Generate customer connection strings and PNG QR data URLs from the applied declarative config. The advertised host and port come from each custom share address, never the node listener.',
+        params: [
+          { name: 'email', in: 'path', type: 'string', desc: 'Stable line account email.' },
         ],
       },
       {
