@@ -52,6 +52,21 @@ func TestDeclarativeInboundCompilesSharedIdentityAndBandwidth(t *testing.T) {
 	if inbound.ShareAddrStrategy != "custom" || inbound.ShareAddr != "proxy.example.com" {
 		t.Fatalf("share address = %s/%s", inbound.ShareAddrStrategy, inbound.ShareAddr)
 	}
+	deliveryInbound, err := deliveryInboundFor(DeclarativeInbound{
+		Tag:            "group-mixed",
+		Protocol:       "mixed",
+		ListenPort:     62789,
+		ShareAddr:      DeclarativeShareAddress{Strategy: "custom", Host: "proxy.example.com", Port: 443},
+		Settings:       map[string]any{},
+		StreamSettings: map[string]any{},
+		Clients:        []DeclarativeClient{{Email: "line-001@line.ipvelo.invalid", Password: &password}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if deliveryInbound.Port != 443 {
+		t.Fatalf("delivery port = %d, want 443", deliveryInbound.Port)
+	}
 }
 
 func TestDeclarativeRequestRejectsDanglingRouteAndRevisionConflictInputs(t *testing.T) {

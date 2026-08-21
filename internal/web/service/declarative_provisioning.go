@@ -205,7 +205,7 @@ func (s *DeclarativeProvisioningService) DeliveryInbounds(email string) ([]*mode
 		if !containsDeclarativeClient(inbound.Clients, email) {
 			continue
 		}
-		panelInbound, err := modelInboundFor(inbound)
+		panelInbound, err := deliveryInboundFor(inbound)
 		if err != nil {
 			return nil, err
 		}
@@ -355,6 +355,15 @@ func modelInboundFor(inbound DeclarativeInbound) (*model.Inbound, error) {
 		ShareAddrStrategy: "custom",
 		ShareAddr:         inbound.ShareAddr.Host,
 	}, nil
+}
+
+func deliveryInboundFor(inbound DeclarativeInbound) (*model.Inbound, error) {
+	panelInbound, err := modelInboundFor(inbound)
+	if err != nil {
+		return nil, err
+	}
+	panelInbound.Port = inbound.ShareAddr.Port
+	return panelInbound, nil
 }
 
 func validateDeclarativeRequest(request *DeclarativeApplyRequest) error {
