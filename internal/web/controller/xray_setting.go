@@ -2,14 +2,17 @@ package controller
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/sub"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service/integration"
@@ -17,6 +20,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 
 	"github.com/gin-gonic/gin"
+	"github.com/skip2/go-qrcode"
 )
 
 // XraySettingController handles Xray configuration and settings operations.
@@ -29,6 +33,8 @@ type XraySettingController struct {
 	WarpService                 integration.WarpService
 	NordService                 integration.NordService
 	OutboundSubscriptionService service.OutboundSubscriptionService
+	ProvisioningService         service.DeclarativeProvisioningService
+	SubService                  sub.SubService
 }
 
 // NewXraySettingController creates a new XraySettingController and initializes its routes.
@@ -50,6 +56,8 @@ func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/warp/:action", a.warp)
 	g.POST("/nord/:action", a.nord)
 	g.POST("/update", a.updateSetting)
+	g.GET("/status", a.declarativeStatus)
+	g.GET("/delivery/:email", a.declarativeDelivery)
 	g.POST("/resetOutboundsTraffic", a.resetOutboundsTraffic)
 	g.POST("/testOutbound", a.testOutbound)
 	g.POST("/testOutbounds", a.testOutbounds)
@@ -146,6 +154,10 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 // the running core right away — through the gRPC API when only inbounds,
 // outbounds or routing rules changed, with a process restart otherwise.
 func (a *XraySettingController) updateSetting(c *gin.Context) {
+	if strings.HasPrefix(c.GetHeader("Content-Type"), "application/json") {
+		a.updateDeclarative(c)
+		return
+	}
 	xraySetting := c.PostForm("xraySetting")
 	if err := a.XraySettingService.SaveXraySetting(xraySetting); err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
@@ -167,6 +179,72 @@ func (a *XraySettingController) updateSetting(c *gin.Context) {
 		}
 	}
 	jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), nil)
+}
+
+func (a *XraySettingController) updateDeclarative(c *gin.Context) {
+	request := &service.DeclarativeApplyRequest{}
+	if err := c.ShouldBindJSON(request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"reason": err.Error()})
+		return
+	}
+	receipt, err := a.ProvisioningService.Apply(request)
+	if err != nil {
+		status := http.StatusUnprocessableEntity
+		if errors.Is(err, service.ErrDeclarativeRevisionConflict) {
+			status = http.StatusConflict
+		}
+		c.JSON(status, gin.H{"reason": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, receipt)
+}
+
+func (a *XraySettingController) declarativeStatus(c *gin.Context) {
+	status, err := a.ProvisioningService.Status()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, status)
+}
+
+func (a *XraySettingController) declarativeDelivery(c *gin.Context) {
+	email := c.Param("email")
+	inbounds, err := a.ProvisioningService.DeliveryInbounds(email)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"reason": err.Error()})
+		return
+	}
+	delivery := &service.DeclarativeDelivery{
+		AccountEmail: email,
+		Connections:  []service.DeclarativeConnection{},
+	}
+	for _, inbound := range inbounds {
+		links := strings.Split(strings.TrimSpace(a.SubService.GetLink(inbound, email)), "\n")
+		for index, link := range links {
+			link = strings.TrimSpace(link)
+			if link == "" {
+				continue
+			}
+			png, err := qrcode.Encode(link, qrcode.Medium, 256)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+				return
+			}
+			dataURL := "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+			label := inbound.Tag
+			if index > 0 {
+				label = fmt.Sprintf("%s-%d", inbound.Tag, index+1)
+			}
+			delivery.Connections = append(delivery.Connections, service.DeclarativeConnection{
+				Protocol: string(inbound.Protocol),
+				Label:    label,
+				URI:      link,
+				QRData:   &dataURL,
+			})
+		}
+	}
+	c.JSON(http.StatusOK, delivery)
 }
 
 // getDefaultXrayConfig retrieves the default Xray configuration.
