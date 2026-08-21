@@ -41,6 +41,8 @@ ENV GOFLAGS=-mod=mod
 # the same credential; keep them in one RUN so the token never lands in a layer.
 #   docker build --secret id=gh_token,env=GH_TOKEN .
 RUN --mount=type=secret,id=gh_token \
+  --mount=type=cache,target=/go/pkg/mod \
+  --mount=type=cache,target=/root/.cache/go-build \
   --mount=type=bind,from=xray-source,source=/,target=/tmp/xray-source,ro \
   sh -eu -c '\
     if [ -s /run/secrets/gh_token ]; then \
