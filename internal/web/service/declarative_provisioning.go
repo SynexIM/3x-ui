@@ -138,8 +138,7 @@ func (s *DeclarativeProvisioningService) Apply(request *DeclarativeApplyRequest)
 		return nil, err
 	}
 	if current != nil {
-		if request.Revision < current.Request.Revision ||
-			(request.Revision == current.Request.Revision && current.Hash != hash) {
+		if request.Revision == current.Request.Revision && current.Hash != hash {
 			return nil, ErrDeclarativeRevisionConflict
 		}
 		if request.Revision == current.Request.Revision {

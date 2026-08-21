@@ -70,3 +70,14 @@ func TestDeclarativeRequestRejectsDanglingRouteAndRevisionConflictInputs(t *test
 		t.Fatal("non-positive revision should be rejected")
 	}
 }
+
+func TestDeclarativeRevisionIsAContentIdentityNotASequence(t *testing.T) {
+	olderNumericValue := &DeclarativeApplyRequest{Revision: 10}
+	newerNumericValue := &DeclarativeApplyRequest{Revision: 20}
+	if err := validateDeclarativeRequest(olderNumericValue); err != nil {
+		t.Fatalf("lower content revision must remain valid: %v", err)
+	}
+	if err := validateDeclarativeRequest(newerNumericValue); err != nil {
+		t.Fatalf("higher content revision must remain valid: %v", err)
+	}
+}
