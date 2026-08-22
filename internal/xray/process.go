@@ -220,6 +220,9 @@ var (
 	xrayGracefulStopTimeout = 5 * time.Second
 	xrayForceStopTimeout    = 2 * time.Second
 	xrayVersionTimeout      = 5 * time.Second
+	// xrayReadyTimeout bounds how long Start waits for a freshly spawned core
+	// to prove it is serving before reporting the start as failed.
+	xrayReadyTimeout = 10 * time.Second
 	// OnCrash is called when xray crashes unexpectedly. Set from web layer.
 	OnCrash func(err error)
 )
@@ -556,7 +559,77 @@ func (p *process) Start() (err error) {
 	p.refreshVersion()
 	p.refreshAPIPort()
 
+	return p.waitReady()
+}
+
+// waitReady blocks until the core just spawned proves it started, turning a
+// core that dies during startup into an error from Start.
+//
+// cmd.Start only reports that the fork succeeded. Xray parses its config
+// afterwards, and a config it refuses makes it exit a few hundred milliseconds
+// later — long after Start would have returned nil. Every caller above then
+// reported success for a node whose core is dead: RestartXray returned nil, the
+// declarative Apply wrote its state and answered restarted:true, and the
+// rollback branch that exists for exactly this case could never be reached.
+//
+// The readiness signal is the core's own gRPC API. Inbound handlers start
+// listening only after xray has accepted the whole config, so a completed
+// handshake against the "api" inbound is proof the config was applied — the
+// same signal tryHotApply already relies on.
+//
+// A config without an API inbound offers nothing to probe. The only caller in
+// that situation is the outbound test path, which runs its own readiness poll
+// over the test inbounds (waitForPortsReady), so there is nothing to add here.
+func (p *process) waitReady() error {
+	p.mu.RLock()
+	done, apiPort := p.done, p.apiPort
+	p.mu.RUnlock()
+
+	if apiPort <= 0 {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), xrayReadyTimeout)
+	defer cancel()
+	// Stop waiting the moment the process is gone, rather than burning the
+	// whole timeout dialling a port that will never open.
+	go func() {
+		select {
+		case <-done:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	readyErr := WaitForAPIReady(ctx, apiPort)
+
+	// An exit outranks whatever the dial reported: waitForCommand has already
+	// stored the exit error and xray's own last log line by the time done is
+	// closed, and that line is where the actual reason lives.
+	select {
+	case <-done:
+		return p.startupErr()
+	default:
+	}
+	if readyErr != nil {
+		return common.NewErrorf("xray started but its API never answered on port %d: %v", apiPort, readyErr)
+	}
 	return nil
+}
+
+// startupErr describes a core that exited while starting, carrying xray's own
+// last log line — "failed to build inbound ..." and friends. The control plane
+// acts on this text, so it must say why rather than just that.
+func (p *process) startupErr() error {
+	reason := strings.TrimSpace(p.GetResult())
+	if reason == "" {
+		if err := p.GetErr(); err != nil {
+			reason = err.Error()
+		} else {
+			reason = "no output"
+		}
+	}
+	return common.NewErrorf("xray exited while starting: %s", reason)
 }
 
 // writeFileAtomic writes data to path via a same-directory temp file that is

@@ -40,6 +40,7 @@ import (
 	wireguard "github.com/xtls/xray-core/proxy/wireguard"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
@@ -122,6 +123,41 @@ func (x *XrayAPI) Init(apiPort int) error {
 	x.FairShareServiceClient = fairShareClient
 
 	return nil
+}
+
+// WaitForAPIReady blocks until the core's gRPC API on apiPort has completed a
+// connection handshake, the context ends, or the dial cannot be set up at all.
+//
+// Init is not a readiness signal: grpc.NewClient only prepares a lazy
+// connection and returns before anything is dialled, so it succeeds against a
+// port nothing listens on. The connectivity state machine is the real signal —
+// it reports Ready only once the HTTP/2 preface has been exchanged with a
+// server that is actually there.
+func WaitForAPIReady(ctx context.Context, apiPort int) error {
+	if apiPort <= 0 || apiPort > math.MaxUint16 {
+		return fmt.Errorf("invalid Xray API port: %d", apiPort)
+	}
+
+	addr := fmt.Sprintf("127.0.0.1:%d", apiPort)
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return fmt.Errorf("failed to connect to Xray API: %w", err)
+	}
+	defer conn.Close()
+
+	for {
+		state := conn.GetState()
+		if state == connectivity.Ready {
+			return nil
+		}
+		// Connect kicks an Idle channel into dialling and re-arms one that
+		// backed off after a refused connection, which is exactly what a core
+		// still binding its listeners produces.
+		conn.Connect()
+		if !conn.WaitForStateChange(ctx, state) {
+			return ctx.Err()
+		}
+	}
 }
 
 // Close closes the gRPC connection and resets the XrayAPI client state.
