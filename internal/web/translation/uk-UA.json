@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "Конфіг Peer {n}"
       },
-      "sniffingDestOverride": "Перевизначення призначення"
+      "sniffingDestOverride": "Перевизначення призначення",
+      "declarativelyManaged": "Вхідні цього вузла керуються панеллю керування та доступні тут лише для читання."
     },
     "clients": {
       "tabBasics": "Основні",

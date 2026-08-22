@@ -74,6 +74,9 @@ export interface InboundListProps {
   pageSize: number;
   isMobile: boolean;
   subEnable: boolean;
+  // A control plane owns the local config: the panel refuses to write
+  // inbounds, so the controls that would write them must look refused.
+  declarativelyManaged: boolean;
   nodesById: Map<number, NodeRecord>;
   hasActiveNode: boolean;
   onAddInbound: () => void;

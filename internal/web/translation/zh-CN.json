@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "Peer {n} 配置"
       },
-      "sniffingDestOverride": "目标覆盖"
+      "sniffingDestOverride": "目标覆盖",
+      "declarativelyManaged": "本节点的入站由控制面下发，面板这里只读。"
     },
     "clients": {
       "tabBasics": "基本",

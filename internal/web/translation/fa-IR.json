@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "پیکربندی Peer {n}"
       },
-      "sniffingDestOverride": "بازنویسی مقصد"
+      "sniffingDestOverride": "بازنویسی مقصد",
+      "declarativelyManaged": "ورودی‌های این گره توسط صفحه کنترل مدیریت می‌شوند و اینجا فقط‌خواندنی هستند."
     },
     "clients": {
       "tabBasics": "پایه",

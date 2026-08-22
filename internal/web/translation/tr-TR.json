@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "Peer {n} Yapılandırması"
       },
-      "sniffingDestOverride": "Hedef geçersiz kılma"
+      "sniffingDestOverride": "Hedef geçersiz kılma",
+      "declarativelyManaged": "Bu düğümün gelen bağlantıları kontrol düzlemi tarafından yönetilir ve burada salt okunurdur."
     },
     "clients": {
       "tabBasics": "Temel",

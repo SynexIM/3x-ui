@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "Peer {n} 設定"
       },
-      "sniffingDestOverride": "目標覆寫"
+      "sniffingDestOverride": "目標覆寫",
+      "declarativelyManaged": "本節點的入站由控制面下發，面板這裡唯讀。"
     },
     "clients": {
       "tabBasics": "基本",

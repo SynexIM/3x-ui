@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "Peer {n} 設定"
       },
-      "sniffingDestOverride": "宛先のオーバーライド"
+      "sniffingDestOverride": "宛先のオーバーライド",
+      "declarativelyManaged": "このノードのインバウンドはコントロールプレーンが管理しており、ここでは読み取り専用です。"
     },
     "clients": {
       "tabBasics": "基本",

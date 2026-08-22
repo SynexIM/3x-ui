@@ -17,6 +17,7 @@ export const DefaultsPayloadSchema = z.object({
   accessLogEnable: z.boolean().optional(),
   webDomain: z.string().optional(),
   subDomain: z.string().optional(),
+  declarativelyManaged: z.boolean().optional(),
 }).loose();
 
 export type DefaultsPayload = z.infer<typeof DefaultsPayloadSchema>;

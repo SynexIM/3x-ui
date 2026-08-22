@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "Cấu hình Peer {n}"
       },
-      "sniffingDestOverride": "Ghi đè đích"
+      "sniffingDestOverride": "Ghi đè đích",
+      "declarativelyManaged": "Inbound của node này do control plane quản lý và chỉ đọc tại đây."
     },
     "clients": {
       "tabBasics": "Cơ bản",

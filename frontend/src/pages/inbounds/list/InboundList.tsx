@@ -45,6 +45,7 @@ export default function InboundList({
   pageSize,
   isMobile,
   subEnable,
+  declarativelyManaged,
   nodesById,
   hasActiveNode,
   onAddInbound,
@@ -138,6 +139,7 @@ export default function InboundList({
     clientCount,
     inboundSpeed,
     subEnable,
+    declarativelyManaged,
     expireDiff,
     trafficDiff,
     onRowAction,
@@ -171,9 +173,20 @@ export default function InboundList({
       hoverable
       title={(
         <Space>
-          <Button type="primary" onClick={onAddInbound} icon={<PlusOutlined />} aria-label={t('pages.inbounds.addInbound')}>
-            {!isMobile && t('pages.inbounds.addInbound')}
-          </Button>
+          <Tooltip title={declarativelyManaged ? t('pages.inbounds.declarativelyManaged') : undefined}>
+            <span style={{ display: 'inline-flex' }}>
+              <Button
+                type="primary"
+                disabled={declarativelyManaged}
+                style={declarativelyManaged ? { pointerEvents: 'none' } : undefined}
+                onClick={onAddInbound}
+                icon={<PlusOutlined />}
+                aria-label={t('pages.inbounds.addInbound')}
+              >
+                {!isMobile && t('pages.inbounds.addInbound')}
+              </Button>
+            </span>
+          </Tooltip>
           <Dropdown trigger={['click']} menu={generalActionsMenu}>
             <Button type="primary" icon={<MenuOutlined />} aria-label={t('pages.inbounds.generalActions')}>
               {!isMobile && t('pages.inbounds.generalActions')}
@@ -204,7 +217,7 @@ export default function InboundList({
               <Tag color="blue" closable onClose={() => setSelectedRowKeys([])} style={{ marginInlineEnd: 0 }}>
                 {t('pages.inbounds.selectedCount', { count: selectedRowKeys.length })}
               </Tag>
-              <Button danger icon={<DeleteOutlined />} onClick={handleBulkDelete} aria-label={t('delete')}>
+              <Button danger disabled={declarativelyManaged} icon={<DeleteOutlined />} onClick={handleBulkDelete} aria-label={t('delete')}>
                 {!isMobile && t('delete')}
               </Button>
             </>
@@ -263,7 +276,7 @@ export default function InboundList({
                         trigger={['click']}
                         placement="bottomRight"
                         menu={{
-                          items: buildRowActionsMenu({ record, subEnable, t, isMobile: true, hasClients: (clientCount[record.id]?.clients || 0) > 0 }),
+                          items: buildRowActionsMenu({ record, subEnable, t, isMobile: true, hasClients: (clientCount[record.id]?.clients || 0) > 0, declarativelyManaged }),
                           onClick: ({ key }) => onRowAction({ key: key as RowAction, dbInbound: record }),
                         }}
                       >

@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "Peer {n} config"
       },
-      "sniffingDestOverride": "Destination override"
+      "sniffingDestOverride": "Destination override",
+      "declarativelyManaged": "This node's inbounds are managed by the control plane and are read-only here."
     },
     "clients": {
       "tabBasics": "Basics",

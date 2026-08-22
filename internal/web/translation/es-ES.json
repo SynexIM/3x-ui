@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "Config Peer {n}"
       },
-      "sniffingDestOverride": "Anulación de destino"
+      "sniffingDestOverride": "Anulación de destino",
+      "declarativelyManaged": "Las entradas de este nodo las gestiona el plano de control y aquí son de solo lectura."
     },
     "clients": {
       "tabBasics": "Básico",

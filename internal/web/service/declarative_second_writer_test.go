@@ -2,6 +2,8 @@ package service
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -198,5 +200,38 @@ func TestPanelInboundWritesWorkWhenNotDeclarativelyManaged(t *testing.T) {
 	}
 	if _, err := svc.DelInbound(added.Id); err != nil {
 		t.Fatalf("delete on an unmanaged panel: %v", err)
+	}
+}
+
+// The panel refuses local inbound writes while a control plane owns the config,
+// but the frontend had no way to know that, so the controls stayed clickable and
+// only answered with an error. This is the flag they grey themselves out on.
+func TestDefaultSettingsTellTheFrontendWhoOwnsTheInbounds(t *testing.T) {
+	setupConflictDB(t)
+	// GetCertFile reads the xray config next to the binary, which a test tree
+	// has no copy of.
+	binDir := t.TempDir()
+	t.Setenv("XUI_BIN_FOLDER", binDir)
+	if err := os.WriteFile(filepath.Join(binDir, "config.json"), []byte(`{"inbounds":[],"outbounds":[]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	svc := &SettingService{}
+
+	before, err := svc.GetDefaultSettings("panel.example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if managed := before.(map[string]any)["declarativelyManaged"]; managed != false {
+		t.Fatalf("an unmanaged panel must say so; got %v", managed)
+	}
+
+	markDeclarativelyManaged(t)
+
+	after, err := svc.GetDefaultSettings("panel.example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if managed := after.(map[string]any)["declarativelyManaged"]; managed != true {
+		t.Fatalf("a managed panel must say so; got %v", managed)
 	}
 }

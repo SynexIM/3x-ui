@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "Config Peer {n}"
       },
-      "sniffingDestOverride": "Substituição de destino"
+      "sniffingDestOverride": "Substituição de destino",
+      "declarativelyManaged": "Os inbounds deste nó são gerenciados pelo plano de controle e aqui são somente leitura."
     },
     "clients": {
       "tabBasics": "Básico",

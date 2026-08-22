@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "تكوين Peer {n}"
       },
-      "sniffingDestOverride": "تجاوز الوجهة"
+      "sniffingDestOverride": "تجاوز الوجهة",
+      "declarativelyManaged": "يدير مستوى التحكم الاتصالات الواردة لهذه العقدة، وهي للقراءة فقط هنا."
     },
     "clients": {
       "tabBasics": "أساسي",

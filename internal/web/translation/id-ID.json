@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "Konfig Peer {n}"
       },
-      "sniffingDestOverride": "Penggantian tujuan"
+      "sniffingDestOverride": "Penggantian tujuan",
+      "declarativelyManaged": "Inbound node ini dikelola oleh control plane dan hanya-baca di sini."
     },
     "clients": {
       "tabBasics": "Dasar",

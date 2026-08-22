@@ -658,7 +658,8 @@
         "peerNumber": "Peer {n}",
         "peerNumberConfig": "Конфиг Peer {n}"
       },
-      "sniffingDestOverride": "Переопределение назначения"
+      "sniffingDestOverride": "Переопределение назначения",
+      "declarativelyManaged": "Входящие этого узла управляются панелью управления и доступны здесь только для чтения."
     },
     "clients": {
       "tabBasics": "Основные",
