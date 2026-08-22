@@ -911,6 +911,9 @@ func (s *InboundService) normalizeMtprotoXrayPort(inbound *model.Inbound, oldSet
 // then saves the inbound to the database and optionally adds it to the running Xray instance.
 // Returns the created inbound, whether Xray needs restart, and any error.
 func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, bool, error) {
+	if inbound.NodeID == nil && IsDeclarativelyManaged() {
+		return inbound, false, ErrDeclarativelyManaged
+	}
 	inbound.Id = 0
 	inbound.TrafficResetDay = normalizeTrafficResetDay(inbound.TrafficResetDay)
 	// Normalize streamSettings based on protocol
@@ -1128,6 +1131,9 @@ func (s *InboundService) DelInbound(id int) (bool, error) {
 	var ib model.Inbound
 	loadErr := db.Model(model.Inbound{}).Where("id = ?", id).First(&ib).Error
 	if loadErr == nil {
+		if ib.NodeID == nil && IsDeclarativelyManaged() {
+			return false, ErrDeclarativelyManaged
+		}
 		shouldPushToRuntime := ib.NodeID != nil || ib.Enable
 		if shouldPushToRuntime {
 			if ib.NodeID != nil {
@@ -1358,6 +1364,10 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	// Restore the stored NodeID before the port-conflict check so a node inbound
 	// stays scoped to its own node (the payload's nodeId is unreliable, often absent).
 	inbound.NodeID = oldInbound.NodeID
+
+	if inbound.NodeID == nil && IsDeclarativelyManaged() {
+		return inbound, false, ErrDeclarativelyManaged
+	}
 
 	conflict, err := s.checkPortConflict(inbound, inbound.Id)
 	if err != nil {

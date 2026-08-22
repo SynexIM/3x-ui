@@ -134,45 +134,94 @@ func (d *portConflictDetail) String() string {
 // template can't be parsed.
 const defaultXrayAPIPort = 62789
 
-// reservedAPIPort returns the port of the internal Xray API inbound declared
-// in the config template, falling back to defaultXrayAPIPort.
-func reservedAPIPort() int {
+// templateInbound is an inbound the config template contributes to the running
+// core without ever appearing in the inbounds table.
+type templateInbound struct {
+	Tag        string
+	Listen     string
+	Port       int
+	Transports transportBits
+}
+
+// templateInbounds returns every inbound declared in the xray config template.
+//
+// XrayService.GetXrayConfig hands the core the template's inbounds *plus* the
+// inbounds table, so a port taken in the template is exactly as unavailable as
+// one held by a table row. Only the table was ever checked, which left two
+// writers and one blind spot: declarative provisioning writes its lines into
+// the template, so an admin adding an inbound through the panel could take a
+// port already in use, hear nothing, and only find out when the core refused
+// to start — taking every other inbound down with it.
+//
+// The fallback keeps the internal API inbound reserved even when the template
+// is missing or unreadable, which is the state a fresh panel starts in.
+func templateInbounds() []templateInbound {
+	fallback := []templateInbound{{
+		Tag:        "api",
+		Listen:     "127.0.0.1",
+		Port:       defaultXrayAPIPort,
+		Transports: transportTCP,
+	}}
+
 	tmpl, err := (&SettingService{}).GetXrayConfigTemplate()
 	if err != nil || tmpl == "" {
-		return defaultXrayAPIPort
+		return fallback
 	}
 	var parsed struct {
 		Inbounds []struct {
-			Port int    `json:"port"`
-			Tag  string `json:"tag"`
+			Tag            string          `json:"tag"`
+			Listen         string          `json:"listen"`
+			Port           int             `json:"port"`
+			Protocol       string          `json:"protocol"`
+			Settings       json.RawMessage `json:"settings"`
+			StreamSettings json.RawMessage `json:"streamSettings"`
 		} `json:"inbounds"`
 	}
 	if json.Unmarshal([]byte(tmpl), &parsed) != nil {
-		return defaultXrayAPIPort
+		return fallback
 	}
+	out := make([]templateInbound, 0, len(parsed.Inbounds))
 	for _, in := range parsed.Inbounds {
-		if in.Tag == "api" && in.Port > 0 {
-			return in.Port
+		if in.Port <= 0 {
+			continue
 		}
+		out = append(out, templateInbound{
+			Tag:        in.Tag,
+			Listen:     in.Listen,
+			Port:       in.Port,
+			Transports: inboundTransports(model.Protocol(in.Protocol), string(in.StreamSettings), string(in.Settings)),
+		})
 	}
-	return defaultXrayAPIPort
+	if len(out) == 0 {
+		return fallback
+	}
+	return out
 }
 
 func (s *InboundService) checkPortConflict(inbound *model.Inbound, ignoreId int) (*portConflictDetail, error) {
 	newBits := inboundTransports(inbound.Protocol, inbound.StreamSettings, inbound.Settings)
 
-	// The internal Xray API inbound (tag "api", loopback TCP) isn't a DB row,
-	// so a local user inbound reusing its port would leave Xray binding the
-	// port twice (#5304). Nodes run their own Xray, so this only applies to
-	// the local panel.
-	if inbound.NodeID == nil && inbound.Port == reservedAPIPort() &&
-		newBits&transportTCP != 0 && listenOverlaps("127.0.0.1", inbound.Listen) {
-		return &portConflictDetail{
-			Tag:        "api",
-			Listen:     "127.0.0.1",
-			Port:       inbound.Port,
-			Transports: transportTCP,
-		}, nil
+	// Inbounds living in the config template are not DB rows, so a local
+	// inbound reusing one of their ports would leave Xray binding the port
+	// twice (#5304 for the internal API inbound; any declaratively provisioned
+	// line for the same reason). Nodes run their own Xray, so this only applies
+	// to the local panel.
+	if inbound.NodeID == nil {
+		for _, existing := range templateInbounds() {
+			if existing.Port != inbound.Port || !listenOverlaps(existing.Listen, inbound.Listen) {
+				continue
+			}
+			shared := existing.Transports & newBits
+			if shared == 0 {
+				continue
+			}
+			return &portConflictDetail{
+				Tag:        existing.Tag,
+				Listen:     existing.Listen,
+				Port:       existing.Port,
+				Transports: shared,
+			}, nil
+		}
 	}
 
 	db := database.GetDB()
