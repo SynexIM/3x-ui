@@ -35,9 +35,9 @@ func TestEnsureAPIServices(t *testing.T) {
 	if err := json.Unmarshal(out, &parsed); err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]bool{"HandlerService": true, "StatsService": true, "RoutingService": true, "ReverseService": true, "LoggerService": true}
-	if len(parsed.Services) != 5 {
-		t.Fatalf("expected 5 services, got %v", parsed.Services)
+	want := map[string]bool{"HandlerService": true, "StatsService": true, "RoutingService": true, "ReverseService": true, "FairShareService": true, "LoggerService": true}
+	if len(parsed.Services) != 6 {
+		t.Fatalf("expected 6 services, got %v", parsed.Services)
 	}
 	for _, svc := range parsed.Services {
 		if !want[svc] {
@@ -49,7 +49,7 @@ func TestEnsureAPIServices(t *testing.T) {
 	}
 
 	// complete api block is returned unchanged (no marshal churn)
-	full := json_util.RawMessage(`{"services":["HandlerService","StatsService","RoutingService","ReverseService"],"tag":"api"}`)
+	full := json_util.RawMessage(`{"services":["HandlerService","StatsService","RoutingService","ReverseService","FairShareService"],"tag":"api"}`)
 	if got := ensureAPIServices(full); string(got) != string(full) {
 		t.Fatalf("complete api block must pass through untouched, got %s", got)
 	}

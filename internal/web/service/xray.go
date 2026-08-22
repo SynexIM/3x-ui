@@ -151,6 +151,9 @@ func addClientRateLimits(entry map[string]any, c model.Client) {
 	if c.CommittedBurstBytes > 0 {
 		entry["committed_burst_bytes"] = c.CommittedBurstBytes
 	}
+	if c.ConnLimit > 0 {
+		entry["conn_limit"] = c.ConnLimit
+	}
 }
 
 func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
@@ -800,7 +803,7 @@ func ensureAPIServices(api json_util.RawMessage) json_util.RawMessage {
 		}
 	}
 	added := false
-	for _, name := range []string{"HandlerService", "StatsService", "RoutingService", "ReverseService"} {
+	for _, name := range []string{"HandlerService", "StatsService", "RoutingService", "ReverseService", "FairShareService"} {
 		if !have[name] {
 			services = append(services, name)
 			added = true
@@ -815,6 +818,19 @@ func ensureAPIServices(api json_util.RawMessage) json_util.RawMessage {
 		return api
 	}
 	return out
+}
+
+func (s *XrayService) SetNodeBandwidth(bitsPerSecond uint64) error {
+	process := currentXrayProcess()
+	if process == nil || !process.IsRunning() {
+		return errors.New("xray is not running")
+	}
+	api := xray.XrayAPI{}
+	if err := api.Init(process.GetAPIPort()); err != nil {
+		return err
+	}
+	defer api.Close()
+	return api.SetNodeBandwidth(bitsPerSecond)
 }
 
 // ensureStatsPolicy guarantees every policy level in the generated config has

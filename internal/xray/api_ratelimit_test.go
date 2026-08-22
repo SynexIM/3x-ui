@@ -12,7 +12,7 @@ import (
 func TestApplyUserRateLimitsFromPanelClient(t *testing.T) {
 	// Values arrive as float64 after a JSON round-trip through settings.
 	var src map[string]any
-	raw := `{"email":"line-042","bandwidth_bps":100000000,"committed_bps":20000000,"committed_burst_bytes":50000000}`
+	raw := `{"email":"line-042","bandwidth_bps":100000000,"committed_bps":20000000,"committed_burst_bytes":50000000,"conn_limit":4}`
 	if err := json.Unmarshal([]byte(raw), &src); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -27,12 +27,15 @@ func TestApplyUserRateLimitsFromPanelClient(t *testing.T) {
 	if u.CommittedBurstBytes != 50_000_000 {
 		t.Errorf("committed_burst_bytes = %d, want 50000000", u.CommittedBurstBytes)
 	}
+	if u.ConnLimit != 4 {
+		t.Errorf("conn_limit = %d, want 4", u.ConnLimit)
+	}
 }
 
 func TestApplyUserRateLimitsLeavesUnlimitedAlone(t *testing.T) {
 	u := applyUserRateLimits(&protocol.User{Email: "free"}, map[string]any{"email": "free"})
-	if u.BandwidthBps != 0 || u.CommittedBps != 0 || u.CommittedBurstBytes != 0 {
-		t.Errorf("a client with no limits gained one: %d/%d/%d", u.BandwidthBps, u.CommittedBps, u.CommittedBurstBytes)
+	if u.BandwidthBps != 0 || u.CommittedBps != 0 || u.CommittedBurstBytes != 0 || u.ConnLimit != 0 {
+		t.Errorf("a client with no limits gained one: %d/%d/%d/%d", u.BandwidthBps, u.CommittedBps, u.CommittedBurstBytes, u.ConnLimit)
 	}
 }
 

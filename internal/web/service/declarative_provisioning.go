@@ -25,7 +25,10 @@ type DeclarativeClient struct {
 	Email     string  `json:"email"`
 	UUID      string  `json:"uuid"`
 	Password  *string `json:"password"`
-	LimitMbps int     `json:"limitMbps"`
+	PirBps    uint64  `json:"pirBps"`
+	CirBps    uint64  `json:"cirBps"`
+	CbsBytes  uint64  `json:"cbsBytes"`
+	ConnLimit uint32  `json:"connLimit"`
 }
 
 type DeclarativeShareAddress struct {
@@ -63,9 +66,10 @@ type DeclarativeRule struct {
 }
 
 type DeclarativeNodeConfig struct {
-	Inbounds  []DeclarativeInbound  `json:"inbounds"`
-	Outbounds []DeclarativeOutbound `json:"outbounds"`
-	Routing   struct {
+	NodeBandwidthBps uint64                `json:"nodeBandwidthBps"`
+	Inbounds         []DeclarativeInbound  `json:"inbounds"`
+	Outbounds        []DeclarativeOutbound `json:"outbounds"`
+	Routing          struct {
 		Rules []DeclarativeRule `json:"rules"`
 	} `json:"routing"`
 }
@@ -142,6 +146,9 @@ func (s *DeclarativeProvisioningService) Apply(request *DeclarativeApplyRequest)
 			return nil, ErrDeclarativeRevisionConflict
 		}
 		if request.Revision == current.Request.Revision {
+			if err := s.XrayService.SetNodeBandwidth(request.Config.NodeBandwidthBps); err != nil {
+				return nil, fmt.Errorf("reconcile node bandwidth: %w", err)
+			}
 			return receiptFor(request, false, false), nil
 		}
 	}
@@ -161,6 +168,14 @@ func (s *DeclarativeProvisioningService) Apply(request *DeclarativeApplyRequest)
 		_ = s.XraySettingService.SaveXraySetting(previousTemplate)
 		_ = s.XrayService.RestartXray(true)
 		return nil, fmt.Errorf("apply declarative xray config: %w", err)
+	}
+	if err := s.XrayService.SetNodeBandwidth(request.Config.NodeBandwidthBps); err != nil {
+		_ = s.XraySettingService.SaveXraySetting(previousTemplate)
+		_ = s.XrayService.RestartXray(true)
+		if current != nil {
+			_ = s.XrayService.SetNodeBandwidth(current.Request.Config.NodeBandwidthBps)
+		}
+		return nil, fmt.Errorf("apply node bandwidth: %w", err)
 	}
 	state := persistedDeclarativeState{Request: *request, Hash: hash}
 	encoded, err := json.Marshal(state)
@@ -185,6 +200,11 @@ func (s *DeclarativeProvisioningService) Status() (*DeclarativePanelStatus, erro
 	}
 	if state == nil {
 		return status, nil
+	}
+	if status.Healthy {
+		if err := s.XrayService.SetNodeBandwidth(state.Request.Config.NodeBandwidthBps); err != nil {
+			return nil, fmt.Errorf("reconcile node bandwidth: %w", err)
+		}
 	}
 	status.AppliedRevision = state.Request.Revision
 	status.Counts = countsFor(state.Request.Config)
@@ -294,10 +314,13 @@ func modelInboundFor(inbound DeclarativeInbound) (*model.Inbound, error) {
 	clients := make([]any, 0, len(inbound.Clients))
 	for _, client := range inbound.Clients {
 		entry := map[string]any{
-			"email":         client.Email,
-			"id":            client.UUID,
-			"enable":        true,
-			"bandwidth_bps": uint64(client.LimitMbps) * 1_000_000,
+			"email":                 client.Email,
+			"id":                    client.UUID,
+			"enable":                true,
+			"bandwidth_bps":         client.PirBps,
+			"committed_bps":         client.CirBps,
+			"committed_burst_bytes": client.CbsBytes,
+			"conn_limit":            client.ConnLimit,
 		}
 		if client.Password != nil {
 			entry["password"] = *client.Password
@@ -389,6 +412,17 @@ func validateDeclarativeRequest(request *DeclarativeApplyRequest) error {
 		case "vless", "vmess", "mixed", "shadowsocks", "trojan":
 		default:
 			return fmt.Errorf("unsupported inbound protocol %q", inbound.Protocol)
+		}
+		for _, client := range inbound.Clients {
+			if client.Email == "" || client.UUID == "" || client.PirBps == 0 {
+				return errors.New("each client requires email, uuid and pirBps")
+			}
+			if client.CirBps > client.PirBps {
+				return errors.New("client cirBps must not exceed pirBps")
+			}
+			if client.CbsBytes > 0 && client.CirBps == 0 {
+				return errors.New("client cbsBytes requires cirBps")
+			}
 		}
 		tags[inbound.Tag] = true
 		ports[inbound.ListenPort] = true

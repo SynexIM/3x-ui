@@ -997,6 +997,7 @@ type Client struct {
 	BandwidthBps        uint64 `json:"bandwidth_bps,omitempty" form:"bandwidth_bps"`
 	CommittedBps        uint64 `json:"committed_bps,omitempty" form:"committed_bps"`
 	CommittedBurstBytes uint64 `json:"committed_burst_bytes,omitempty" form:"committed_burst_bytes"`
+	ConnLimit           uint32 `json:"conn_limit,omitempty" form:"conn_limit"`
 
 	// Display units the operator picked, so reopening the form shows the number
 	// they typed. camelCase keeps them clearly out of xray's snake_case set.
@@ -1036,6 +1037,7 @@ type ClientRecord struct {
 	BandwidthBps        uint64 `json:"bandwidth_bps" gorm:"column:bandwidth_bps;default:0"`
 	CommittedBps        uint64 `json:"committed_bps" gorm:"column:committed_bps;default:0"`
 	CommittedBurstBytes uint64 `json:"committed_burst_bytes" gorm:"column:committed_burst_bytes;default:0"`
+	ConnLimit           uint32 `json:"conn_limit" gorm:"column:conn_limit;default:0"`
 	RateUnit            string `json:"rateUnit" gorm:"column:rate_unit;default:''"`
 	BurstUnit           string `json:"burstUnit" gorm:"column:burst_unit;default:''"`
 	// Owned solely by the node-snapshot sweep, which soft-orphans instead of
@@ -1045,7 +1047,7 @@ type ClientRecord struct {
 
 // ClientRateLimitKeys are the xray-facing limit keys, in one place so every
 // emit path (config.json, mixed accounts, runtime AddUser) stays in sync.
-var ClientRateLimitKeys = []string{"bandwidth_bps", "committed_bps", "committed_burst_bytes"}
+var ClientRateLimitKeys = []string{"bandwidth_bps", "committed_bps", "committed_burst_bytes", "conn_limit"}
 
 func (ClientRecord) TableName() string { return "clients" }
 
@@ -1213,6 +1215,7 @@ func (c *Client) ToRecord() *ClientRecord {
 		BandwidthBps:        c.BandwidthBps,
 		CommittedBps:        c.CommittedBps,
 		CommittedBurstBytes: c.CommittedBurstBytes,
+		ConnLimit:           c.ConnLimit,
 		RateUnit:            c.RateUnit,
 		BurstUnit:           c.BurstUnit,
 
@@ -1272,6 +1275,7 @@ func (r *ClientRecord) ToClient() *Client {
 		BandwidthBps:        r.BandwidthBps,
 		CommittedBps:        r.CommittedBps,
 		CommittedBurstBytes: r.CommittedBurstBytes,
+		ConnLimit:           r.ConnLimit,
 		RateUnit:            r.RateUnit,
 		BurstUnit:           r.BurstUnit,
 

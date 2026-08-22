@@ -20,6 +20,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 	wgutil "github.com/mhsanaei/3x-ui/v3/internal/util/wireguard"
 
+	fairShareService "github.com/xtls/xray-core/app/fairshare/command"
 	"github.com/xtls/xray-core/app/proxyman/command"
 	"github.com/xtls/xray-core/app/reverse"
 	reverseService "github.com/xtls/xray-core/app/reverse/command"
@@ -52,13 +53,14 @@ var (
 
 // XrayAPI is a gRPC client for managing Xray core configuration, inbounds, outbounds, and statistics.
 type XrayAPI struct {
-	HandlerServiceClient *command.HandlerServiceClient
-	StatsServiceClient   *statsService.StatsServiceClient
-	RoutingServiceClient *routerService.RoutingServiceClient
-	ReverseServiceClient *reverseService.ReverseServiceClient
-	grpcClient           *grpc.ClientConn
-	isConnected          bool
-	StatsLastValues      map[string]int64
+	HandlerServiceClient   *command.HandlerServiceClient
+	StatsServiceClient     *statsService.StatsServiceClient
+	RoutingServiceClient   *routerService.RoutingServiceClient
+	ReverseServiceClient   *reverseService.ReverseServiceClient
+	FairShareServiceClient fairShareService.FairShareServiceClient
+	grpcClient             *grpc.ClientConn
+	isConnected            bool
+	StatsLastValues        map[string]int64
 }
 
 func getRequiredUserString(user map[string]any, key string) (string, error) {
@@ -111,11 +113,13 @@ func (x *XrayAPI) Init(apiPort int) error {
 	ssClient := statsService.NewStatsServiceClient(conn)
 	rsClient := routerService.NewRoutingServiceClient(conn)
 	reverseClient := reverseService.NewReverseServiceClient(conn)
+	fairShareClient := fairShareService.NewFairShareServiceClient(conn)
 
 	x.HandlerServiceClient = &hsClient
 	x.StatsServiceClient = &ssClient
 	x.RoutingServiceClient = &rsClient
 	x.ReverseServiceClient = &reverseClient
+	x.FairShareServiceClient = fairShareClient
 
 	return nil
 }
@@ -129,7 +133,20 @@ func (x *XrayAPI) Close() {
 	x.StatsServiceClient = nil
 	x.RoutingServiceClient = nil
 	x.ReverseServiceClient = nil
+	x.FairShareServiceClient = nil
 	x.isConnected = false
+}
+
+func (x *XrayAPI) SetNodeBandwidth(bitsPerSecond uint64) error {
+	if x.FairShareServiceClient == nil {
+		return common.NewError("xray FairShareServiceClient is not initialized")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), handlerRPCTimeout)
+	defer cancel()
+	_, err := x.FairShareServiceClient.SetNodeBandwidth(ctx, &fairShareService.SetNodeBandwidthRequest{
+		AvailBps: bitsPerSecond / 8,
+	})
+	return err
 }
 
 // AddReverseBridge adds a bridge to the running reverse app.
@@ -754,6 +771,7 @@ func applyUserRateLimits(u *protocol.User, src map[string]any) *protocol.User {
 	u.BandwidthBps = uint64Field(src, "bandwidth_bps")
 	u.CommittedBps = uint64Field(src, "committed_bps")
 	u.CommittedBurstBytes = uint64Field(src, "committed_burst_bytes")
+	u.ConnLimit = uint32(uint64Field(src, "conn_limit"))
 	return u
 }
 

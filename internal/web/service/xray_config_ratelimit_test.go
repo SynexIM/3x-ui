@@ -9,16 +9,18 @@ import (
 )
 
 const (
-	testPIR = uint64(100_000_000) // 100 Mbps
-	testCIR = uint64(20_000_000)  // 20 Mbps
-	testCBS = uint64(50_000_000)  // 50 MB
+	testPIR       = uint64(100_000_000) // 100 Mbps
+	testCIR       = uint64(20_000_000)  // 20 Mbps
+	testCBS       = uint64(50_000_000)  // 50 MB
+	testConnLimit = uint32(4)
 )
 
 func limitedClient(email, id string) model.Client {
 	return model.Client{
 		Email: email, ID: id, Password: id, Auth: id, Enable: true,
 		BandwidthBps: testPIR, CommittedBps: testCIR, CommittedBurstBytes: testCBS,
-		RateUnit: "Mbps", BurstUnit: "MB",
+		ConnLimit: testConnLimit,
+		RateUnit:  "Mbps", BurstUnit: "MB",
 	}
 }
 
@@ -65,6 +67,7 @@ func assertLimits(t *testing.T, where string, obj map[string]any) {
 		"bandwidth_bps":         float64(testPIR),
 		"committed_bps":         float64(testCIR),
 		"committed_burst_bytes": float64(testCBS),
+		"conn_limit":            float64(testConnLimit),
 	}
 	for key, expect := range want {
 		got, ok := obj[key]
@@ -157,8 +160,8 @@ func TestRateLimitsRoundTripThroughDatabase(t *testing.T) {
 		t.Fatalf("expected one client, got %d", len(clients))
 	}
 	c := clients[0]
-	if c.BandwidthBps != testPIR || c.CommittedBps != testCIR || c.CommittedBurstBytes != testCBS {
-		t.Errorf("limits lost in the DB round-trip: %d/%d/%d", c.BandwidthBps, c.CommittedBps, c.CommittedBurstBytes)
+	if c.BandwidthBps != testPIR || c.CommittedBps != testCIR || c.CommittedBurstBytes != testCBS || c.ConnLimit != testConnLimit {
+		t.Errorf("limits lost in the DB round-trip: %d/%d/%d/%d", c.BandwidthBps, c.CommittedBps, c.CommittedBurstBytes, c.ConnLimit)
 	}
 	if c.RateUnit != "Mbps" || c.BurstUnit != "MB" {
 		t.Errorf("display units lost: rate=%q burst=%q — the form would reopen with a different number", c.RateUnit, c.BurstUnit)
@@ -174,6 +177,7 @@ func TestClearingRateLimitsPersists(t *testing.T) {
 
 	cleared := limitedClient("clear@x", "77777777-7777-7777-7777-777777777777")
 	cleared.BandwidthBps, cleared.CommittedBps, cleared.CommittedBurstBytes = 0, 0, 0
+	cleared.ConnLimit = 0
 	if err := (&ClientService{}).SyncInbound(nil, 1, []model.Client{cleared}); err != nil {
 		t.Fatalf("SyncInbound: %v", err)
 	}
@@ -187,5 +191,8 @@ func TestClearingRateLimitsPersists(t *testing.T) {
 	}
 	if got := clients[0].CommittedBps; got != 0 {
 		t.Errorf("committed_bps still %d after clearing", got)
+	}
+	if got := clients[0].ConnLimit; got != 0 {
+		t.Errorf("conn_limit still %d after clearing", got)
 	}
 }

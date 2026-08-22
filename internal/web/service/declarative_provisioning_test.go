@@ -22,7 +22,10 @@ func TestDeclarativeInboundCompilesSharedIdentityAndBandwidth(t *testing.T) {
 			Email:     "line-001@line.ipvelo.invalid",
 			UUID:      "11111111-1111-1111-1111-111111111111",
 			Password:  &password,
-			LimitMbps: 20,
+			PirBps:    100_000_000,
+			CirBps:    20_000_000,
+			CbsBytes:  50_000_000,
+			ConnLimit: 4,
 		}},
 	})
 	if err != nil {
@@ -31,9 +34,12 @@ func TestDeclarativeInboundCompilesSharedIdentityAndBandwidth(t *testing.T) {
 	compiled := inbound.GenXrayInboundConfig()
 	var settings struct {
 		Accounts []struct {
-			User         string `json:"user"`
-			Pass         string `json:"pass"`
-			BandwidthBps uint64 `json:"bandwidth_bps"`
+			User                string `json:"user"`
+			Pass                string `json:"pass"`
+			BandwidthBps        uint64 `json:"bandwidth_bps"`
+			CommittedBps        uint64 `json:"committed_bps"`
+			CommittedBurstBytes uint64 `json:"committed_burst_bytes"`
+			ConnLimit           uint32 `json:"conn_limit"`
 		} `json:"accounts"`
 	}
 	if err := json.Unmarshal(compiled.Settings, &settings); err != nil {
@@ -46,8 +52,11 @@ func TestDeclarativeInboundCompilesSharedIdentityAndBandwidth(t *testing.T) {
 	if account.User != "line-001@line.ipvelo.invalid" || account.Pass != password {
 		t.Fatalf("compiled account = %#v", account)
 	}
-	if account.BandwidthBps != 20_000_000 {
-		t.Fatalf("bandwidth_bps = %d, want 20000000", account.BandwidthBps)
+	if account.BandwidthBps != 100_000_000 ||
+		account.CommittedBps != 20_000_000 ||
+		account.CommittedBurstBytes != 50_000_000 ||
+		account.ConnLimit != 4 {
+		t.Fatalf("compiled limits = %#v", account)
 	}
 	if inbound.ShareAddrStrategy != "custom" || inbound.ShareAddr != "proxy.example.com" {
 		t.Fatalf("share address = %s/%s", inbound.ShareAddrStrategy, inbound.ShareAddr)
@@ -59,7 +68,12 @@ func TestDeclarativeInboundCompilesSharedIdentityAndBandwidth(t *testing.T) {
 		ShareAddr:      DeclarativeShareAddress{Strategy: "custom", Host: "proxy.example.com", Port: 443},
 		Settings:       map[string]any{},
 		StreamSettings: map[string]any{},
-		Clients:        []DeclarativeClient{{Email: "line-001@line.ipvelo.invalid", Password: &password}},
+		Clients: []DeclarativeClient{{
+			Email:    "line-001@line.ipvelo.invalid",
+			UUID:     "11111111-1111-1111-1111-111111111111",
+			Password: &password,
+			PirBps:   100_000_000,
+		}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -83,6 +97,35 @@ func TestDeclarativeRequestRejectsDanglingRouteAndRevisionConflictInputs(t *test
 	request.Config.Routing.Rules = nil
 	if err := validateDeclarativeRequest(request); err == nil {
 		t.Fatal("non-positive revision should be rejected")
+	}
+}
+
+func TestDeclarativeRequestRejectsMisspelledRateLimitField(t *testing.T) {
+	raw := `{
+		"revision": 1,
+		"config": {
+			"nodeBandwidthBps": 1000000000,
+			"inbounds": [{
+				"tag": "entry",
+				"protocol": "vless",
+				"listenPort": 443,
+				"shareAddr": {"strategy": "custom", "host": "edge.example.com", "port": 443},
+				"settings": {},
+				"streamSettings": {},
+				"clients": [{
+					"email": "line@example.invalid",
+					"uuid": "11111111-1111-1111-1111-111111111111",
+					"pir_bps": 100000000
+				}]
+			}]
+		}
+	}`
+	request := &DeclarativeApplyRequest{}
+	if err := json.Unmarshal([]byte(raw), request); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateDeclarativeRequest(request); err == nil {
+		t.Fatal("misspelled pirBps was silently accepted")
 	}
 }
 
