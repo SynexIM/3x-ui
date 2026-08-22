@@ -11,12 +11,21 @@ import (
 // Anything outside this set (adding an inbound, changing a listen port, moving
 // node bandwidth) goes through the full Apply, which stays the reconciliation
 // and repair path.
+//
+// There is no addOutbound: setOutbound upserts by tag, so adding an egress is
+// already one op. removeOutbound is the half that was missing, and its absence
+// was expensive. configHash covers outbounds, so releasing an expired line left
+// an orphan egress behind, the folded hash no longer matched what the control
+// plane computed, and the whole delta was refused — pushing an everyday event
+// onto the full-apply path, which on a node holding 50k lines means resending
+// 250k clients.
 const (
-	DeltaOpAddClient    = "addClient"
-	DeltaOpRemoveClient = "removeClient"
-	DeltaOpUpdateClient = "updateClient"
-	DeltaOpSetRule      = "setRule"
-	DeltaOpSetOutbound  = "setOutbound"
+	DeltaOpAddClient      = "addClient"
+	DeltaOpRemoveClient   = "removeClient"
+	DeltaOpUpdateClient   = "updateClient"
+	DeltaOpSetRule        = "setRule"
+	DeltaOpSetOutbound    = "setOutbound"
+	DeltaOpRemoveOutbound = "removeOutbound"
 )
 
 // DeclarativeDeltaOp is one edit against the applied configuration.
@@ -36,6 +45,8 @@ type DeclarativeDeltaOp struct {
 	Rule *DeclarativeRule `json:"rule"`
 	// Outbound upserts an egress keyed by its tag.
 	Outbound *DeclarativeOutbound `json:"outbound"`
+	// OutboundTag names the egress removeOutbound drops.
+	OutboundTag string `json:"outboundTag"`
 }
 
 // DeclarativeDeltaRequest is the incremental form of DeclarativeApplyRequest.
@@ -234,6 +245,32 @@ func applyDeltaOp(config *DeclarativeNodeConfig, op DeclarativeDeltaOp) error {
 			}
 		}
 		config.Outbounds = append(config.Outbounds, *op.Outbound)
+		return nil
+
+	case DeltaOpRemoveOutbound:
+		if op.OutboundTag == "" {
+			return errors.New("outboundTag is required")
+		}
+		at := -1
+		for i := range config.Outbounds {
+			if config.Outbounds[i].Tag == op.OutboundTag {
+				at = i
+				break
+			}
+		}
+		if at < 0 {
+			return fmt.Errorf("outbound %q is not part of the applied configuration", op.OutboundTag)
+		}
+		// An outbound a rule still points at is not removable: the folded state
+		// would fail validation ("routing accounts must target a declared
+		// outbound") several steps later, reported as a hash the control plane
+		// cannot explain. Say it here, naming the account still on it.
+		for _, rule := range config.Routing.Rules {
+			if rule.OutboundTag == op.OutboundTag {
+				return fmt.Errorf("outbound %q still carries account %q; drop the rule first", op.OutboundTag, rule.AccountEmail)
+			}
+		}
+		config.Outbounds = append(config.Outbounds[:at], config.Outbounds[at+1:]...)
 		return nil
 	}
 	return fmt.Errorf("unknown operation %q", op.Op)

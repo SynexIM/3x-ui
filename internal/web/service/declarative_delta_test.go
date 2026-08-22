@@ -348,3 +348,119 @@ func TestApplyDeltaRejectsIncompleteRequests(t *testing.T) {
 		})
 	}
 }
+
+// Releasing an expired line is the everyday delta: the account leaves every
+// inbound, its routing override goes, and the egress it held goes back to the
+// pool. Before removeOutbound existed the egress had nowhere to go, and since
+// configHash covers outbounds, the fold could never reach the hash the control
+// plane had computed — so the whole thing fell back to a full apply, which on a
+// node holding 50k lines means resending 250k clients to delete one.
+func TestReleasingALineIsADeltaAndNotAFullApply(t *testing.T) {
+	base := deltaBaseConfig()
+
+	folded, err := foldDeclarativeDelta(base, []DeclarativeDeltaOp{
+		{Op: DeltaOpRemoveClient, InboundTag: "entry-vless", Email: "line-001@line.invalid"},
+		{Op: DeltaOpRemoveClient, InboundTag: "entry-trojan", Email: "line-001@line.invalid"},
+		{Op: DeltaOpSetRule, Rule: &DeclarativeRule{AccountEmail: "line-001@line.invalid"}},
+		{Op: DeltaOpRemoveOutbound, OutboundTag: "egress-hk-1"},
+	})
+	if err != nil {
+		t.Fatalf("releasing a line must fold: %v", err)
+	}
+
+	// The same state a full apply would have carried: an empty node.
+	expected := deltaBaseConfig()
+	expected.Inbounds[0].Clients = []DeclarativeClient{}
+	expected.Inbounds[1].Clients = []DeclarativeClient{}
+	expected.Outbounds = []DeclarativeOutbound{}
+	expected.Routing.Rules = []DeclarativeRule{}
+
+	foldedHash, err := hashDeclarativeConfig(folded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedHash, err := hashDeclarativeConfig(expected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if foldedHash != expectedHash {
+		gotJSON, _ := json.Marshal(folded)
+		wantJSON, _ := json.Marshal(expected)
+		t.Fatalf("a release must land exactly where the full apply would\ngot:  %s\nwant: %s", gotJSON, wantJSON)
+	}
+	if err := validateDeclarativeRequest(&DeclarativeApplyRequest{Revision: 2, Config: folded}); err != nil {
+		t.Fatalf("the released state must pass the ordinary validation: %v", err)
+	}
+}
+
+// Without removeOutbound the release above is unreachable: every other op can
+// be applied and the fold still differs from the control plane's state by the
+// orphan egress alone.
+func TestWithoutRemovingTheEgressAReleaseCannotReachTheExpectedHash(t *testing.T) {
+	folded, err := foldDeclarativeDelta(deltaBaseConfig(), []DeclarativeDeltaOp{
+		{Op: DeltaOpRemoveClient, InboundTag: "entry-vless", Email: "line-001@line.invalid"},
+		{Op: DeltaOpRemoveClient, InboundTag: "entry-trojan", Email: "line-001@line.invalid"},
+		{Op: DeltaOpSetRule, Rule: &DeclarativeRule{AccountEmail: "line-001@line.invalid"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(folded.Outbounds) != 1 {
+		t.Fatalf("expected the orphan egress to still be there, got %#v", folded.Outbounds)
+	}
+
+	released := deltaBaseConfig()
+	released.Inbounds[0].Clients = []DeclarativeClient{}
+	released.Inbounds[1].Clients = []DeclarativeClient{}
+	released.Outbounds = []DeclarativeOutbound{}
+	released.Routing.Rules = []DeclarativeRule{}
+
+	orphanHash, err := hashDeclarativeConfig(folded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	releasedHash, err := hashDeclarativeConfig(released)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if orphanHash == releasedHash {
+		t.Fatal("an orphan egress must change the hash; otherwise this whole op is pointless")
+	}
+}
+
+func TestRemoveOutboundRefusesWhatDoesNotFit(t *testing.T) {
+	cases := []struct {
+		name string
+		ops  []DeclarativeDeltaOp
+		want string
+	}{
+		{
+			name: "no tag",
+			ops:  []DeclarativeDeltaOp{{Op: DeltaOpRemoveOutbound}},
+			want: "outboundTag is required",
+		},
+		{
+			name: "an egress this node does not have",
+			ops:  []DeclarativeDeltaOp{{Op: DeltaOpRemoveOutbound, OutboundTag: "egress-nowhere"}},
+			want: "not part of the applied configuration",
+		},
+		{
+			// Dropping it would leave a rule pointing at nothing, which the
+			// ordinary validation rejects later with no clue about the cause.
+			name: "an egress an account is still routed to",
+			ops:  []DeclarativeDeltaOp{{Op: DeltaOpRemoveOutbound, OutboundTag: "egress-hk-1"}},
+			want: "still carries account",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := foldDeclarativeDelta(deltaBaseConfig(), c.ops)
+			if err == nil {
+				t.Fatal("the op must be refused")
+			}
+			if !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("refusal should say %q; got %q", c.want, err.Error())
+			}
+		})
+	}
+}

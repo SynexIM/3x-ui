@@ -1328,7 +1328,7 @@ export const sections: readonly Section[] = [
         summary: 'Apply a set of edits against the currently applied declarative config instead of uploading the whole projection again. The ops are folded into a complete desired state and then run through the ordinary apply, so validation, hashing, template building and hot reload are unchanged. Answers 409 with the node config hash when baseHash does not match, which is the signal to fall back to a whole-node apply.',
         params: [
           { name: 'baseHash', in: 'body (json)', type: 'string', desc: 'Config hash this delta was computed against, as returned by /panel/api/xray/status or a previous apply receipt.' },
-          { name: 'ops', in: 'body (json)', type: 'array', desc: 'Edits to fold in: addClient, removeClient, updateClient (each with inboundTag), setRule (empty outboundTag removes the account override), setOutbound (upsert by tag).' },
+          { name: 'ops', in: 'body (json)', type: 'array', desc: 'Edits to fold in: addClient, removeClient, updateClient (each with inboundTag), setRule (empty outboundTag removes the account override), setOutbound (upsert by tag), removeOutbound (by outboundTag; refused while an account is still routed to it).' },
           { name: 'resultHash', in: 'body (json)', type: 'string', desc: 'Config hash the folded state is expected to have. A mismatch is refused before anything is written.' },
         ],
       },
