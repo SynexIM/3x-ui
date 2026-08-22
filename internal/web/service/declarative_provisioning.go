@@ -106,10 +106,14 @@ type DeclarativeCounts struct {
 }
 
 type DeclarativeApplyReceipt struct {
-	AppliedRevision int               `json:"appliedRevision"`
-	HotApplied      bool              `json:"hotApplied"`
-	Restarted       bool              `json:"restarted"`
-	Counts          DeclarativeCounts `json:"counts"`
+	AppliedRevision int `json:"appliedRevision"`
+	// ConfigHash is the identity of the configuration now applied. The control
+	// plane sends it back as the baseHash of its next delta, so it never has to
+	// reproduce the panel's hashing to address the state it is building on.
+	ConfigHash string            `json:"configHash"`
+	HotApplied bool              `json:"hotApplied"`
+	Restarted  bool              `json:"restarted"`
+	Counts     DeclarativeCounts `json:"counts"`
 }
 
 type DeclarativePanelStatus struct {
@@ -118,6 +122,7 @@ type DeclarativePanelStatus struct {
 	CapacityLines   int               `json:"capacityLines"`
 	ActiveClients   int               `json:"activeClients"`
 	AppliedRevision int               `json:"appliedRevision"`
+	ConfigHash      string            `json:"configHash"`
 	Counts          DeclarativeCounts `json:"counts"`
 }
 
@@ -148,6 +153,12 @@ func (s *DeclarativeProvisioningService) Apply(request *DeclarativeApplyRequest)
 	declarativeProvisioningLock.Lock()
 	defer declarativeProvisioningLock.Unlock()
 
+	return s.apply(request)
+}
+
+// apply is the whole apply path, minus the lock. ApplyDelta holds the same lock
+// across reading the applied state and applying the state it derived from it.
+func (s *DeclarativeProvisioningService) apply(request *DeclarativeApplyRequest) (*DeclarativeApplyReceipt, error) {
 	if err := validateDeclarativeRequest(request); err != nil {
 		return nil, err
 	}
@@ -167,7 +178,7 @@ func (s *DeclarativeProvisioningService) Apply(request *DeclarativeApplyRequest)
 			if err := s.XrayService.SetNodeBandwidth(request.Config.NodeBandwidthBps); err != nil {
 				return nil, fmt.Errorf("reconcile node bandwidth: %w", err)
 			}
-			return receiptFor(request, false, false), nil
+			return receiptFor(request, hash, false, false), nil
 		}
 	}
 
@@ -203,7 +214,7 @@ func (s *DeclarativeProvisioningService) Apply(request *DeclarativeApplyRequest)
 	if err := s.SettingService.saveSetting(declarativeProvisioningStateKey, string(encoded)); err != nil {
 		return nil, err
 	}
-	return receiptFor(request, !request.RequiresRestart, request.RequiresRestart), nil
+	return receiptFor(request, hash, !request.RequiresRestart, request.RequiresRestart), nil
 }
 
 func (s *DeclarativeProvisioningService) Status() (*DeclarativePanelStatus, error) {
@@ -225,6 +236,7 @@ func (s *DeclarativeProvisioningService) Status() (*DeclarativePanelStatus, erro
 		}
 	}
 	status.AppliedRevision = state.Request.Revision
+	status.ConfigHash = state.Hash
 	status.Counts = countsFor(state.Request.Config)
 	status.ActiveClients = status.Counts.Clients
 	return status, nil
@@ -481,9 +493,10 @@ func hashDeclarativeConfig(config DeclarativeNodeConfig) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func receiptFor(request *DeclarativeApplyRequest, hotApplied, restarted bool) *DeclarativeApplyReceipt {
+func receiptFor(request *DeclarativeApplyRequest, hash string, hotApplied, restarted bool) *DeclarativeApplyReceipt {
 	return &DeclarativeApplyReceipt{
 		AppliedRevision: request.Revision,
+		ConfigHash:      hash,
 		HotApplied:      hotApplied,
 		Restarted:       restarted,
 		Counts:          countsFor(request.Config),

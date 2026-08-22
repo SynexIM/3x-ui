@@ -46,6 +46,11 @@ func NewXraySettingController(g *gin.RouterGroup) *XraySettingController {
 
 // initRouter sets up the routes for Xray settings management.
 func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
+	// The control plane's incremental surface. Full applies keep riding on
+	// POST /panel/api/xray/update below; this is the same operation with a
+	// smaller request body.
+	g.POST("/declarative/apply-delta", a.applyDeclarativeDelta)
+
 	g = g.Group("/xray")
 	g.GET("/getDefaultJsonConfig", a.getDefaultXrayConfig)
 	g.GET("/getOutboundsTraffic", a.getOutboundsTraffic)
@@ -189,6 +194,39 @@ func (a *XraySettingController) updateDeclarative(c *gin.Context) {
 	}
 	receipt, err := a.ProvisioningService.Apply(request)
 	if err != nil {
+		status := http.StatusUnprocessableEntity
+		if errors.Is(err, service.ErrDeclarativeRevisionConflict) {
+			status = http.StatusConflict
+		}
+		c.JSON(status, gin.H{"reason": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, receipt)
+}
+
+// applyDeclarativeDelta folds a set of edits onto the applied configuration and
+// runs the result through the ordinary apply.
+//
+// A delta computed against a configuration this node is no longer running is
+// answered with 409 and the node's current identity, which is the control
+// plane's signal to recompute or fall back to a full apply.
+func (a *XraySettingController) applyDeclarativeDelta(c *gin.Context) {
+	request := &service.DeclarativeDeltaRequest{}
+	if err := c.ShouldBindJSON(request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"reason": err.Error()})
+		return
+	}
+	receipt, err := a.ProvisioningService.ApplyDelta(request)
+	if err != nil {
+		var mismatch *service.DeclarativeDeltaBaseMismatchError
+		if errors.As(err, &mismatch) {
+			c.JSON(http.StatusConflict, gin.H{
+				"reason":          err.Error(),
+				"configHash":      mismatch.CurrentHash,
+				"appliedRevision": mismatch.CurrentRevision,
+			})
+			return
+		}
 		status := http.StatusUnprocessableEntity
 		if errors.Is(err, service.ErrDeclarativeRevisionConflict) {
 			status = http.StatusConflict
