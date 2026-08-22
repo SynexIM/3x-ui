@@ -314,6 +314,24 @@ func ValidateOutboundConfig(outbound []byte) error {
 	return err
 }
 
+// ValidateInboundConfig builds an inbound JSON object through the vendored
+// xray-core config loader, surfacing the exact error the core would raise at
+// startup.
+//
+// The outbound and routing sections have been validated this way for a long
+// time; inbounds never were, so a malformed one was only discovered when the
+// core exited moments after the config had already been saved.
+func ValidateInboundConfig(inbound []byte) error {
+	ensureXrayAssetLocation()
+
+	detour := new(conf.InboundDetourConfig)
+	if err := json.Unmarshal(inbound, detour); err != nil {
+		return err
+	}
+	_, err := detour.Build()
+	return err
+}
+
 // AddOutbound adds a new outbound configuration to the Xray core via gRPC.
 func (x *XrayAPI) AddOutbound(outbound []byte) error {
 	if x.HandlerServiceClient == nil {

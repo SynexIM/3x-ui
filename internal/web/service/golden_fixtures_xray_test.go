@@ -153,7 +153,7 @@ func assertXrayAccepts(t *testing.T, subject string, err error) {
 	if err == nil {
 		return
 	}
-	if isMissingGeoAssetErr(err) {
+	if mentionsMissingGeoAsset(err) {
 		t.Skipf("geo data files not available, cannot judge %s: %v", subject, err)
 	}
 	t.Fatalf("xray-core refuses %s: %v", subject, err)
@@ -342,9 +342,4 @@ func TestGoldenDNSFixturesBuildInXray(t *testing.T) {
 			assertXrayAccepts(t, "this dns server", build(map[string]any{"servers": []any{server}}))
 		})
 	}
-}
-
-func isMissingGeoAssetErr(err error) bool {
-	msg := err.Error()
-	return strings.Contains(msg, "geoip.dat") || strings.Contains(msg, "geosite.dat")
 }

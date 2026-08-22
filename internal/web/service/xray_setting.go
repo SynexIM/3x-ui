@@ -4,10 +4,12 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
@@ -73,7 +75,89 @@ func (s *XraySettingService) CheckXrayConfig(XrayTemplateConfig string) error {
 			}
 		}
 	}
+	return checkTemplateInbounds(XrayTemplateConfig)
+}
+
+// checkTemplateInbounds builds every inbound in the template through
+// xray-core's own config loader — the check outbounds and routing have always
+// had and inbounds never did.
+//
+// Without it a malformed inbound sailed through SaveXraySetting, was persisted,
+// and only surfaced when the core refused to start, taking every other inbound
+// on the node down with it.
+//
+// Two shapes are deliberately not judged here:
+//   - mtproto is served by the bundled mtg-multi sidecar rather than by xray,
+//     so xray-core has no config id for it;
+//   - an inbound whose certificate or key file is absent would be rejected over
+//     the missing file instead of over its shape. Certificates are issued and
+//     renewed out of band, and a genuinely wrong path still fails the start,
+//     which is now reported rather than swallowed.
+func checkTemplateInbounds(template string) error {
+	var parsed struct {
+		Inbounds []json.RawMessage `json:"inbounds"`
+	}
+	if err := json.Unmarshal([]byte(template), &parsed); err != nil {
+		return common.NewError("xray template config invalid: inbounds is not an array:", err)
+	}
+	for _, inbound := range parsed.Inbounds {
+		meta := struct {
+			Tag      string `json:"tag"`
+			Protocol string `json:"protocol"`
+		}{}
+		_ = json.Unmarshal(inbound, &meta)
+		if model.Protocol(meta.Protocol) == model.MTProto {
+			continue
+		}
+		var decoded any
+		if json.Unmarshal(inbound, &decoded) == nil && referencesMissingFile(decoded) {
+			continue
+		}
+		if err := xray.ValidateInboundConfig(inbound); err != nil {
+			if mentionsMissingGeoAsset(err) {
+				continue
+			}
+			return common.NewError("xray core rejects inbound \""+meta.Tag+"\":", err)
+		}
+	}
 	return nil
+}
+
+// referencesMissingFile reports whether the decoded config points at a
+// certificate or key file that is not on disk.
+func referencesMissingFile(node any) bool {
+	switch value := node.(type) {
+	case map[string]any:
+		for key, child := range value {
+			if key == "certificateFile" || key == "keyFile" {
+				if path, ok := child.(string); ok && path != "" {
+					if _, err := os.Stat(path); err != nil {
+						return true
+					}
+					continue
+				}
+			}
+			if referencesMissingFile(child) {
+				return true
+			}
+		}
+	case []any:
+		for _, child := range value {
+			if referencesMissingFile(child) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// mentionsMissingGeoAsset reports whether the loader failed on an absent geo
+// data file rather than on the config itself. The dat files ship next to the
+// xray binary and are updated out of band, so their absence says nothing about
+// whether the inbound is well formed.
+func mentionsMissingGeoAsset(err error) bool {
+	msg := err.Error()
+	return strings.Contains(msg, "geoip.dat") || strings.Contains(msg, "geosite.dat")
 }
 
 // shouldSkipLegacyUnencryptedOutboundRejection lets an older running Xray
