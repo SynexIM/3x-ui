@@ -55,7 +55,7 @@ RUN --mount=type=secret,id=gh_token \
       go mod edit -replace github.com/xtls/xray-core=/tmp/xray-local; \
       export XRAY_SOURCE_DIR=/tmp/xray-local; \
     fi; \
-    go build -ldflags "-w -s" -o build/x-ui main.go; \
+    go build -ldflags "-w -s -linkmode external -extldflags=-static" -o build/x-ui main.go; \
     XRAY_REPO="$XRAY_REPO" XRAY_REF="$XRAY_REF" ./DockerInit.sh "$TARGETARCH"'
 
 # ========================================================

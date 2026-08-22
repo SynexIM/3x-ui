@@ -139,3 +139,27 @@ func TestDeclarativeRevisionIsAContentIdentityNotASequence(t *testing.T) {
 		t.Fatalf("higher content revision must remain valid: %v", err)
 	}
 }
+
+func TestDeclarativeTemplateKeepsPanelControlPath(t *testing.T) {
+	template, err := (&DeclarativeProvisioningService{}).buildTemplate(DeclarativeNodeConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var config struct {
+		Inbounds []struct {
+			Tag string `json:"tag"`
+		} `json:"inbounds"`
+		Routing struct {
+			Rules []map[string]any `json:"rules"`
+		} `json:"routing"`
+	}
+	if err := json.Unmarshal([]byte(template), &config); err != nil {
+		t.Fatal(err)
+	}
+	if len(config.Inbounds) == 0 || config.Inbounds[0].Tag != "api" {
+		t.Fatalf("panel API inbound was removed: %#v", config.Inbounds)
+	}
+	if len(config.Routing.Rules) == 0 || !isApiRule(config.Routing.Rules[0]) {
+		t.Fatalf("panel API routing rule was removed: %#v", config.Routing.Rules)
+	}
+}

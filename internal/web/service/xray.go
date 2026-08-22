@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/config"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
@@ -830,6 +833,19 @@ func (s *XrayService) SetNodeBandwidth(bitsPerSecond uint64) error {
 		return err
 	}
 	defer api.Close()
+	address := net.JoinHostPort("127.0.0.1", strconv.Itoa(process.GetAPIPort()))
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		connection, err := net.DialTimeout("tcp", address, 100*time.Millisecond)
+		if err == nil {
+			_ = connection.Close()
+			break
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("xray API did not listen on %s: %w", address, err)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 	return api.SetNodeBandwidth(bitsPerSecond)
 }
 

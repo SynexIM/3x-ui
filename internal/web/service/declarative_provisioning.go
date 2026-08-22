@@ -164,7 +164,7 @@ func (s *DeclarativeProvisioningService) Apply(request *DeclarativeApplyRequest)
 	if err := s.XraySettingService.SaveXraySetting(template); err != nil {
 		return nil, err
 	}
-	if err := s.XrayService.RestartXray(false); err != nil {
+	if err := s.XrayService.RestartXray(request.RequiresRestart); err != nil {
 		_ = s.XraySettingService.SaveXraySetting(previousTemplate)
 		_ = s.XrayService.RestartXray(true)
 		return nil, fmt.Errorf("apply declarative xray config: %w", err)
@@ -262,7 +262,16 @@ func (s *DeclarativeProvisioningService) buildTemplate(config DeclarativeNodeCon
 		return "", errors.New("default xray config is not an object")
 	}
 
-	inbounds := make([]any, 0, len(config.Inbounds))
+	inbounds := make([]any, 0, len(config.Inbounds)+1)
+	if defaults, ok := template["inbounds"].([]any); ok {
+		for _, candidate := range defaults {
+			inbound, ok := candidate.(map[string]any)
+			if ok && inbound["tag"] == "api" {
+				inbounds = append(inbounds, inbound)
+				break
+			}
+		}
+	}
 	for _, inbound := range config.Inbounds {
 		panelInbound, err := modelInboundFor(inbound)
 		if err != nil {
@@ -306,7 +315,7 @@ func (s *DeclarativeProvisioningService) buildTemplate(config DeclarativeNodeCon
 	if err != nil {
 		return "", err
 	}
-	return string(encoded), nil
+	return EnsureStatsRouting(string(encoded))
 }
 
 func modelInboundFor(inbound DeclarativeInbound) (*model.Inbound, error) {
