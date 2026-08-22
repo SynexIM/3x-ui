@@ -125,7 +125,7 @@ jobs:
 
           # Download dependencies
           XRAY_VERSION="${XRAY_VERSION:-v26.7.28-synexim.1}"
-          Xray_URL="https://github.com/SynexIM-Labs/xray-core/releases/download/${XRAY_VERSION}/"
+          Xray_URL="https://github.com/SynexIM/xray-core/releases/download/${XRAY_VERSION}/"
           if [ "${{ matrix.platform }}" == "amd64" ]; then
             fetch ${Xray_URL}Xray-linux-64.zip
             unzip Xray-linux-64.zip
@@ -289,7 +289,7 @@ jobs:
 
           # Download Xray for Windows
           $xrayVersion = if ($env:XRAY_VERSION) { $env:XRAY_VERSION } else { "v26.7.28-synexim.1" }
-          $Xray_URL = "https://github.com/SynexIM-Labs/xray-core/releases/download/$xrayVersion/"
+          $Xray_URL = "https://github.com/SynexIM/xray-core/releases/download/$xrayVersion/"
           Invoke-WebRequest @retry -Uri "${Xray_URL}Xray-windows-64.zip" -OutFile "Xray-windows-64.zip"
           Expand-Archive -Path "Xray-windows-64.zip" -DestinationPath .
           Remove-Item "Xray-windows-64.zip"

@@ -40,7 +40,7 @@ type PanelUpdateInfo struct {
 }
 
 const (
-	panelRepository      = "SynexIM-Labs/3x-ui"
+	panelRepository      = "SynexIM/3x-ui"
 	panelUpdaterURL      = "https://raw.githubusercontent.com/" + panelRepository + "/main/update.sh"
 	maxPanelUpdaterBytes = 2 << 20
 	// devReleaseTag is the fixed-tag rolling pre-release the CI force-moves to the
