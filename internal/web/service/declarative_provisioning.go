@@ -16,6 +16,12 @@ import (
 
 const declarativeProvisioningStateKey = "ipveloDeclarativeProvisioningState"
 
+// hysteriaConfigVersion is the only version xray-core builds — both
+// conf.HysteriaServerConfig (the protocol half) and conf.HysteriaConfig (the
+// transport half) answer anything else with "version != 2", and that error
+// rejects the whole config, taking every other inbound on the node down with it.
+const hysteriaConfigVersion = 2
+
 var (
 	ErrDeclarativeRevisionConflict = errors.New("declarative config revision conflicts with the applied revision")
 	// ErrDeclarativelyManaged is returned to a panel-side inbound write while a
@@ -389,12 +395,24 @@ func modelInboundFor(inbound DeclarativeInbound) (*model.Inbound, error) {
 			if client.Password == nil || *client.Password == "" {
 				return nil, fmt.Errorf("%s client %q requires a password", inbound.Protocol, client.Email)
 			}
+		case "hysteria":
+			// Hysteria2 has no UUID: the account is the "auth" token, and
+			// conf.HysteriaUserConfig reads it from that key alone. The shared
+			// line password is that token, so one identity still spans all five
+			// inbounds.
+			if client.Password == nil || *client.Password == "" {
+				return nil, fmt.Errorf("hysteria client %q requires a password to use as its auth token", client.Email)
+			}
+			entry["auth"] = *client.Password
 		}
 		clients = append(clients, entry)
 	}
 	settings["clients"] = clients
 	if inbound.Protocol == "vless" {
 		settings["decryption"] = "none"
+	}
+	if inbound.Protocol == "hysteria" {
+		settings["version"] = hysteriaConfigVersion
 	}
 	stream := cloneMap(inbound.StreamSettings)
 	if reality, ok := stream["reality"].(map[string]any); ok {
@@ -412,6 +430,19 @@ func modelInboundFor(inbound DeclarativeInbound) (*model.Inbound, error) {
 			realitySettings["shortIds"] = []string{shortID}
 		}
 		stream["realitySettings"] = realitySettings
+	}
+	if inbound.Protocol == "hysteria" {
+		// Two things xray-core does not tolerate and the control plane should
+		// not have to remember. The transport has to be hysteria — over any
+		// other network the config still builds, so nothing complains, and the
+		// listener is simply not a hysteria one. And hysteriaSettings has to be
+		// present: transport/internet/hysteria.Listen type-asserts
+		// streamSettings.ProtocolSettings.(*Config), which panics when the
+		// section is absent. Version 2 is the only value Build() accepts.
+		stream["network"] = "hysteria"
+		hysteriaSettings := cloneMap(mapValue(stream, "hysteriaSettings"))
+		hysteriaSettings["version"] = hysteriaConfigVersion
+		stream["hysteriaSettings"] = hysteriaSettings
 	}
 	settingsJSON, err := json.Marshal(settings)
 	if err != nil {
@@ -465,6 +496,17 @@ func validateDeclarativeRequest(request *DeclarativeApplyRequest) error {
 		}
 		switch inbound.Protocol {
 		case "vless", "vmess", "mixed", "shadowsocks", "trojan":
+		case "hysteria":
+			// A hysteria inbound without TLS builds fine and then fails to
+			// listen ("tls config is nil" in hysteria.Listen), which costs a
+			// restart and a rollback to discover. QUIC has no unencrypted mode
+			// to fall back to, so refuse it here instead.
+			if security, _ := inbound.StreamSettings["security"].(string); !strings.EqualFold(security, "tls") {
+				return fmt.Errorf("hysteria inbound %q must use tls; hysteria has no unencrypted mode", inbound.Tag)
+			}
+			if _, ok := inbound.StreamSettings["tlsSettings"].(map[string]any); !ok {
+				return fmt.Errorf("hysteria inbound %q needs tlsSettings with a certificate", inbound.Tag)
+			}
 		default:
 			return fmt.Errorf("unsupported inbound protocol %q", inbound.Protocol)
 		}
@@ -562,6 +604,15 @@ func cloneMap(input map[string]any) map[string]any {
 		output[key] = value
 	}
 	return output
+}
+
+// mapValue returns the nested object at key, or an empty one when it is absent
+// or is not an object.
+func mapValue(input map[string]any, key string) map[string]any {
+	if value, ok := input[key].(map[string]any); ok {
+		return value
+	}
+	return map[string]any{}
 }
 
 func firstNonEmptyString(input map[string]any, keys ...string) string {
