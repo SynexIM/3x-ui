@@ -194,17 +194,10 @@ func (s *DeclarativeProvisioningService) apply(request *DeclarativeApplyRequest)
 		return nil, err
 	}
 	if err := s.XrayService.RestartXray(request.RequiresRestart); err != nil {
-		_ = s.XraySettingService.SaveXraySetting(previousTemplate)
-		_ = s.XrayService.RestartXray(true)
-		return nil, fmt.Errorf("apply declarative xray config: %w", err)
+		return nil, s.rollback(previousTemplate, current, fmt.Errorf("apply declarative xray config: %w", err))
 	}
 	if err := s.XrayService.SetNodeBandwidth(request.Config.NodeBandwidthBps); err != nil {
-		_ = s.XraySettingService.SaveXraySetting(previousTemplate)
-		_ = s.XrayService.RestartXray(true)
-		if current != nil {
-			_ = s.XrayService.SetNodeBandwidth(current.Request.Config.NodeBandwidthBps)
-		}
-		return nil, fmt.Errorf("apply node bandwidth: %w", err)
+		return nil, s.rollback(previousTemplate, current, fmt.Errorf("apply node bandwidth: %w", err))
 	}
 	state := persistedDeclarativeState{Request: *request, Hash: hash}
 	encoded, err := json.Marshal(state)
@@ -215,6 +208,29 @@ func (s *DeclarativeProvisioningService) apply(request *DeclarativeApplyRequest)
 		return nil, err
 	}
 	return receiptFor(request, hash, !request.RequiresRestart, request.RequiresRestart), nil
+}
+
+// rollback puts the previously applied configuration back and returns cause —
+// joined with whatever went wrong on the way back.
+//
+// A rollback that fails quietly is worse than the failure it is undoing: the
+// node keeps the rejected template, and the control plane hears only about the
+// original problem, so neither side knows this node needs a human. The node
+// bandwidth is re-pushed too, because the rollback restart drops it.
+func (s *DeclarativeProvisioningService) rollback(previousTemplate string, previous *persistedDeclarativeState, cause error) error {
+	errs := []error{cause}
+	if err := s.XraySettingService.SaveXraySetting(previousTemplate); err != nil {
+		errs = append(errs, fmt.Errorf("rollback: restoring the previous template failed: %w", err))
+	}
+	if err := s.XrayService.RestartXray(true); err != nil {
+		errs = append(errs, fmt.Errorf("rollback: restarting on the previous template failed: %w", err))
+	}
+	if previous != nil {
+		if err := s.XrayService.SetNodeBandwidth(previous.Request.Config.NodeBandwidthBps); err != nil {
+			errs = append(errs, fmt.Errorf("rollback: restoring node bandwidth failed: %w", err))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func (s *DeclarativeProvisioningService) Status() (*DeclarativePanelStatus, error) {
