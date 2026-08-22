@@ -1053,6 +1053,9 @@
             "format": "int64",
             "type": "integer"
           },
+          "conn_limit": {
+            "type": "integer"
+          },
           "created_at": {
             "description": "Creation timestamp",
             "format": "int64",
@@ -1216,6 +1219,9 @@
             "format": "int64",
             "type": "integer"
           },
+          "conn_limit": {
+            "type": "integer"
+          },
           "createdAt": {
             "format": "int64",
             "type": "integer"
@@ -1298,6 +1304,7 @@
           "comment",
           "committed_bps",
           "committed_burst_bytes",
+          "conn_limit",
           "createdAt",
           "email",
           "enable",
@@ -10452,6 +10459,34 @@
             }
           }
         }
+      },
+      "head": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "Return the SHA-256 ETag of the stored Xray template without returning the template body.",
+        "operationId": "head_panel_api_xray",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/panel/api/xray/getDefaultJsonConfig": {
@@ -10549,8 +10584,230 @@
         "tags": [
           "Xray Settings"
         ],
-        "summary": "Save the Xray JSON config template and optionally the outbound test URL. Both are sent as form fields.",
+        "summary": "Save the interactive form template, or accept one whole declarative IPVelo node projection when Content-Type is application/json. Declarative revisions are content identities: the same revision with different content is rejected.",
         "operationId": "post_panel_api_xray_update",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/xray/status": {
+      "get": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "Return Xray health, measured line capacity, the applied declarative revision, the applied config hash, and current inbound/client/outbound/rule counts.",
+        "operationId": "get_panel_api_xray_status",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/declarative/apply-delta": {
+      "post": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "Apply a set of edits against the currently applied declarative config instead of uploading the whole projection again. The ops are folded into a complete desired state and then run through the ordinary apply, so validation, hashing, template building and hot reload are unchanged. Answers 409 with the node config hash when baseHash does not match, which is the signal to fall back to a whole-node apply.",
+        "operationId": "post_panel_api_declarative_apply_delta",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/declarative/stage": {
+      "post": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "Buffer one slice of a whole-node declarative apply request body. The request body is the raw slice of the JSON document, not a JSON document of its own. Chunks must arrive in order starting at seq 0; the response says which sequence number the panel wants next. Nothing is applied until the upload is committed, and an upload that stops receiving chunks is discarded after ten minutes.",
+        "operationId": "post_panel_api_declarative_stage",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "query",
+            "required": true,
+            "description": "Caller-chosen id tying the chunks of one upload together.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "seq",
+            "in": "query",
+            "required": true,
+            "description": "Zero-based chunk index. A chunk that would leave a hole is refused, and the refusal names the chunk the panel is waiting for.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/declarative/commit": {
+      "post": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "Apply everything staged under one upload id as a single whole-node configuration, through the same path as a single-shot full apply — so an illegal config is still 422 with the previous configuration restored, and a port conflict is still refused here. The upload is consumed whatever the outcome. Answers 404 when the upload is unknown, already committed or expired.",
+        "operationId": "post_panel_api_declarative_commit",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/declarative/abort": {
+      "post": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "Discard a staged upload the control plane has given up on, instead of waiting for it to expire. Always answers 204, including for an upload id the panel does not hold.",
+        "operationId": "post_panel_api_declarative_abort",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "query",
+            "required": true,
+            "description": "The upload to discard.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/xray/delivery/{email}": {
+      "get": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "Generate customer connection strings and PNG QR data URLs from the applied declarative config. The advertised host and port come from each custom share address, never the node listener.",
+        "operationId": "get_panel_api_xray_delivery_email",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Stable line account email.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",

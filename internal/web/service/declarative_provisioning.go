@@ -16,10 +16,8 @@ import (
 
 const declarativeProvisioningStateKey = "ipveloDeclarativeProvisioningState"
 
-// hysteriaConfigVersion is the only version xray-core builds — both
-// conf.HysteriaServerConfig (the protocol half) and conf.HysteriaConfig (the
-// transport half) answer anything else with "version != 2", and that error
-// rejects the whole config, taking every other inbound on the node down with it.
+// The only version xray-core builds, in both the protocol and transport halves.
+// Anything else is "version != 2", which rejects the entire config.
 const hysteriaConfigVersion = 2
 
 var (
@@ -396,10 +394,8 @@ func modelInboundFor(inbound DeclarativeInbound) (*model.Inbound, error) {
 				return nil, fmt.Errorf("%s client %q requires a password", inbound.Protocol, client.Email)
 			}
 		case "hysteria":
-			// Hysteria2 has no UUID: the account is the "auth" token, and
-			// conf.HysteriaUserConfig reads it from that key alone. The shared
-			// line password is that token, so one identity still spans all five
-			// inbounds.
+			// Hysteria2 has no UUID: conf.HysteriaUserConfig reads the account
+			// from "auth" alone, so the line's shared password is that token.
 			if client.Password == nil || *client.Password == "" {
 				return nil, fmt.Errorf("hysteria client %q requires a password to use as its auth token", client.Email)
 			}
@@ -432,13 +428,9 @@ func modelInboundFor(inbound DeclarativeInbound) (*model.Inbound, error) {
 		stream["realitySettings"] = realitySettings
 	}
 	if inbound.Protocol == "hysteria" {
-		// Two things xray-core does not tolerate and the control plane should
-		// not have to remember. The transport has to be hysteria — over any
-		// other network the config still builds, so nothing complains, and the
-		// listener is simply not a hysteria one. And hysteriaSettings has to be
-		// present: transport/internet/hysteria.Listen type-asserts
-		// streamSettings.ProtocolSettings.(*Config), which panics when the
-		// section is absent. Version 2 is the only value Build() accepts.
+		// Both are things the loader lets through: another network builds fine
+		// and is not a hysteria listener, and a missing hysteriaSettings panics
+		// the bare type assertion in hysteria.Listen.
 		stream["network"] = "hysteria"
 		hysteriaSettings := cloneMap(mapValue(stream, "hysteriaSettings"))
 		hysteriaSettings["version"] = hysteriaConfigVersion
@@ -497,10 +489,8 @@ func validateDeclarativeRequest(request *DeclarativeApplyRequest) error {
 		switch inbound.Protocol {
 		case "vless", "vmess", "mixed", "shadowsocks", "trojan":
 		case "hysteria":
-			// A hysteria inbound without TLS builds fine and then fails to
-			// listen ("tls config is nil" in hysteria.Listen), which costs a
-			// restart and a rollback to discover. QUIC has no unencrypted mode
-			// to fall back to, so refuse it here instead.
+			// Without TLS it builds and then fails to listen ("tls config is
+			// nil"), costing a restart and a rollback to discover.
 			if security, _ := inbound.StreamSettings["security"].(string); !strings.EqualFold(security, "tls") {
 				return fmt.Errorf("hysteria inbound %q must use tls; hysteria has no unencrypted mode", inbound.Tag)
 			}

@@ -1333,6 +1333,32 @@ export const sections: readonly Section[] = [
         ],
       },
       {
+        method: 'POST',
+        path: '/panel/api/declarative/stage',
+        summary: 'Buffer one slice of a whole-node declarative apply request body. The request body is the raw slice of the JSON document, not a JSON document of its own. Chunks must arrive in order starting at seq 0; the response says which sequence number the panel wants next. Nothing is applied until the upload is committed, and an upload that stops receiving chunks is discarded after ten minutes.',
+        params: [
+          { name: 'uploadId', in: 'query', type: 'string', desc: 'Caller-chosen id tying the chunks of one upload together.' },
+          { name: 'seq', in: 'query', type: 'integer', desc: 'Zero-based chunk index. A chunk that would leave a hole is refused, and the refusal names the chunk the panel is waiting for.' },
+        ],
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/declarative/commit',
+        summary: 'Apply everything staged under one upload id as a single whole-node configuration, through the same path as a single-shot full apply — so an illegal config is still 422 with the previous configuration restored, and a port conflict is still refused here. The upload is consumed whatever the outcome. Answers 404 when the upload is unknown, already committed or expired.',
+        params: [
+          { name: 'uploadId', in: 'body (json)', type: 'string', desc: 'The upload to commit.' },
+          { name: 'expectedHash', in: 'body (json)', type: 'string', desc: 'Config hash the assembled upload must have. Checked before anything is written, so a truncated or reordered upload is refused rather than applied.' },
+        ],
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/declarative/abort',
+        summary: 'Discard a staged upload the control plane has given up on, instead of waiting for it to expire. Always answers 204, including for an upload id the panel does not hold.',
+        params: [
+          { name: 'uploadId', in: 'query', type: 'string', desc: 'The upload to discard.' },
+        ],
+      },
+      {
         method: 'GET',
         path: '/panel/api/xray/delivery/:email',
         summary: 'Generate customer connection strings and PNG QR data URLs from the applied declarative config. The advertised host and port come from each custom share address, never the node listener.',

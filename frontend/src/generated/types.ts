@@ -250,6 +250,7 @@ export interface Client {
   comment: string;
   committed_bps?: number;
   committed_burst_bytes?: number;
+  conn_limit?: number;
   created_at?: number;
   email: string;
   enable: boolean;
@@ -290,6 +291,7 @@ export interface ClientRecord {
   comment: string;
   committed_bps: number;
   committed_burst_bytes: number;
+  conn_limit: number;
   createdAt: number;
   email: string;
   enable: boolean;

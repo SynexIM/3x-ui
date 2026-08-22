@@ -12,13 +12,8 @@ import (
 // node bandwidth) goes through the full Apply, which stays the reconciliation
 // and repair path.
 //
-// There is no addOutbound: setOutbound upserts by tag, so adding an egress is
-// already one op. removeOutbound is the half that was missing, and its absence
-// was expensive. configHash covers outbounds, so releasing an expired line left
-// an orphan egress behind, the folded hash no longer matched what the control
-// plane computed, and the whole delta was refused — pushing an everyday event
-// onto the full-apply path, which on a node holding 50k lines means resending
-// 250k clients.
+// No addOutbound: setOutbound upserts by tag. removeOutbound is the half that
+// was missing, and without it releasing a line could never reach its resultHash.
 const (
 	DeltaOpAddClient      = "addClient"
 	DeltaOpRemoveClient   = "removeClient"
@@ -261,10 +256,8 @@ func applyDeltaOp(config *DeclarativeNodeConfig, op DeclarativeDeltaOp) error {
 		if at < 0 {
 			return fmt.Errorf("outbound %q is not part of the applied configuration", op.OutboundTag)
 		}
-		// An outbound a rule still points at is not removable: the folded state
-		// would fail validation ("routing accounts must target a declared
-		// outbound") several steps later, reported as a hash the control plane
-		// cannot explain. Say it here, naming the account still on it.
+		// Dropping an egress a rule still points at fails validation several
+		// steps later, as a hash the control plane cannot explain. Say it here.
 		for _, rule := range config.Routing.Rules {
 			if rule.OutboundTag == op.OutboundTag {
 				return fmt.Errorf("outbound %q still carries account %q; drop the rule first", op.OutboundTag, rule.AccountEmail)

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -50,6 +51,12 @@ func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
 	// POST /panel/api/xray/update below; this is the same operation with a
 	// smaller request body.
 	g.POST("/declarative/apply-delta", a.applyDeclarativeDelta)
+
+	// The chunked form of the full apply below: a whole-node projection stops
+	// fitting one request body once a node holds tens of thousands of lines.
+	g.POST("/declarative/stage", a.stageDeclarativeUpload)
+	g.POST("/declarative/commit", a.commitDeclarativeUpload)
+	g.POST("/declarative/abort", a.abortDeclarativeUpload)
 
 	g = g.Group("/xray")
 	g.GET("/getDefaultJsonConfig", a.getDefaultXrayConfig)
@@ -235,6 +242,67 @@ func (a *XraySettingController) applyDeclarativeDelta(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, receipt)
+}
+
+// stageDeclarativeUpload buffers one raw slice of a full apply request body.
+// The slice is not itself JSON, so wrapping it in JSON would only re-escape it.
+func (a *XraySettingController) stageDeclarativeUpload(c *gin.Context) {
+	uploadID := c.Query("uploadId")
+	seq, err := strconv.Atoi(c.Query("seq"))
+	if err != nil || seq < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"reason": "seq must be a non-negative integer"})
+		return
+	}
+	chunk, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"reason": err.Error()})
+		return
+	}
+	receipt, err := a.ProvisioningService.StageChunk(uploadID, seq, chunk)
+	if err != nil {
+		status := http.StatusConflict
+		if errors.Is(err, service.ErrStagedUploadNotFound) {
+			status = http.StatusNotFound
+		}
+		if errors.Is(err, service.ErrStagedUploadTooLarge) {
+			status = http.StatusRequestEntityTooLarge
+		}
+		c.JSON(status, gin.H{"reason": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, receipt)
+}
+
+// commitDeclarativeUpload applies one upload through the same Apply a
+// single-shot full apply uses, so 422-and-rollback behaves identically.
+func (a *XraySettingController) commitDeclarativeUpload(c *gin.Context) {
+	request := &struct {
+		UploadID     string `json:"uploadId"`
+		ExpectedHash string `json:"expectedHash"`
+	}{}
+	if err := c.ShouldBindJSON(request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"reason": err.Error()})
+		return
+	}
+	receipt, err := a.ProvisioningService.CommitStaged(request.UploadID, request.ExpectedHash)
+	if err != nil {
+		status := http.StatusUnprocessableEntity
+		switch {
+		case errors.Is(err, service.ErrStagedUploadNotFound):
+			status = http.StatusNotFound
+		case errors.Is(err, service.ErrDeclarativeRevisionConflict):
+			status = http.StatusConflict
+		}
+		c.JSON(status, gin.H{"reason": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, receipt)
+}
+
+// abortDeclarativeUpload frees an abandoned upload without waiting for the TTL.
+func (a *XraySettingController) abortDeclarativeUpload(c *gin.Context) {
+	a.ProvisioningService.AbortStagedUpload(c.Query("uploadId"))
+	c.Status(http.StatusNoContent)
 }
 
 func (a *XraySettingController) declarativeStatus(c *gin.Context) {

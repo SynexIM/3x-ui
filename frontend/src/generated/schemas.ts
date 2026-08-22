@@ -1027,6 +1027,9 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "type": "integer"
       },
+      "conn_limit": {
+        "type": "integer"
+      },
       "created_at": {
         "description": "Creation timestamp",
         "format": "int64",
@@ -1190,6 +1193,9 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "type": "integer"
       },
+      "conn_limit": {
+        "type": "integer"
+      },
       "createdAt": {
         "format": "int64",
         "type": "integer"
@@ -1272,6 +1278,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "comment",
       "committed_bps",
       "committed_burst_bytes",
+      "conn_limit",
       "createdAt",
       "email",
       "enable",
