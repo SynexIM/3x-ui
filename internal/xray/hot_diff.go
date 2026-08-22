@@ -336,12 +336,6 @@ func splitSettingsUsers(
 	return splitSettingsEntries(raw, usersKey, emailKey, nil)
 }
 
-// splitSettingsClients indexes settings.clients by email and returns the rest of
-// the settings in canonical form; ok is false when a client has no unique email.
-func splitSettingsClients(raw json_util.RawMessage) (map[string]clientEntry, []byte, bool) {
-	return splitSettingsEntries(raw, "clients", "email", nil)
-}
-
 func splitSettingsClientsWithInherited(
 	raw json_util.RawMessage,
 	inheritedKey string,

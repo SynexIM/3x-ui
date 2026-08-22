@@ -16,8 +16,10 @@ type SubLinkProvider interface {
 	LinksForInbounds(host string, inbounds []*model.Inbound) []string
 }
 
-var endpointHostnamePattern = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$`)
-var ErrInvalidEndpointOverride = common.NewError("protocol, host and port must be provided together")
+var (
+	endpointHostnamePattern    = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$`)
+	ErrInvalidEndpointOverride = common.NewError("protocol, host and port must be provided together")
+)
 
 var registeredSubLinkProvider SubLinkProvider
 

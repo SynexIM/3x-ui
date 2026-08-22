@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -834,14 +835,18 @@ func (s *XrayService) SetNodeBandwidth(bitsPerSecond uint64) error {
 	}
 	defer api.Close()
 	address := net.JoinHostPort("127.0.0.1", strconv.Itoa(process.GetAPIPort()))
-	deadline := time.Now().Add(5 * time.Second)
+	// One context bounds the whole wait, so a dial that hangs cannot push the
+	// readiness check past the deadline the caller was promised.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	dialer := &net.Dialer{Timeout: 100 * time.Millisecond}
 	for {
-		connection, err := net.DialTimeout("tcp", address, 100*time.Millisecond)
+		connection, err := dialer.DialContext(ctx, "tcp", address)
 		if err == nil {
 			_ = connection.Close()
 			break
 		}
-		if time.Now().After(deadline) {
+		if ctx.Err() != nil {
 			return fmt.Errorf("xray API did not listen on %s: %w", address, err)
 		}
 		time.Sleep(50 * time.Millisecond)
