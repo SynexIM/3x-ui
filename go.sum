@@ -2,8 +2,8 @@ github.com/Azure/go-ntlmssp v0.1.1 h1:l+FM/EEMb0U9QZE7mKNEDw5Mu3mFiaa2GKOoTSsNDP
 github.com/Azure/go-ntlmssp v0.1.1/go.mod h1:NYqdhxd/8aAct/s4qSYZEerdPuH1liG2/X9DiVTbhpk=
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/SynexIM/xray-core v0.0.0-20260813201846-9e3f24656572 h1:2Hg+rWrsHogimSi30xtWpOW54I2puw7RP2UWAtuSBuY=
-github.com/SynexIM/xray-core v0.0.0-20260813201846-9e3f24656572/go.mod h1:wukQoBGnQ6GaLTGuKwv8rCTgf80QxPj+6iznDZHQEWo=
+github.com/SynexIM/xray-core v0.0.0-20260822163046-09c931b3d2b0 h1:BjBAiFTMQhaW28rP3A3Ya8nQ/zubIeZvPAXBR4gA38E=
+github.com/SynexIM/xray-core v0.0.0-20260822163046-09c931b3d2b0/go.mod h1:wukQoBGnQ6GaLTGuKwv8rCTgf80QxPj+6iznDZHQEWo=
 github.com/alexbrainman/sspi v0.0.0-20250919150558-7d374ff0d59e h1:4dAU9FXIyQktpoUAgOJK3OTFc/xug0PCXYCqU0FgDKI=
 github.com/alexbrainman/sspi v0.0.0-20250919150558-7d374ff0d59e/go.mod h1:cEWa1LVoE5KvSD9ONXsZrj0z6KqySlCCNKHlLzbqAt4=
 github.com/andybalholm/brotli v1.2.2 h1:HzTuoo2ErYQqf5qvcJInB8uvqSVxRttzkFexPWtnceM=
