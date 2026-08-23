@@ -57,6 +57,25 @@ function tryParseJson(raw) {
   }
 }
 
+// The four body locations the endpoint table declares. Only the bare "body" one
+// was ever recognised, so 69 of the 78 documented body parameters silently
+// vanished from the spec — every declarative endpoint among them.
+const BODY_MEDIA_TYPES = {
+  body: 'application/json',
+  'body (json)': 'application/json',
+  'body (form)': 'application/x-www-form-urlencoded',
+  'body (multipart)': 'multipart/form-data',
+  'body (raw)': 'application/octet-stream',
+};
+
+// Body properties carry shapes parameters never do: uploads and arrays of rows.
+function propertySchema(p) {
+  const raw = String(p.type || '').toLowerCase();
+  if (raw === 'file') return { type: 'string', format: 'binary' };
+  if (raw.endsWith('[]')) return { type: 'array', items: { type: mapType(raw.slice(0, -2)) } };
+  return { type: mapType(raw) };
+}
+
 function paramToOpenApi(p) {
   const out = {
     name: p.name,
@@ -79,10 +98,12 @@ function buildOperation(ep, tag) {
   if (ep.deprecated) op.deprecated = true;
 
   const params = [];
-  const bodyParams = [];
+  const bodyByMediaType = new Map();
   for (const p of ep.params || []) {
-    if (p.in === 'body') {
-      bodyParams.push(p);
+    const mediaType = BODY_MEDIA_TYPES[p.in];
+    if (mediaType) {
+      if (!bodyByMediaType.has(mediaType)) bodyByMediaType.set(mediaType, []);
+      bodyByMediaType.get(mediaType).push(p);
     } else if (p.in === 'path' || p.in === 'query' || p.in === 'header') {
       params.push(paramToOpenApi(p));
     }
@@ -103,29 +124,43 @@ function buildOperation(ep, tag) {
 
   if (params.length > 0) op.parameters = params;
 
-  if (ep.body || bodyParams.length > 0) {
+  if (ep.body || bodyByMediaType.size > 0) {
     const example = tryParseJson(ep.body);
-    const properties = {};
-    const required = [];
-    for (const bp of bodyParams) {
-      properties[bp.name] = {
-        type: mapType(bp.type),
-        description: bp.desc || '',
+    const content = {};
+    let anyRequired = false;
+    // An endpoint that takes either a form or a JSON document (the declarative
+    // apply is one) gets one content entry per media type it accepts.
+    for (const [mediaType, bodyParams] of bodyByMediaType) {
+      // A raw body is the bytes themselves, not an object with one field in it.
+      if (mediaType === 'application/octet-stream') {
+        anyRequired = true;
+        content[mediaType] = {
+          schema: { type: 'string', format: 'binary', description: bodyParams[0]?.desc || '' },
+        };
+        continue;
+      }
+      const properties = {};
+      const required = [];
+      for (const bp of bodyParams) {
+        properties[bp.name] = { ...propertySchema(bp), description: bp.desc || '' };
+        if (!bp.optional) required.push(bp.name);
+      }
+      if (required.length > 0) anyRequired = true;
+      content[mediaType] = {
+        schema: { type: 'object', properties, ...(required.length > 0 ? { required } : {}) },
       };
-      if (!bp.optional) required.push(bp.name);
     }
-    const schema = bodyParams.length > 0
-      ? { type: 'object', properties, ...(required.length > 0 ? { required } : {}) }
-      : { type: 'object' };
+    if (bodyByMediaType.size === 0) {
+      content['application/json'] = { schema: { type: 'object' } };
+    }
+    if (example !== undefined) {
+      const target = content['application/json'] ? 'application/json' : Object.keys(content)[0];
+      content[target].example = example;
+    }
 
     op.requestBody = {
-      required: required.length > 0 || bodyParams.length === 0,
-      content: {
-        'application/json': {
-          schema,
-          ...(example !== undefined ? { example } : {}),
-        },
-      },
+      required: anyRequired || bodyByMediaType.size === 0,
+      content,
     };
   }
 

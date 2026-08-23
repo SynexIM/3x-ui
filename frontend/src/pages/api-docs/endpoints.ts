@@ -6,7 +6,8 @@ export type ParamLocation =
   | 'body'
   | 'body (form)'
   | 'body (json)'
-  | 'body (multipart)';
+  | 'body (multipart)'
+  | 'body (raw)';
 export type ParamType =
   | 'string'
   | 'integer'
@@ -1339,6 +1340,7 @@ export const sections: readonly Section[] = [
         params: [
           { name: 'uploadId', in: 'query', type: 'string', desc: 'Caller-chosen id tying the chunks of one upload together.' },
           { name: 'seq', in: 'query', type: 'integer', desc: 'Zero-based chunk index. A chunk that would leave a hole is refused, and the refusal names the chunk the panel is waiting for.' },
+          { name: 'chunk', in: 'body (raw)', type: 'file', desc: 'One raw slice of the apply request JSON document, sent as the request body. It is not JSON on its own: concatenating every chunk in seq order must reproduce the document byte for byte.' },
         ],
       },
       {
