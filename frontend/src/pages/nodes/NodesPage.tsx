@@ -16,6 +16,7 @@ import type { NodeRecord } from '@/api/queries/useNodesQuery';
 import { useNodeMutations } from '@/api/queries/useNodeMutations';
 import AppSidebar from '@/layouts/AppSidebar';
 import NodeList from './NodeList';
+import NodeFairSharePanel from './NodeFairSharePanel';
 import NodeFormModal from './NodeFormModal';
 import { setMessageInstance } from '@/utils/messageBus';
 import { HttpUtil } from '@/utils';
@@ -274,6 +275,10 @@ export default function NodesPage() {
                         </Col>
                       </Row>
                     </Card>
+                  </Col>
+
+                  <Col span={24}>
+                    <NodeFairSharePanel />
                   </Col>
 
                   <Col span={24}>
