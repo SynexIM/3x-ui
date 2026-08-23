@@ -1389,6 +1389,169 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "FairShareClassPolicy": {
+    "description": "FairShareClassPolicy is one class (= one SKU) contention policy.\nEvery rate is bit/s and 0 means \"not enabled\", never \"use a default\".",
+    "properties": {
+      "burstCapBitPerSec": {
+        "example": 50000000,
+        "format": "int64",
+        "type": "integer"
+      },
+      "burstCreditBytes": {
+        "example": 1000000000,
+        "format": "int64",
+        "type": "integer"
+      },
+      "floorRatioPercent": {
+        "example": 20,
+        "type": "integer"
+      },
+      "name": {
+        "example": "live",
+        "type": "string"
+      },
+      "normalCapBitPerSec": {
+        "example": 20000000,
+        "format": "int64",
+        "type": "integer"
+      },
+      "weight": {
+        "example": 3,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "burstCapBitPerSec",
+      "burstCreditBytes",
+      "floorRatioPercent",
+      "name",
+      "normalCapBitPerSec",
+      "weight"
+    ],
+    "type": "object"
+  },
+  "FairSharePolicy": {
+    "description": "FairSharePolicy is the whole node-level fair-share configuration the panel owns.",
+    "properties": {
+      "availBitPerSec": {
+        "example": 1000000000,
+        "format": "int64",
+        "type": "integer"
+      },
+      "classes": {
+        "items": {
+          "$ref": "#/components/schemas/FairShareClassPolicy"
+        },
+        "type": "array"
+      },
+      "congestionEnterPercent": {
+        "example": 85,
+        "type": "integer"
+      },
+      "congestionExitPercent": {
+        "example": 70,
+        "type": "integer"
+      },
+      "congestionExitTicks": {
+        "example": 5,
+        "type": "integer"
+      },
+      "hardFloorBitPerSec": {
+        "example": 0,
+        "format": "int64",
+        "type": "integer"
+      },
+      "softFloorBitPerSec": {
+        "example": 500000,
+        "format": "int64",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "availBitPerSec",
+      "classes",
+      "congestionEnterPercent",
+      "congestionExitPercent",
+      "congestionExitTicks",
+      "hardFloorBitPerSec",
+      "softFloorBitPerSec"
+    ],
+    "type": "object"
+  },
+  "FairSharePolicyView": {
+    "description": "FairSharePolicyView is what the node page reads: the policy plus the reason\nits controls may be read-only.",
+    "properties": {
+      "declarativelyManaged": {
+        "description": "DeclarativelyManaged mirrors the server-side refusal so the form can grey\nitself out instead of failing on submit.",
+        "example": false,
+        "type": "boolean"
+      },
+      "policy": {
+        "$ref": "#/components/schemas/FairSharePolicy"
+      }
+    },
+    "required": [
+      "declarativelyManaged",
+      "policy"
+    ],
+    "type": "object"
+  },
+  "FairShareStatusView": {
+    "description": "FairShareStatusView is the scheduler's runtime state, in panel units.",
+    "properties": {
+      "activeMembers": {
+        "example": 12,
+        "type": "integer"
+      },
+      "congested": {
+        "example": false,
+        "type": "boolean"
+      },
+      "fillRounds": {
+        "example": 3,
+        "type": "integer"
+      },
+      "fillTruncated": {
+        "example": false,
+        "type": "boolean"
+      },
+      "fillTruncatedTicks": {
+        "example": 0,
+        "format": "int64",
+        "type": "integer"
+      },
+      "fillTruncatedTotalTicks": {
+        "example": 0,
+        "format": "int64",
+        "type": "integer"
+      },
+      "fillUnresolvedMembers": {
+        "example": 0,
+        "type": "integer"
+      },
+      "rootCapBitPerSec": {
+        "example": 1000000000,
+        "format": "int64",
+        "type": "integer"
+      },
+      "running": {
+        "example": true,
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "activeMembers",
+      "congested",
+      "fillRounds",
+      "fillTruncated",
+      "fillTruncatedTicks",
+      "fillTruncatedTotalTicks",
+      "fillUnresolvedMembers",
+      "rootCapBitPerSec",
+      "running"
+    ],
+    "type": "object"
+  },
   "FallbackParentInfo": {
     "description": "FallbackParentInfo carries everything the frontend needs to rewrite a\nchild inbound's client link: where to connect (the master's address\nand port) and which path matched on the master's fallbacks array.\nThe frontend already has the master inbound in its dbInbounds list,\nso we only ship identifiers + the match path here.",
     "properties": {

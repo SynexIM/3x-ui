@@ -983,7 +983,9 @@
         "updateStarted": "Actualización del panel iniciada",
         "updateResult": "Actualización iniciada en {ok} nodo(s), {failed} fallaron",
         "updateNoneEligible": "Selecciona al menos un nodo en línea y habilitado",
-        "saveMtls": "Guardar mTLS del nodo"
+        "saveMtls": "Guardar mTLS del nodo",
+        "fairShare": "No se pudieron cargar los límites de velocidad del nodo",
+        "saveFairShare": "Guardar límites de velocidad del nodo"
       },
       "tlsVerifyMode": "Verificación TLS",
       "tlsVerifyModeHint": "Cómo valida el panel el certificado HTTPS del nodo. Fijar u Omitir son para certificados autofirmados (solo nodos https).",

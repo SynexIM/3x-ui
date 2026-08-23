@@ -77,6 +77,10 @@ func run(root, outDir string) error {
 		{
 			Path: resolveRel(root, "internal/web/service"),
 			StructAllow: setOf(
+				"FairShareClassPolicy",
+				"FairSharePolicy",
+				"FairSharePolicyView",
+				"FairShareStatusView",
 				"InboundOption",
 				"NodeMutationRequest",
 				"NodeView",

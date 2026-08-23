@@ -357,6 +357,46 @@ export const ClientTrafficSchema = z.object({
 });
 export type ClientTraffic = z.infer<typeof ClientTrafficSchema>;
 
+export const FairShareClassPolicySchema = z.object({
+  burstCapBitPerSec: z.number().int(),
+  burstCreditBytes: z.number().int(),
+  floorRatioPercent: z.number().int(),
+  name: z.string(),
+  normalCapBitPerSec: z.number().int(),
+  weight: z.number().int(),
+});
+export type FairShareClassPolicy = z.infer<typeof FairShareClassPolicySchema>;
+
+export const FairSharePolicySchema = z.object({
+  availBitPerSec: z.number().int(),
+  classes: z.array(z.lazy(() => FairShareClassPolicySchema)),
+  congestionEnterPercent: z.number().int(),
+  congestionExitPercent: z.number().int(),
+  congestionExitTicks: z.number().int(),
+  hardFloorBitPerSec: z.number().int(),
+  softFloorBitPerSec: z.number().int(),
+});
+export type FairSharePolicy = z.infer<typeof FairSharePolicySchema>;
+
+export const FairSharePolicyViewSchema = z.object({
+  declarativelyManaged: z.boolean(),
+  policy: z.lazy(() => FairSharePolicySchema),
+});
+export type FairSharePolicyView = z.infer<typeof FairSharePolicyViewSchema>;
+
+export const FairShareStatusViewSchema = z.object({
+  activeMembers: z.number().int(),
+  congested: z.boolean(),
+  fillRounds: z.number().int(),
+  fillTruncated: z.boolean(),
+  fillTruncatedTicks: z.number().int(),
+  fillTruncatedTotalTicks: z.number().int(),
+  fillUnresolvedMembers: z.number().int(),
+  rootCapBitPerSec: z.number().int(),
+  running: z.boolean(),
+});
+export type FairShareStatusView = z.infer<typeof FairShareStatusViewSchema>;
+
 export const FallbackParentInfoSchema = z.object({
   masterId: z.number().int(),
   path: z.string().optional(),

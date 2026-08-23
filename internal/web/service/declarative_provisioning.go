@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
+	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
 
 const declarativeProvisioningStateKey = "ipveloDeclarativeProvisioningState"
@@ -179,7 +180,7 @@ func (s *DeclarativeProvisioningService) apply(request *DeclarativeApplyRequest)
 			return nil, ErrDeclarativeRevisionConflict
 		}
 		if request.Revision == current.Request.Revision {
-			if err := s.XrayService.SetNodeBandwidth(request.Config.NodeBandwidthBps); err != nil {
+			if err := s.XrayService.SetNodeBandwidth(xray.NodeFairShare{AvailBitPerSec: request.Config.NodeBandwidthBps}); err != nil {
 				return nil, fmt.Errorf("reconcile node bandwidth: %w", err)
 			}
 			return receiptFor(request, hash, false, false), nil
@@ -200,7 +201,7 @@ func (s *DeclarativeProvisioningService) apply(request *DeclarativeApplyRequest)
 	if err := s.XrayService.RestartXray(request.RequiresRestart); err != nil {
 		return nil, s.rollback(previousTemplate, current, fmt.Errorf("apply declarative xray config: %w", err))
 	}
-	if err := s.XrayService.SetNodeBandwidth(request.Config.NodeBandwidthBps); err != nil {
+	if err := s.XrayService.SetNodeBandwidth(xray.NodeFairShare{AvailBitPerSec: request.Config.NodeBandwidthBps}); err != nil {
 		return nil, s.rollback(previousTemplate, current, fmt.Errorf("apply node bandwidth: %w", err))
 	}
 	state := persistedDeclarativeState{Request: *request, Hash: hash}
@@ -230,7 +231,7 @@ func (s *DeclarativeProvisioningService) rollback(previousTemplate string, previ
 		errs = append(errs, fmt.Errorf("rollback: restarting on the previous template failed: %w", err))
 	}
 	if previous != nil {
-		if err := s.XrayService.SetNodeBandwidth(previous.Request.Config.NodeBandwidthBps); err != nil {
+		if err := s.XrayService.SetNodeBandwidth(xray.NodeFairShare{AvailBitPerSec: previous.Request.Config.NodeBandwidthBps}); err != nil {
 			errs = append(errs, fmt.Errorf("rollback: restoring node bandwidth failed: %w", err))
 		}
 	}
@@ -251,7 +252,7 @@ func (s *DeclarativeProvisioningService) Status() (*DeclarativePanelStatus, erro
 		return status, nil
 	}
 	if status.Healthy {
-		if err := s.XrayService.SetNodeBandwidth(state.Request.Config.NodeBandwidthBps); err != nil {
+		if err := s.XrayService.SetNodeBandwidth(xray.NodeFairShare{AvailBitPerSec: state.Request.Config.NodeBandwidthBps}); err != nil {
 			return nil, fmt.Errorf("reconcile node bandwidth: %w", err)
 		}
 	}

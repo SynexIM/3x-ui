@@ -824,7 +824,34 @@ func ensureAPIServices(api json_util.RawMessage) json_util.RawMessage {
 	return out
 }
 
-func (s *XrayService) SetNodeBandwidth(bitsPerSecond uint64) error {
+func (s *XrayService) SetNodeBandwidth(policy xray.NodeFairShare) error {
+	return s.withReadyFairShareAPI(func(api *xray.XrayAPI) error {
+		return api.SetNodeBandwidth(policy)
+	})
+}
+
+// SetClassPolicy replaces the scheduler's whole class table; classes missing
+// from the slice are deleted from the running core.
+func (s *XrayService) SetClassPolicy(classes []xray.ClassFairShare) error {
+	return s.withReadyFairShareAPI(func(api *xray.XrayAPI) error {
+		return api.SetClassPolicy(classes)
+	})
+}
+
+func (s *XrayService) GetFairShareStatus() (*xray.FairShareStatus, error) {
+	var status *xray.FairShareStatus
+	err := s.withReadyFairShareAPI(func(api *xray.XrayAPI) error {
+		got, err := api.GetFairShareStatus()
+		status = got
+		return err
+	})
+	return status, err
+}
+
+// withReadyFairShareAPI opens the core API only once the port actually accepts
+// connections: the fair-share calls run right after a restart, when the process
+// exists but its gRPC listener may not be up yet.
+func (s *XrayService) withReadyFairShareAPI(call func(api *xray.XrayAPI) error) error {
 	process := currentXrayProcess()
 	if process == nil || !process.IsRunning() {
 		return errors.New("xray is not running")
@@ -851,7 +878,7 @@ func (s *XrayService) SetNodeBandwidth(bitsPerSecond uint64) error {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	return api.SetNodeBandwidth(bitsPerSecond)
+	return call(&api)
 }
 
 // ensureStatsPolicy guarantees every policy level in the generated config has
@@ -1212,6 +1239,10 @@ func (s *XrayService) RestartXray(isForce bool) error {
 	if err != nil {
 		return err
 	}
+
+	// A fresh core starts with an empty fair-share scheduler. Off the goroutine
+	// because pushing waits for the core's API port, and `lock` is still held.
+	go (&FairShareService{}).Reapply()
 
 	return nil
 }

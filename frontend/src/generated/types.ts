@@ -336,6 +336,42 @@ export interface ClientTraffic {
   uuid: string;
 }
 
+export interface FairShareClassPolicy {
+  burstCapBitPerSec: number;
+  burstCreditBytes: number;
+  floorRatioPercent: number;
+  name: string;
+  normalCapBitPerSec: number;
+  weight: number;
+}
+
+export interface FairSharePolicy {
+  availBitPerSec: number;
+  classes: FairShareClassPolicy[];
+  congestionEnterPercent: number;
+  congestionExitPercent: number;
+  congestionExitTicks: number;
+  hardFloorBitPerSec: number;
+  softFloorBitPerSec: number;
+}
+
+export interface FairSharePolicyView {
+  declarativelyManaged: boolean;
+  policy: FairSharePolicy;
+}
+
+export interface FairShareStatusView {
+  activeMembers: number;
+  congested: boolean;
+  fillRounds: number;
+  fillTruncated: boolean;
+  fillTruncatedTicks: number;
+  fillTruncatedTotalTicks: number;
+  fillUnresolvedMembers: number;
+  rootCapBitPerSec: number;
+  running: boolean;
+}
+
 export interface FallbackParentInfo {
   masterId: number;
   path?: string;

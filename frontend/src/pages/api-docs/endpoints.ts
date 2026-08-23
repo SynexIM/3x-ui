@@ -1037,6 +1037,24 @@ export const sections: readonly Section[] = [
           { name: 'bucket', in: 'path', type: 'number', desc: 'Bucket size in seconds. Allowed: 2, 30, 60, 120, 180, 300.' },
         ],
       },
+      {
+        method: 'GET',
+        path: '/panel/api/nodes/fairshare',
+        summary: "This panel's own node-level fair-share policy, plus whether a control plane owns it (declarativelyManaged), in which case the panel refuses writes. Every rate is bit/s; 0 means the field is not enabled, never a default.",
+        responseSchema: 'FairSharePolicyView',
+      },
+      {
+        method: 'GET',
+        path: '/panel/api/nodes/fairshare/status',
+        summary: "Live state of the local core's fair-share scheduler. `congested` is the first thing to check when limits look like they do nothing: outside fair mode nothing is shaped at all. The fill* fields report water-filling truncation, which is an approximation, not a fault. running=false means the core is down and there are no numbers yet.",
+        responseSchema: 'FairShareStatusView',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/nodes/fairshare',
+        summary: 'Save and push the node-level fair-share policy to the running core (SetNodeBandwidth + SetClassPolicy). The class list is replaced whole: a class left out is deleted. Rejected while the node is declaratively managed.',
+        body: '{\n  "availBitPerSec": 1000000000,\n  "softFloorBitPerSec": 500000,\n  "hardFloorBitPerSec": 0,\n  "congestionEnterPercent": 85,\n  "congestionExitPercent": 70,\n  "congestionExitTicks": 5,\n  "classes": [\n    {\n      "name": "live",\n      "weight": 3,\n      "normalCapBitPerSec": 20000000,\n      "burstCapBitPerSec": 50000000,\n      "burstCreditBytes": 1000000000,\n      "floorRatioPercent": 20\n    }\n  ]\n}',
+      },
     ],
   },
 

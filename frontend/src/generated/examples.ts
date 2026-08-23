@@ -323,6 +323,64 @@ export const EXAMPLES: Record<string, unknown> = {
     "up": 1048576,
     "uuid": "e18c9a96-71bf-48d4-933f-8b9a46d4290c"
   },
+  "FairShareClassPolicy": {
+    "burstCapBitPerSec": 50000000,
+    "burstCreditBytes": 1000000000,
+    "floorRatioPercent": 20,
+    "name": "live",
+    "normalCapBitPerSec": 20000000,
+    "weight": 3
+  },
+  "FairSharePolicy": {
+    "availBitPerSec": 1000000000,
+    "classes": [
+      {
+        "burstCapBitPerSec": 50000000,
+        "burstCreditBytes": 1000000000,
+        "floorRatioPercent": 20,
+        "name": "live",
+        "normalCapBitPerSec": 20000000,
+        "weight": 3
+      }
+    ],
+    "congestionEnterPercent": 85,
+    "congestionExitPercent": 70,
+    "congestionExitTicks": 5,
+    "hardFloorBitPerSec": 0,
+    "softFloorBitPerSec": 500000
+  },
+  "FairSharePolicyView": {
+    "declarativelyManaged": false,
+    "policy": {
+      "availBitPerSec": 1000000000,
+      "classes": [
+        {
+          "burstCapBitPerSec": 50000000,
+          "burstCreditBytes": 1000000000,
+          "floorRatioPercent": 20,
+          "name": "live",
+          "normalCapBitPerSec": 20000000,
+          "weight": 3
+        }
+      ],
+      "congestionEnterPercent": 85,
+      "congestionExitPercent": 70,
+      "congestionExitTicks": 5,
+      "hardFloorBitPerSec": 0,
+      "softFloorBitPerSec": 500000
+    }
+  },
+  "FairShareStatusView": {
+    "activeMembers": 12,
+    "congested": false,
+    "fillRounds": 3,
+    "fillTruncated": false,
+    "fillTruncatedTicks": 0,
+    "fillTruncatedTotalTicks": 0,
+    "fillUnresolvedMembers": 0,
+    "rootCapBitPerSec": 1000000000,
+    "running": true
+  },
   "FallbackParentInfo": {
     "masterId": 0,
     "path": ""

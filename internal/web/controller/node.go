@@ -16,8 +16,9 @@ import (
 )
 
 type NodeController struct {
-	nodeService service.NodeService
-	xrayService service.XrayService
+	nodeService      service.NodeService
+	xrayService      service.XrayService
+	fairShareService service.FairShareService
 }
 
 func NewNodeController(g *gin.RouterGroup) *NodeController {
@@ -44,6 +45,45 @@ func (a *NodeController) initRouter(g *gin.RouterGroup) {
 	g.GET("/history/:id/:metric/:bucket", a.history)
 	g.POST("/mtls/ca", a.mtlsCa)
 	g.POST("/mtls/trustCA", a.setMtlsTrustCA)
+
+	g.GET("/fairshare", a.fairShare)
+	g.GET("/fairshare/status", a.fairShareStatus)
+	g.POST("/fairshare", a.setFairShare)
+}
+
+// fairShare returns this panel's own node-level fair-share policy, plus whether
+// a control plane owns it and the form must therefore be read-only.
+func (a *NodeController) fairShare(c *gin.Context) {
+	view, err := a.fairShareService.GetPolicyView()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.nodes.toasts.fairShare"), err)
+		return
+	}
+	jsonObj(c, view, nil)
+}
+
+// fairShareStatus reports the running scheduler's state — above all `congested`,
+// which answers "why does none of my tuning do anything" before anyone tunes further.
+func (a *NodeController) fairShareStatus(c *gin.Context) {
+	status, err := a.fairShareService.GetStatus()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.nodes.toasts.fairShare"), err)
+		return
+	}
+	jsonObj(c, status, nil)
+}
+
+func (a *NodeController) setFairShare(c *gin.Context) {
+	policy := &service.FairSharePolicy{}
+	if err := c.ShouldBind(policy); err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.nodes.toasts.saveFairShare"), err)
+		return
+	}
+	if err := a.fairShareService.SavePolicy(policy); err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.nodes.toasts.saveFairShare"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.nodes.toasts.saveFairShare"), nil)
 }
 
 // mtlsCa returns this panel's node-auth CA certificate (public) to paste into a

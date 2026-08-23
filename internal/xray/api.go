@@ -173,18 +173,6 @@ func (x *XrayAPI) Close() {
 	x.isConnected = false
 }
 
-func (x *XrayAPI) SetNodeBandwidth(bitsPerSecond uint64) error {
-	if x.FairShareServiceClient == nil {
-		return common.NewError("xray FairShareServiceClient is not initialized")
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), handlerRPCTimeout)
-	defer cancel()
-	_, err := x.FairShareServiceClient.SetNodeBandwidth(ctx, &fairShareService.SetNodeBandwidthRequest{
-		AvailBps: bitsPerSecond / 8,
-	})
-	return err
-}
-
 // AddReverseBridge adds a bridge to the running reverse app.
 func (x *XrayAPI) AddReverseBridge(entry ReverseEntry) error {
 	if x.ReverseServiceClient == nil {

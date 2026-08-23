@@ -983,7 +983,9 @@
         "updateStarted": "Atualização do painel iniciada",
         "updateResult": "Atualização iniciada em {ok} nó(s), {failed} falharam",
         "updateNoneEligible": "Selecione pelo menos um nó online e ativo",
-        "saveMtls": "Salvar mTLS do nó"
+        "saveMtls": "Salvar mTLS do nó",
+        "fairShare": "Falha ao carregar os limites de velocidade do nó",
+        "saveFairShare": "Salvar limites de velocidade do nó"
       },
       "tlsVerifyMode": "Verificação TLS",
       "tlsVerifyModeHint": "Como o painel valida o certificado HTTPS do nó. Fixar ou Ignorar são para certificados autoassinados (apenas nós https).",
