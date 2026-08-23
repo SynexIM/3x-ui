@@ -163,3 +163,53 @@ func TestDeclarativeTemplateKeepsPanelControlPath(t *testing.T) {
 		t.Fatalf("panel API routing rule was removed: %#v", config.Routing.Rules)
 	}
 }
+
+// vision 只在 raw/tcp 上合法。面板以前无条件给所有 vless 客户端写上它，
+// 于是 ws/grpc 上的线路配置看起来是绿的、xray 也起得来，客户却永远握手不过。
+func TestDeclarativeVlessFlowComesFromTheSender(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		flow    *string
+		network string
+		want    string
+	}{
+		{name: "ws 上下发端说不要 flow", flow: strPtr(""), network: "ws", want: ""},
+		{name: "tcp 上下发端要 vision", flow: strPtr("xtls-rprx-vision"), network: "tcp", want: "xtls-rprx-vision"},
+		{name: "旧下发端不发 flow 时保持原行为", flow: nil, network: "tcp", want: "xtls-rprx-vision"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			inbound, err := modelInboundFor(DeclarativeInbound{
+				Tag:            "g-vless",
+				Protocol:       "vless",
+				ListenPort:     31006,
+				ShareAddr:      DeclarativeShareAddress{Strategy: "custom", Host: "h", Port: 31006},
+				Settings:       map[string]any{},
+				StreamSettings: map[string]any{"network": tc.network},
+				Clients: []DeclarativeClient{{
+					Email: "l1@x.invalid",
+					UUID:  "11111111-1111-1111-1111-111111111111",
+					Flow:  tc.flow,
+				}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var settings struct {
+				Clients []struct {
+					Flow string `json:"flow"`
+				} `json:"clients"`
+			}
+			if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
+				t.Fatal(err)
+			}
+			if len(settings.Clients) != 1 {
+				t.Fatalf("clients = %d, want 1", len(settings.Clients))
+			}
+			if settings.Clients[0].Flow != tc.want {
+				t.Fatalf("flow = %q, want %q", settings.Clients[0].Flow, tc.want)
+			}
+		})
+	}
+}
+
+func strPtr(value string) *string { return &value }
