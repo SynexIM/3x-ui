@@ -75,6 +75,25 @@ _openapi:
       title: Aggregated metric history for a node — same shape as /server/history,
         scoped to one node.
       url: '#aggregated-metric-history-for-a-node--same-shape-as-serverhistory-scoped-to-one-node'
+    - depth: 2
+      title: This panel's own node-level fair-share policy, plus whether a control
+        plane owns it (declarativelyManaged), in which case the panel refuses
+        writes. Every rate is bit/s; 0 means the field is not enabled, never a
+        default.
+      url: '#this-panels-own-node-level-fair-share-policy-plus-whether-a-control-plane-owns-it-declarativelymanaged-in-which-case-the-panel-refuses-writes-every-rate-is-bits-0-means-the-field-is-not-enabled-never-a-default'
+    - depth: 2
+      title: 'Save and push the node-level fair-share policy to the running core
+        (SetNodeBandwidth + SetClassPolicy). The class list is replaced whole: a
+        class left out is deleted. Rejected while the node is declaratively
+        managed.'
+      url: '#save-and-push-the-node-level-fair-share-policy-to-the-running-core-setnodebandwidth--setclasspolicy-the-class-list-is-replaced-whole-a-class-left-out-is-deleted-rejected-while-the-node-is-declaratively-managed'
+    - depth: 2
+      title: "Live state of the local core's fair-share scheduler. `congested` is the
+        first thing to check when limits look like they do nothing: outside fair
+        mode nothing is shaped at all. The fill* fields report water-filling
+        truncation, which is an approximation, not a fault. running=false means
+        the core is down and there are no numbers yet."
+      url: '#live-state-of-the-local-cores-fair-share-scheduler-congested-is-the-first-thing-to-check-when-limits-look-like-they-do-nothing-outside-fair-mode-nothing-is-shaped-at-all-the-fill-fields-report-water-filling-truncation-which-is-an-approximation-not-a-fault-runningfalse-means-the-core-is-down-and-there-are-no-numbers-yet'
   structuredData:
     headings:
       - content: List every configured node with its connection details, health, and
@@ -130,6 +149,22 @@ _openapi:
       - content: Aggregated metric history for a node — same shape as /server/history,
           scoped to one node.
         id: aggregated-metric-history-for-a-node--same-shape-as-serverhistory-scoped-to-one-node
+      - content: This panel's own node-level fair-share policy, plus whether a control
+          plane owns it (declarativelyManaged), in which case the panel refuses
+          writes. Every rate is bit/s; 0 means the field is not enabled, never a
+          default.
+        id: this-panels-own-node-level-fair-share-policy-plus-whether-a-control-plane-owns-it-declarativelymanaged-in-which-case-the-panel-refuses-writes-every-rate-is-bits-0-means-the-field-is-not-enabled-never-a-default
+      - content: 'Save and push the node-level fair-share policy to the running core
+          (SetNodeBandwidth + SetClassPolicy). The class list is replaced whole:
+          a class left out is deleted. Rejected while the node is declaratively
+          managed.'
+        id: save-and-push-the-node-level-fair-share-policy-to-the-running-core-setnodebandwidth--setclasspolicy-the-class-list-is-replaced-whole-a-class-left-out-is-deleted-rejected-while-the-node-is-declaratively-managed
+      - content: "Live state of the local core's fair-share scheduler. `congested` is
+          the first thing to check when limits look like they do nothing:
+          outside fair mode nothing is shaped at all. The fill* fields report
+          water-filling truncation, which is an approximation, not a fault.
+          running=false means the core is down and there are no numbers yet."
+        id: live-state-of-the-local-cores-fair-share-scheduler-congested-is-the-first-thing-to-check-when-limits-look-like-they-do-nothing-outside-fair-mode-nothing-is-shaped-at-all-the-fill-fields-report-water-filling-truncation-which-is-an-approximation-not-a-fault-runningfalse-means-the-core-is-down-and-there-are-no-numbers-yet
     contents: []
 ---
 
@@ -142,7 +177,7 @@ export default function Layout(props) {
   return (
     <>
       {props.children}
-      <Comp document="./public/openapi.json" webhooks={[]} operations={[{"path":"/panel/api/nodes/list","method":"get"},{"path":"/panel/api/nodes/mtls/ca","method":"post"},{"path":"/panel/api/nodes/mtls/trustCA","method":"post"},{"path":"/panel/api/nodes/get/{id}","method":"get"},{"path":"/panel/api/nodes/webCert/{id}","method":"get"},{"path":"/panel/api/nodes/add","method":"post"},{"path":"/panel/api/nodes/update/{id}","method":"post"},{"path":"/panel/api/nodes/del/{id}","method":"post"},{"path":"/panel/api/nodes/setEnable/{id}","method":"post"},{"path":"/panel/api/nodes/test","method":"post"},{"path":"/panel/api/nodes/certFingerprint","method":"post"},{"path":"/panel/api/nodes/inbounds","method":"post"},{"path":"/panel/api/nodes/probe/{id}","method":"post"},{"path":"/panel/api/nodes/updatePanel","method":"post"},{"path":"/panel/api/nodes/history/{id}/{metric}/{bucket}","method":"get"}]} showTitle />
+      <Comp document="./public/openapi.json" webhooks={[]} operations={[{"path":"/panel/api/nodes/list","method":"get"},{"path":"/panel/api/nodes/mtls/ca","method":"post"},{"path":"/panel/api/nodes/mtls/trustCA","method":"post"},{"path":"/panel/api/nodes/get/{id}","method":"get"},{"path":"/panel/api/nodes/webCert/{id}","method":"get"},{"path":"/panel/api/nodes/add","method":"post"},{"path":"/panel/api/nodes/update/{id}","method":"post"},{"path":"/panel/api/nodes/del/{id}","method":"post"},{"path":"/panel/api/nodes/setEnable/{id}","method":"post"},{"path":"/panel/api/nodes/test","method":"post"},{"path":"/panel/api/nodes/certFingerprint","method":"post"},{"path":"/panel/api/nodes/inbounds","method":"post"},{"path":"/panel/api/nodes/probe/{id}","method":"post"},{"path":"/panel/api/nodes/updatePanel","method":"post"},{"path":"/panel/api/nodes/history/{id}/{metric}/{bucket}","method":"get"},{"path":"/panel/api/nodes/fairshare","method":"get"},{"path":"/panel/api/nodes/fairshare","method":"post"},{"path":"/panel/api/nodes/fairshare/status","method":"get"}]} showTitle />
     </>
   );
 }
