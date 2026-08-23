@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { waitFor } from '@testing-library/react';
+import { fireEvent, waitFor } from '@testing-library/react';
 import type { QueryClient } from '@tanstack/react-query';
 
 import NodeFairSharePanel from '@/pages/nodes/NodeFairSharePanel';
@@ -76,6 +76,19 @@ describe('NodeFairSharePanel', () => {
     expect(saveButton().disabled).toBe(true);
     // The greyed-out field still has to show the value that is really in force.
     expect(numberInputs().some((input) => input.value === '1000')).toBe(true);
+  });
+
+  // Grey with no reason is just a dead end. A disabled antd control eats mouse
+  // events, so the tooltip only fires if the wrapper is right.
+  it('can actually say why it is greyed out', async () => {
+    await renderLoaded({ declarativelyManaged: true, policy: OFF });
+    await waitFor(() => expect(document.body.textContent).toContain('Managed by the control plane'));
+    const wrapper = numberInputs()[0].closest('.ant-input-number')?.parentElement?.parentElement;
+    expect(wrapper).toBeTruthy();
+    fireEvent.mouseEnter(wrapper as HTMLElement);
+    await waitFor(() =>
+      expect(document.querySelector('.ant-tooltip')?.textContent).toContain('the control plane owns'),
+    );
   });
 
   it('leaves the controls editable on a standalone install', async () => {

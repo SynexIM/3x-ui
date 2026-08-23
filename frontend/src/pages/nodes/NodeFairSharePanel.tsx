@@ -18,13 +18,14 @@ import {
 } from '@/lib/nodes/fairshare';
 
 // A disabled antd control swallows mouse events, so the Tooltip explaining why
-// it is disabled never fires without a wrapper that still receives them.
-function WhyDisabled({ reason, children }: { reason?: string; children: React.ReactNode }) {
+// it is disabled never fires without a wrapper that still receives them. `block`
+// is for full-width fields; buttons keep their intrinsic width.
+function WhyDisabled({ reason, block, children }: { reason?: string; block?: boolean; children: React.ReactNode }) {
   if (!reason) return <>{children}</>;
   return (
     <Tooltip title={reason}>
-      <span style={{ display: 'block', pointerEvents: 'auto' }}>
-        <div style={{ pointerEvents: 'none' }}>{children}</div>
+      <span style={block ? { display: 'block', width: '100%' } : { display: 'inline-flex' }}>
+        <span style={{ display: 'block', width: '100%', pointerEvents: 'none' }}>{children}</span>
       </span>
     </Tooltip>
   );
@@ -71,7 +72,7 @@ export default function NodeFairSharePanel() {
     key: 'availMbps' | 'softFloorMbps' | 'hardFloorMbps',
   ) => (
     <Form.Item label={label} tooltip={tip} extra={tip}>
-      <WhyDisabled reason={readOnlyReason}>
+      <WhyDisabled reason={readOnlyReason} block>
         <InputNumber
           value={form[key]}
           min={0}
@@ -101,7 +102,7 @@ export default function NodeFairSharePanel() {
       validateStatus={invalid ? 'error' : undefined}
       help={invalid}
     >
-      <WhyDisabled reason={readOnlyReason}>
+      <WhyDisabled reason={readOnlyReason} block>
         <InputNumber
           value={form[key]}
           min={0}
@@ -128,7 +129,7 @@ export default function NodeFairSharePanel() {
     dataIndex: key,
     width: 170,
     render: (_: unknown, klass: FairShareClassForm, index: number) => (
-      <WhyDisabled reason={readOnlyReason}>
+      <WhyDisabled reason={readOnlyReason} block>
         <InputNumber
           value={klass[key]}
           min={0}
@@ -317,7 +318,7 @@ export default function NodeFairSharePanel() {
                 dataIndex: 'name',
                 width: 180,
                 render: (_: unknown, klass: FairShareClassForm, index: number) => (
-                  <WhyDisabled reason={readOnlyReason}>
+                  <WhyDisabled reason={readOnlyReason} block>
                     <Input
                       value={klass.name}
                       disabled={managed}
