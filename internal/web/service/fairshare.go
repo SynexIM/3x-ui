@@ -162,6 +162,12 @@ func (s *FairShareService) Reapply() {
 		logger.Warning("fair-share policy could not be read back after restart:", err)
 		return
 	}
+	// A fresh core already starts with fair sharing off, so an unconfigured node
+	// has nothing to re-push — and pushing anyway would make every restart wait
+	// on the core's API port for nothing.
+	if isEmptyFairSharePolicy(policy) {
+		return
+	}
 	if err := s.push(policy); err != nil {
 		logger.Warning("fair-share policy could not be re-applied after restart:", err)
 	}
@@ -193,6 +199,17 @@ func (s *FairShareService) push(policy *FairSharePolicy) error {
 		return fmt.Errorf("apply class policy: %w", err)
 	}
 	return nil
+}
+
+// isEmptyFairSharePolicy reports a policy where nothing at all is enabled.
+func isEmptyFairSharePolicy(policy *FairSharePolicy) bool {
+	return len(policy.Classes) == 0 &&
+		policy.AvailBitPerSec == 0 &&
+		policy.SoftFloorBitPerSec == 0 &&
+		policy.HardFloorBitPerSec == 0 &&
+		policy.CongestionEnterPercent == 0 &&
+		policy.CongestionExitPercent == 0 &&
+		policy.CongestionExitTicks == 0
 }
 
 func validateFairSharePolicy(policy *FairSharePolicy) error {
