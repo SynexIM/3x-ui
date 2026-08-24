@@ -53,9 +53,79 @@ type RealityScanResult struct {
 	CertSubject string   `json:"certSubject" example:"cloudflare.com"`
 	CertIssuer  string   `json:"certIssuer" example:"Google Trust Services"`
 	NotAfter    string   `json:"notAfter" example:"2026-08-01T00:00:00Z"`
-	ServerNames []string `json:"serverNames"`
-	LatencyMs   int      `json:"latencyMs" example:"180"`
-	Reason      string   `json:"reason" example:""`
+	// CertRecordBytes estimates the size of this target's Certificate record on
+	// the wire. REALITY reads the target's handshake into a fixed buffer and
+	// abandons the borrowed handshake when one record exceeds it. The failure
+	// mode is the worst kind: the client authenticates, then dies before the
+	// inner protocol starts, while every status page stays green.
+	CertRecordBytes int      `json:"certRecordBytes" example:"4200"`
+	CertRecordRisk  string   `json:"certRecordRisk" example:"ok"`
+	ServerNames     []string `json:"serverNames"`
+	LatencyMs       int      `json:"latencyMs" example:"180"`
+	Reason          string   `json:"reason" example:""`
+}
+
+// TLS 1.3 record ceilings, from RFC 8446 §5.2: TLSCiphertext.length MUST NOT
+// exceed 2^14 + 256, and every record carries a 5-byte header.
+const (
+	tlsRecordHeaderLen   = 5
+	maxCiphertextTLS13   = 16384 + 256
+	maxTLSRecordBytes    = tlsRecordHeaderLen + maxCiphertextTLS13 // 16645
+	legacyRealityCeiling = 8192                                    // 未打补丁的 REALITY 的上限
+)
+
+/*
+estimateCertRecordBytes reconstructs how many bytes this target's Certificate
+message occupies once TLS 1.3 has encrypted and framed it.
+
+Why estimate instead of measure: Go's crypto/tls hands back parsed certificates,
+not the raw records it read. But the record is dominated by the DER chain and the
+stapled OCSP response, and both are available verbatim — so the estimate is tight
+enough to answer the only question that matters: is this target near a limit.
+
+Layout being counted (RFC 8446 §4.4.2):
+
+	record header          5
+	handshake header       4
+	cert request context   1
+	certificate_list len   3
+	per certificate        3 + len(DER) + 2 + extensions
+	  first cert's ext       4 + 4 + len(OCSP DER)   (status_request staple)
+	inner content type     1
+	AEAD tag              16
+*/
+func estimateCertRecordBytes(chain []*x509.Certificate, ocsp []byte) int {
+	if len(chain) == 0 {
+		return 0
+	}
+	total := tlsRecordHeaderLen + 4 + 1 + 3
+	for index, cert := range chain {
+		total += 3 + len(cert.Raw) + 2
+		if index == 0 && len(ocsp) > 0 {
+			total += 4 + 4 + len(ocsp)
+		}
+	}
+	return total + 1 + 16
+}
+
+// classifyCertRecord turns the byte count into something an operator can act on.
+// Two thresholds, because two different node builds are in play: a node still
+// running an unpatched REALITY breaks at 8192, everything breaks past the RFC bound.
+//
+// There is deliberately no "getting close" band. It would sit above 8192 and so
+// could never be reached — every record big enough to be "close" to the RFC bound
+// is already fatal on an unpatched node, which is the more urgent thing to say.
+func classifyCertRecord(size int) string {
+	switch {
+	case size == 0:
+		return "unknown"
+	case size > maxTLSRecordBytes:
+		return "over-protocol-limit"
+	case size > legacyRealityCeiling:
+		return "over-legacy-limit"
+	default:
+		return "ok"
+	}
 }
 
 type realityProbeTask struct {
@@ -243,6 +313,8 @@ func (s *ServerService) probeRealityAddr(dialHost string, port int, sni string, 
 		}
 		res.NotAfter = leaf.NotAfter.UTC().Format(time.RFC3339)
 		res.ServerNames = filterUsableSANs(leaf.DNSNames)
+		res.CertRecordBytes = estimateCertRecordBytes(st.PeerCertificates, st.OCSPResponse)
+		res.CertRecordRisk = classifyCertRecord(res.CertRecordBytes)
 
 		if sni == "" {
 			if discovered := firstUsableName(leaf); discovered != "" {
@@ -269,7 +341,8 @@ func (s *ServerService) probeRealityAddr(dialHost string, port int, sni string, 
 		res.Reason = "no certificate presented"
 	}
 
-	res.Feasible = res.TLS13 && res.H2 && res.X25519 && res.CertValid
+	res.Feasible = res.TLS13 && res.H2 && res.X25519 && res.CertValid &&
+		res.CertRecordRisk != "over-protocol-limit"
 	if !res.Feasible && res.Reason == "" {
 		switch {
 		case !res.TLS13:
@@ -278,7 +351,19 @@ func (s *ServerService) probeRealityAddr(dialHost string, port int, sni string, 
 			res.Reason = "server does not negotiate HTTP/2 (h2)"
 		case !res.X25519:
 			res.Reason = "server did not use X25519 key exchange"
+		case res.CertRecordRisk == "over-protocol-limit":
+			res.Reason = fmt.Sprintf(
+				"certificate record is about %d bytes, past the %d-byte TLS 1.3 record limit; REALITY cannot borrow this handshake",
+				res.CertRecordBytes, maxTLSRecordBytes)
 		}
+	}
+	// Not fatal, but the operator has to know: a node still running an unpatched
+	// REALITY abandons the handshake at 8192, and it does so after the client has
+	// already authenticated — so the node looks healthy while clients cannot connect.
+	if res.Feasible && res.CertRecordRisk == "over-legacy-limit" && res.Reason == "" {
+		res.Reason = fmt.Sprintf(
+			"certificate record is about %d bytes; nodes running an unpatched REALITY (8192-byte buffer) will fail after the client authenticates",
+			res.CertRecordBytes)
 	}
 	return res
 }
