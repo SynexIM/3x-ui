@@ -52,7 +52,7 @@ func (a *NodeController) initRouter(g *gin.RouterGroup) {
 }
 
 // fairShare returns this panel's own node-level fair-share policy, plus whether
-// a control plane owns it and the form must therefore be read-only.
+// automation holds a desired state for it that a later reconciliation may restore.
 func (a *NodeController) fairShare(c *gin.Context) {
 	view, err := a.fairShareService.GetPolicyView()
 	if err != nil {

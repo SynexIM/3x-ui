@@ -659,7 +659,7 @@
         "peerNumberConfig": "Peer {n} config"
       },
       "sniffingDestOverride": "Destination override",
-      "declarativelyManaged": "This node's inbounds are managed by the control plane and are read-only here."
+      "declarativelyManaged": "An API client has applied desired state to this node. You can still edit here, but the next reconciliation may put its own values back."
     },
     "clients": {
       "tabBasics": "Basics",
@@ -1120,9 +1120,8 @@
         "blankMeaning": "Leave a field blank to leave it off. The panel never fills in a default bandwidth: blank means that limit does not exist, not that a fallback value is used. Every field says below it what leaving it blank does.",
         "blank": "Blank = off",
         "saved": "Fair-share policy pushed to the core",
-        "managedTitle": "Managed by the control plane",
-        "managedDesc": "A control plane owns this node's configuration and re-pushes its own node bandwidth on every status poll, so anything set here would be reverted within minutes. The fields stay visible but read-only until this node is detached. On a standalone install they are fully editable.",
-        "managedTooltip": "Read-only: the control plane owns this node's speed limits.",
+        "managedTitle": "An API client is managing this policy",
+        "managedDesc": "An API client applied desired state to this node and re-sends its own node bandwidth on every status poll, so a value set here may be put back within minutes. The fields stay editable and show the value currently in force.",
         "nodeSection": "Node level",
         "avail": "Node capacity (root cap)",
         "availBlank": "The ceiling every client on this node shares. Blank: node-level fair sharing is off entirely and only per-client limits apply.",
@@ -1137,7 +1136,7 @@
         "exitAboveEnter": "The exit threshold is above the enter threshold, so the core would ignore it.",
         "congestionTicks": "Leave after",
         "congestionTicksBlank": "Consecutive seconds under the exit threshold before fair mode really ends. Blank: 1 second.",
-        "classSection": "Classes (one class = one SKU)",
+        "classSection": "Classes (clients sharing one contention policy)",
         "classReplaceWhole": "This table is sent whole: a class removed here is deleted from the core. Classes are operator settings and never appear to customers.",
         "addClass": "Add class",
         "noClasses": "No classes: every client contends with the same weight and no class ceiling.",

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,7 +21,7 @@ func declarativeTemplate(t *testing.T, inbounds string) {
 	}
 }
 
-// markDeclarativelyManaged puts the panel in the state a control plane leaves
+// markDeclarativelyManaged puts the panel in the state an API client leaves
 // behind after a successful apply.
 func markDeclarativelyManaged(t *testing.T) {
 	t.Helper()
@@ -119,10 +118,10 @@ func TestPortConflictIgnoresTemplateForNodeInbounds(t *testing.T) {
 	}
 }
 
-// While a control plane owns the config, the panel must not write the inbounds
-// table at all: anything it adds there joins a configuration the control plane
-// believes it fully describes, and survives every later apply.
-func TestPanelInboundWritesAreRefusedWhileDeclarativelyManaged(t *testing.T) {
+// A panel that locks itself the moment automation touches it stops being a
+// product an operator can use in an incident. The edit goes through; the page
+// warns that a later reconciliation may put the automated value back.
+func TestPanelInboundWritesStayOpenWhileAnApiClientManagesTheNode(t *testing.T) {
 	setupConflictDB(t)
 	svc := &InboundService{}
 
@@ -143,7 +142,7 @@ func TestPanelInboundWritesAreRefusedWhileDeclarativelyManaged(t *testing.T) {
 
 	t.Run("add", func(t *testing.T) {
 		added := &model.Inbound{
-			Tag:            "sneaky",
+			Tag:            "hand-made-while-managed",
 			Enable:         true,
 			Listen:         "0.0.0.0",
 			Port:           30601,
@@ -151,32 +150,35 @@ func TestPanelInboundWritesAreRefusedWhileDeclarativelyManaged(t *testing.T) {
 			Settings:       `{"clients":[],"decryption":"none"}`,
 			StreamSettings: `{"network":"tcp"}`,
 		}
-		if _, _, err := svc.AddInbound(added); !errors.Is(err, ErrDeclarativelyManaged) {
-			t.Fatalf("add must be refused, got %v", err)
+		if _, _, err := svc.AddInbound(added); err != nil {
+			t.Fatalf("add while managed = %v, want it to go through", err)
+		}
+		if _, err := svc.GetInbound(added.Id); err != nil {
+			t.Fatalf("the added inbound must be readable back: %v", err)
 		}
 	})
 
 	t.Run("update", func(t *testing.T) {
 		edit := *existing
 		edit.Port = 30602
-		if _, _, err := svc.UpdateInbound(&edit); !errors.Is(err, ErrDeclarativelyManaged) {
-			t.Fatalf("update must be refused, got %v", err)
+		if _, _, err := svc.UpdateInbound(&edit); err != nil {
+			t.Fatalf("update while managed = %v, want it to go through", err)
+		}
+		got, err := svc.GetInbound(existing.Id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Port != 30602 {
+			t.Fatalf("port is %d, want the 30602 the operator just set", got.Port)
 		}
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		if _, err := svc.DelInbound(existing.Id); !errors.Is(err, ErrDeclarativelyManaged) {
-			t.Fatalf("delete must be refused, got %v", err)
+		if _, err := svc.DelInbound(existing.Id); err != nil {
+			t.Fatalf("delete while managed = %v, want it to go through", err)
 		}
-	})
-
-	t.Run("the row is untouched", func(t *testing.T) {
-		got, err := svc.GetInbound(existing.Id)
-		if err != nil {
-			t.Fatalf("the inbound must still be there: %v", err)
-		}
-		if got.Port != 30600 {
-			t.Fatalf("port changed to %d despite the refusal", got.Port)
+		if _, err := svc.GetInbound(existing.Id); err == nil {
+			t.Fatal("the deleted inbound is still there")
 		}
 	})
 }
@@ -203,10 +205,9 @@ func TestPanelInboundWritesWorkWhenNotDeclarativelyManaged(t *testing.T) {
 	}
 }
 
-// The panel refuses local inbound writes while a control plane owns the config,
-// but the frontend had no way to know that, so the controls stayed clickable and
-// only answered with an error. This is the flag they grey themselves out on.
-func TestDefaultSettingsTellTheFrontendWhoOwnsTheInbounds(t *testing.T) {
+// Local edits stay open, but the page still has to say that automation holds a
+// desired state for this node. This is the flag it warns on.
+func TestDefaultSettingsTellTheFrontendThatAutomationManagesTheInbounds(t *testing.T) {
 	setupConflictDB(t)
 	// GetCertFile reads the xray config next to the binary, which a test tree
 	// has no copy of.
@@ -222,7 +223,7 @@ func TestDefaultSettingsTellTheFrontendWhoOwnsTheInbounds(t *testing.T) {
 		t.Fatal(err)
 	}
 	if managed := before.(map[string]any)["declarativelyManaged"]; managed != false {
-		t.Fatalf("an unmanaged panel must say so; got %v", managed)
+		t.Fatalf("a panel no automation has touched must say so; got %v", managed)
 	}
 
 	markDeclarativelyManaged(t)
@@ -232,6 +233,6 @@ func TestDefaultSettingsTellTheFrontendWhoOwnsTheInbounds(t *testing.T) {
 		t.Fatal(err)
 	}
 	if managed := after.(map[string]any)["declarativelyManaged"]; managed != true {
-		t.Fatalf("a managed panel must say so; got %v", managed)
+		t.Fatalf("a panel automation has applied state to must say so; got %v", managed)
 	}
 }

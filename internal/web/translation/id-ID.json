@@ -659,7 +659,7 @@
         "peerNumberConfig": "Konfig Peer {n}"
       },
       "sniffingDestOverride": "Penggantian tujuan",
-      "declarativelyManaged": "Inbound node ini dikelola oleh control plane dan hanya-baca di sini."
+      "declarativelyManaged": "Sebuah klien API telah menerapkan desired state ke node ini. Anda tetap bisa menyunting di sini, tetapi rekonsiliasi berikutnya mungkin mengembalikan nilainya."
     },
     "clients": {
       "tabBasics": "Dasar",
@@ -1003,9 +1003,8 @@
         "blankMeaning": "Biarkan kosong kalau tidak ingin mengaktifkannya. Panel tidak pernah mengisi bandwidth bawaan: kosong berarti batas itu tidak ada, bukan berarti dipakai nilai cadangan. Di bawah setiap kolom tertulis apa yang terjadi kalau dibiarkan kosong.",
         "blank": "Kosong = nonaktif",
         "saved": "Kebijakan pembagian adil sudah dikirim ke core",
-        "managedTitle": "Dikelola oleh control plane",
-        "managedDesc": "Control plane memiliki konfigurasi node ini dan mengirim ulang bandwidth-nya sendiri setiap kali polling status, jadi apa pun yang diubah di sini akan dikembalikan dalam hitungan menit. Kolom tetap terlihat tetapi hanya-baca sampai node ini dilepas. Pada instalasi mandiri kolom-kolom ini bisa diubah sepenuhnya.",
-        "managedTooltip": "Hanya-baca: batas kecepatan node ini dimiliki oleh control plane.",
+        "managedTitle": "Kebijakan ini dikelola oleh klien API",
+        "managedDesc": "Sebuah klien API menerapkan desired state ke node ini dan mengirim ulang bandwidth node-nya setiap kali polling status, jadi nilai yang diatur di sini bisa dikembalikan dalam hitungan menit. Kolom tetap bisa disunting dan menampilkan nilai yang benar-benar berlaku sekarang.",
         "nodeSection": "Tingkat node",
         "avail": "Kapasitas node (root cap)",
         "availBlank": "Plafon yang dibagi semua klien di node ini. Kosong: pembagian adil tingkat node mati sepenuhnya dan hanya tersisa batas per klien.",
@@ -1020,7 +1019,7 @@
         "exitAboveEnter": "Ambang keluar lebih tinggi dari ambang masuk, jadi core akan mengabaikannya.",
         "congestionTicks": "Keluar setelah",
         "congestionTicksBlank": "Berapa detik berturut-turut di bawah ambang keluar sebelum mode adil benar-benar berakhir. Kosong: 1 detik.",
-        "classSection": "Kelas (satu kelas = satu SKU)",
+        "classSection": "Kelas (klien yang berbagi satu kebijakan perebutan)",
         "classReplaceWhole": "Tabel ini dikirim utuh: kelas yang dihapus di sini juga terhapus dari core. Kelas adalah parameter operasional dan tidak pernah tampil ke pelanggan.",
         "addClass": "Tambah kelas",
         "noClasses": "Tidak ada kelas: semua klien bersaing dengan bobot sama dan tanpa plafon kelas.",

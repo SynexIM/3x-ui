@@ -19,7 +19,7 @@ type NodeFairShare struct {
 	CongestionExitTicks    uint32
 }
 
-// ClassFairShare is one class (= one SKU) contention policy, rates in bit/s.
+// ClassFairShare is one contention policy shared by a group of clients, rates in bit/s.
 type ClassFairShare struct {
 	Name               string
 	Weight             uint32

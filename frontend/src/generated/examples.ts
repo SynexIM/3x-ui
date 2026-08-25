@@ -700,6 +700,8 @@ export const EXAMPLES: Record<string, unknown> = {
   "RealityScanResult": {
     "alpn": "h2",
     "certIssuer": "Google Trust Services",
+    "certRecordBytes": 4200,
+    "certRecordRisk": "ok",
     "certSubject": "cloudflare.com",
     "certValid": true,
     "curveID": "X25519",

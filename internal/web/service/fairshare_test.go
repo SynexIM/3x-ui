@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -61,23 +60,30 @@ func TestPolicySurvivesASaveWhileXrayIsDown(t *testing.T) {
 	}
 }
 
-// The control plane re-pushes its own bandwidth on every status poll, so a
-// panel-side save would be reverted minutes later. Refuse it in the service, not
-// only in the form.
-func TestSaveIsRefusedWhileDeclarativelyManaged(t *testing.T) {
+// An API client applying desired state must not turn the panel into its
+// attachment: the operator keeps the local edit, and the view says out loud that
+// a later reconciliation may put the automated value back.
+func TestSaveStillWorksWhileAnApiClientManagesTheNode(t *testing.T) {
 	service := initFairShareDB(t)
 	if err := (&SettingService{}).saveSetting(declarativeProvisioningStateKey, `{"Request":{"revision":1}}`); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.SavePolicy(&FairSharePolicy{AvailBitPerSec: 1_000_000}); !errors.Is(err, ErrFairShareManaged) {
-		t.Fatalf("save while managed = %v, want ErrFairShareManaged", err)
+	if err := service.SavePolicy(&FairSharePolicy{AvailBitPerSec: 1_000_000, SoftFloorBitPerSec: 250_000}); err != nil {
+		t.Fatalf("save while managed = %v, want it to go through", err)
+	}
+	got, err := service.GetPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.SoftFloorBitPerSec != 250_000 {
+		t.Fatalf("soft floor read back as %d, want the 250000 that was just saved", got.SoftFloorBitPerSec)
 	}
 	view, err := service.GetPolicyView()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !view.DeclarativelyManaged {
-		t.Fatal("the view must tell the form it is read-only before anything is clicked")
+		t.Fatal("the view must warn that automation manages this node before anything is clicked")
 	}
 }
 

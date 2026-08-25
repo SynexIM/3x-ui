@@ -659,7 +659,7 @@
         "peerNumberConfig": "Peer {n} Yapılandırması"
       },
       "sniffingDestOverride": "Hedef geçersiz kılma",
-      "declarativelyManaged": "Bu düğümün gelen bağlantıları kontrol düzlemi tarafından yönetilir ve burada salt okunurdur."
+      "declarativelyManaged": "Bir API istemcisi bu düğüme istenen yapılandırmayı uyguladı. Burada düzenleyebilirsiniz, ancak bir sonraki mutabakat kendi değerlerini geri koyabilir."
     },
     "clients": {
       "tabBasics": "Temel",
@@ -1003,9 +1003,8 @@
         "blankMeaning": "Etkinleştirmek istemediğiniz alanı boş bırakın. Panel asla varsayılan bir bant genişliği doldurmaz: boş, o sınırın hiç olmadığı anlamına gelir, yedek bir değer kullanıldığı anlamına gelmez. Her alanın altında boş bırakılınca ne olacağı yazıyor.",
         "blank": "Boş = kapalı",
         "saved": "Adil paylaşım politikası çekirdeğe gönderildi",
-        "managedTitle": "Kontrol düzlemi tarafından yönetiliyor",
-        "managedDesc": "Bu düğümün yapılandırması kontrol düzlemine aittir ve her durum yoklamasında kendi düğüm bant genişliğini yeniden gönderir; bu yüzden burada yapılan değişiklik dakikalar içinde geri alınır. Alanlar görünür kalır ama düğüm ayrılana kadar salt okunurdur. Bağımsız kurulumda tamamen düzenlenebilir.",
-        "managedTooltip": "Salt okunur: bu düğümün hız sınırları kontrol düzlemine ait.",
+        "managedTitle": "Bu politikayı bir API istemcisi yönetiyor",
+        "managedDesc": "Bir API istemcisi bu düğüme istenen yapılandırmayı uyguladı ve her durum yoklamasında kendi düğüm bant genişliğini yeniden gönderiyor; bu yüzden burada verilen bir değer dakikalar içinde geri konabilir. Alanlar düzenlenebilir kalır ve şu an gerçekten geçerli olan değeri gösterir.",
         "nodeSection": "Düğüm düzeyi",
         "avail": "Düğüm kapasitesi (root cap)",
         "availBlank": "Bu düğümdeki tüm istemcilerin paylaştığı tavan. Boş: düğüm düzeyinde adil paylaşım tamamen kapanır, yalnızca istemci başına sınırlar kalır.",
@@ -1020,7 +1019,7 @@
         "exitAboveEnter": "Çıkış eşiği giriş eşiğinin üzerinde, çekirdek bunu yok sayar.",
         "congestionTicks": "Şu süreden sonra çık",
         "congestionTicksBlank": "Adil modun gerçekten bitmesi için çıkış eşiğinin altında geçmesi gereken ardışık saniye. Boş: 1 saniye.",
-        "classSection": "Sınıflar (bir sınıf = bir SKU)",
+        "classSection": "Sınıflar (aynı çekişme politikasını paylaşan istemciler)",
         "classReplaceWhole": "Bu tablo bütün olarak gönderilir: burada silinen sınıf çekirdekten de silinir. Sınıflar operasyon parametresidir, müşterilere hiç görünmez.",
         "addClass": "Sınıf ekle",
         "noClasses": "Sınıf yok: tüm istemciler aynı ağırlıkla yarışır ve sınıf tavanı olmaz.",

@@ -659,7 +659,7 @@
         "peerNumberConfig": "Cấu hình Peer {n}"
       },
       "sniffingDestOverride": "Ghi đè đích",
-      "declarativelyManaged": "Inbound của node này do control plane quản lý và chỉ đọc tại đây."
+      "declarativelyManaged": "Một client API đã áp dụng cấu hình mong muốn cho node này. Bạn vẫn sửa được ở đây, nhưng lần đối soát sau có thể đặt lại giá trị của nó."
     },
     "clients": {
       "tabBasics": "Cơ bản",
@@ -1003,9 +1003,8 @@
         "blankMeaning": "Để trống ô nào thì ô đó không bật. Bảng điều khiển không bao giờ tự điền băng thông mặc định: để trống nghĩa là giới hạn đó không tồn tại, chứ không phải dùng một giá trị dự phòng. Dưới mỗi ô đều ghi rõ để trống thì sẽ ra sao.",
         "blank": "Để trống = tắt",
         "saved": "Đã đẩy chính sách chia sẻ công bằng xuống lõi",
-        "managedTitle": "Do mặt phẳng điều khiển quản lý",
-        "managedDesc": "Mặt phẳng điều khiển sở hữu cấu hình của nút này và đẩy lại băng thông của chính nó mỗi lần thăm dò trạng thái, nên mọi thay đổi ở đây sẽ bị ghi đè trong vài phút. Các ô vẫn hiển thị nhưng chỉ đọc cho tới khi tách nút ra. Trên bản cài độc lập chúng sửa được bình thường.",
-        "managedTooltip": "Chỉ đọc: giới hạn tốc độ của nút này thuộc về mặt phẳng điều khiển.",
+        "managedTitle": "Một client API đang quản lý chính sách này",
+        "managedDesc": "Một client API đã áp dụng cấu hình mong muốn cho node này và gửi lại băng thông node của nó mỗi lần thăm dò trạng thái, nên giá trị đặt ở đây có thể bị đặt lại trong vài phút. Các ô vẫn sửa được và hiển thị giá trị đang thực sự có hiệu lực.",
         "nodeSection": "Cấp nút",
         "avail": "Dung lượng nút (root cap)",
         "availBlank": "Trần mà mọi khách trên nút này cùng chia. Để trống: chia sẻ công bằng cấp nút tắt hoàn toàn, chỉ còn giới hạn của từng khách.",
@@ -1020,7 +1019,7 @@
         "exitAboveEnter": "Ngưỡng ra cao hơn ngưỡng vào nên lõi sẽ bỏ qua nó.",
         "congestionTicks": "Rời sau",
         "congestionTicksBlank": "Số giây liên tiếp dưới ngưỡng ra trước khi chế độ công bằng thật sự kết thúc. Để trống: 1 giây.",
-        "classSection": "Lớp (một lớp = một SKU)",
+        "classSection": "Lớp (các khách hàng dùng chung một chính sách tranh chấp)",
         "classReplaceWhole": "Bảng này được gửi nguyên khối: xóa một lớp ở đây thì lớp đó cũng bị xóa khỏi lõi. Lớp là tham số vận hành, không bao giờ hiện ra với khách.",
         "addClass": "Thêm lớp",
         "noClasses": "Không có lớp nào: mọi khách tranh nhau với cùng trọng số và không có trần theo lớp.",

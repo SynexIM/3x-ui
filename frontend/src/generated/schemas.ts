@@ -1390,7 +1390,7 @@ export const SCHEMAS: Record<string, unknown> = {
     "type": "object"
   },
   "FairShareClassPolicy": {
-    "description": "FairShareClassPolicy is one class (= one SKU) contention policy.\nEvery rate is bit/s and 0 means \"not enabled\", never \"use a default\".",
+    "description": "FairShareClassPolicy is one contention policy shared by a group of clients.\nEvery rate is bit/s and 0 means \"not enabled\", never \"use a default\".",
     "properties": {
       "burstCapBitPerSec": {
         "example": 50000000,
@@ -1479,10 +1479,9 @@ export const SCHEMAS: Record<string, unknown> = {
     "type": "object"
   },
   "FairSharePolicyView": {
-    "description": "FairSharePolicyView is what the node page reads: the policy plus the reason\nits controls may be read-only.",
+    "description": "FairSharePolicyView is what the node page reads: the policy plus whether an\nAPI client has applied desired state that may later overwrite local edits.",
     "properties": {
       "declarativelyManaged": {
-        "description": "DeclarativelyManaged mirrors the server-side refusal so the form can grey\nitself out instead of failing on submit.",
         "example": false,
         "type": "boolean"
       },
@@ -2906,6 +2905,15 @@ export const SCHEMAS: Record<string, unknown> = {
         "example": "Google Trust Services",
         "type": "string"
       },
+      "certRecordBytes": {
+        "description": "CertRecordBytes estimates the size of this target's Certificate record on\nthe wire. REALITY reads the target's handshake into a fixed buffer and\nabandons the borrowed handshake when one record exceeds it. The failure\nmode is the worst kind: the client authenticates, then dies before the\ninner protocol starts, while every status page stays green.",
+        "example": 4200,
+        "type": "integer"
+      },
+      "certRecordRisk": {
+        "example": "ok",
+        "type": "string"
+      },
       "certSubject": {
         "example": "cloudflare.com",
         "type": "string"
@@ -2975,6 +2983,8 @@ export const SCHEMAS: Record<string, unknown> = {
     "required": [
       "alpn",
       "certIssuer",
+      "certRecordBytes",
+      "certRecordRisk",
       "certSubject",
       "certValid",
       "curveID",

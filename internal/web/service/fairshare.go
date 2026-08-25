@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
@@ -12,12 +11,7 @@ import (
 
 const fairSharePolicySettingKey = "fairSharePolicy"
 
-// ErrFairShareManaged is returned to a panel-side fair-share write while a
-// control plane owns this node: it re-pushes its own node bandwidth on every
-// status poll, so a local edit would be silently reverted minutes later.
-var ErrFairShareManaged = errors.New("this node's fair-share policy is managed by the control plane and is read-only in the panel")
-
-// FairShareClassPolicy is one class (= one SKU) contention policy.
+// FairShareClassPolicy is one contention policy shared by a group of clients.
 // Every rate is bit/s and 0 means "not enabled", never "use a default".
 type FairShareClassPolicy struct {
 	Name               string `json:"name" example:"live"`
@@ -39,13 +33,11 @@ type FairSharePolicy struct {
 	Classes                []FairShareClassPolicy `json:"classes"`
 }
 
-// FairSharePolicyView is what the node page reads: the policy plus the reason
-// its controls may be read-only.
+// FairSharePolicyView is what the node page reads: the policy plus whether an
+// API client has applied desired state that may later overwrite local edits.
 type FairSharePolicyView struct {
-	Policy FairSharePolicy `json:"policy"`
-	// DeclarativelyManaged mirrors the server-side refusal so the form can grey
-	// itself out instead of failing on submit.
-	DeclarativelyManaged bool `json:"declarativelyManaged" example:"false"`
+	Policy               FairSharePolicy `json:"policy"`
+	DeclarativelyManaged bool            `json:"declarativelyManaged" example:"false"`
 }
 
 // FairShareStatusView is the scheduler's runtime state, in panel units.
@@ -92,20 +84,17 @@ func (s *FairShareService) GetPolicyView() (*FairSharePolicyView, error) {
 		return nil, err
 	}
 	view := &FairSharePolicyView{Policy: *policy, DeclarativelyManaged: IsDeclarativelyManaged()}
-	// While managed, the control plane's bandwidth is the one the core actually
-	// runs on; showing the stale local number would be the greyed-out lie.
+	// Show the bandwidth most recently requested by automation while preserving
+	// the rest of the locally editable policy.
 	if view.DeclarativelyManaged {
 		if state, err := (&DeclarativeProvisioningService{}).loadState(); err == nil && state != nil {
-			view.Policy = FairSharePolicy{AvailBitPerSec: state.Request.Config.NodeBandwidthBps}
+			view.Policy.AvailBitPerSec = state.Request.Config.NodeBandwidthBps
 		}
 	}
 	return view, nil
 }
 
 func (s *FairShareService) SavePolicy(policy *FairSharePolicy) error {
-	if IsDeclarativelyManaged() {
-		return ErrFairShareManaged
-	}
 	if err := validateFairSharePolicy(policy); err != nil {
 		return err
 	}
@@ -154,7 +143,7 @@ func (s *FairShareService) GetStatus() (*FairShareStatusView, error) {
 func (s *FairShareService) Reapply() {
 	// Called from a goroutine off the restart path, which some tests drive with
 	// no database at all; a nil handle there would panic the whole process.
-	if database.GetDB() == nil || IsDeclarativelyManaged() {
+	if database.GetDB() == nil {
 		return
 	}
 	policy, err := s.GetPolicy()

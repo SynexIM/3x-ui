@@ -659,7 +659,7 @@
         "peerNumberConfig": "Config Peer {n}"
       },
       "sniffingDestOverride": "Anulación de destino",
-      "declarativelyManaged": "Las entradas de este nodo las gestiona el plano de control y aquí son de solo lectura."
+      "declarativelyManaged": "Un cliente de API aplicó un estado deseado a este nodo. Puedes editar aquí, pero la próxima reconciliación puede restaurar sus valores."
     },
     "clients": {
       "tabBasics": "Básico",
@@ -1003,9 +1003,8 @@
         "blankMeaning": "Deja un campo en blanco para no activarlo. El panel nunca rellena un ancho de banda por defecto: en blanco significa que ese límite no existe, no que se use un valor de reserva. Bajo cada campo se explica qué pasa si lo dejas en blanco.",
         "blank": "En blanco = desactivado",
         "saved": "Política de reparto enviada al núcleo",
-        "managedTitle": "Gestionado por el plano de control",
-        "managedDesc": "El plano de control es dueño de la configuración de este nodo y reenvía su propio ancho de banda en cada sondeo de estado, así que cualquier cambio hecho aquí se revertiría en minutos. Los campos siguen visibles pero son de solo lectura hasta que el nodo se desvincule. En una instalación independiente son totalmente editables.",
-        "managedTooltip": "Solo lectura: el plano de control es dueño de los límites de este nodo.",
+        "managedTitle": "Un cliente de API gestiona esta política",
+        "managedDesc": "Un cliente de API aplicó un estado deseado a este nodo y reenvía su propio ancho de banda en cada sondeo de estado, así que un valor puesto aquí puede volver atrás en minutos. Los campos siguen siendo editables y muestran el valor realmente vigente.",
         "nodeSection": "Nivel de nodo",
         "avail": "Capacidad del nodo (root cap)",
         "availBlank": "El techo que comparten todos los clientes de este nodo. En blanco: el reparto justo a nivel de nodo queda desactivado por completo y solo quedan los límites por cliente.",
@@ -1020,7 +1019,7 @@
         "exitAboveEnter": "El umbral de salida está por encima del de entrada, así que el núcleo lo ignoraría.",
         "congestionTicks": "Salir tras",
         "congestionTicksBlank": "Segundos seguidos por debajo del umbral de salida antes de que el modo justo termine de verdad. En blanco: 1 segundo.",
-        "classSection": "Clases (una clase = un SKU)",
+        "classSection": "Clases (clientes que comparten una política de contención)",
         "classReplaceWhole": "Esta tabla se envía entera: una clase eliminada aquí se borra del núcleo. Las clases son parámetros de operación y nunca se muestran a los clientes.",
         "addClass": "Añadir clase",
         "noClasses": "Sin clases: todos los clientes compiten con el mismo peso y sin techo de clase.",

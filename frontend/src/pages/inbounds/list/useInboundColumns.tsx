@@ -32,7 +32,6 @@ interface UseInboundColumnsParams {
   subEnable: boolean;
   expireDiff: number;
   trafficDiff: number;
-  declarativelyManaged: boolean;
   onRowAction: (action: { key: RowAction; dbInbound: DBInboundRecord }) => void;
   onSwitchEnable: (dbInbound: DBInboundRecord, next: boolean) => void;
 }
@@ -47,7 +46,6 @@ export function useInboundColumns({
   subEnable,
   expireDiff,
   trafficDiff,
-  declarativelyManaged,
   onRowAction,
   onSwitchEnable,
 }: UseInboundColumnsParams): TableColumnType<DBInboundRecord>[] {
@@ -117,7 +115,6 @@ export function useInboundColumns({
           <RowActionsCell
             record={record}
             subEnable={subEnable}
-            declarativelyManaged={declarativelyManaged}
             hasClients={(clientCount[record.id]?.clients || 0) > 0}
             onClick={(key) => onRowAction({ key, dbInbound: record })}
           />
@@ -129,16 +126,10 @@ export function useInboundColumns({
         align: 'center',
         width: 80,
         render: (_, record) => (
-          <Tooltip title={declarativelyManaged ? t('pages.inbounds.declarativelyManaged') : undefined}>
-            <span style={{ display: 'inline-flex' }}>
-              <Switch
-                checked={record.enable}
-                disabled={declarativelyManaged}
-                style={declarativelyManaged ? { pointerEvents: 'none' } : undefined}
-                onChange={(next) => onSwitchEnable(record, next)}
-              />
-            </span>
-          </Tooltip>
+          <Switch
+            checked={record.enable}
+            onChange={(next) => onSwitchEnable(record, next)}
+          />
         ),
       },
     ];
@@ -366,5 +357,5 @@ export function useInboundColumns({
     );
 
     return cols;
-  }, [t, hasAnyRemark, hasAnySubSortIndex, hasActiveNode, nodesById, clientCount, inboundSpeed, subEnable, expireDiff, trafficDiff, datepicker, declarativelyManaged, onRowAction, onSwitchEnable]);
+  }, [t, hasAnyRemark, hasAnySubSortIndex, hasActiveNode, nodesById, clientCount, inboundSpeed, subEnable, expireDiff, trafficDiff, datepicker, onRowAction, onSwitchEnable]);
 }

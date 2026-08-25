@@ -1040,7 +1040,7 @@ export const sections: readonly Section[] = [
       {
         method: 'GET',
         path: '/panel/api/nodes/fairshare',
-        summary: "This panel's own node-level fair-share policy, plus whether a control plane owns it (declarativelyManaged), in which case the panel refuses writes. Every rate is bit/s; 0 means the field is not enabled, never a default.",
+        summary: "This panel's own node-level fair-share policy, plus whether an API client has applied desired state to it (declarativelyManaged), in which case a later reconciliation may put the automated values back. Local writes are never refused. Every rate is bit/s; 0 means the field is not enabled, never a default.",
         responseSchema: 'FairSharePolicyView',
       },
       {
@@ -1373,7 +1373,7 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/declarative/abort',
-        summary: 'Discard a staged upload the control plane has given up on, instead of waiting for it to expire. Always answers 204, including for an upload id the panel does not hold.',
+        summary: 'Discard a staged upload the caller has given up on, instead of waiting for it to expire. Always answers 204, including for an upload id the panel does not hold.',
         params: [
           { name: 'uploadId', in: 'query', type: 'string', desc: 'The upload to discard.' },
         ],

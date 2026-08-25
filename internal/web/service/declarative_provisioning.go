@@ -23,22 +23,12 @@ const hysteriaConfigVersion = 2
 
 var (
 	ErrDeclarativeRevisionConflict = errors.New("declarative config revision conflicts with the applied revision")
-	// ErrDeclarativelyManaged is returned to a panel-side inbound write while a
-	// control plane owns this node's configuration.
-	ErrDeclarativelyManaged     = errors.New("this node's inbounds are managed declaratively by the control plane and are read-only in the panel")
-	declarativeProvisioningLock sync.Mutex
+	declarativeProvisioningLock    sync.Mutex
 )
 
-// IsDeclarativelyManaged reports whether a control plane has applied a
-// declarative configuration to this panel.
-//
-// While it has, the template is the authority on local inbounds and the panel
-// must not write the inbounds table: GetXrayConfig concatenates the two, so a
-// panel-added inbound silently joins a configuration the control plane believes
-// it fully describes — it never appears in the applied revision, it survives
-// every subsequent apply, and its ports are outside what the control plane
-// tracks. Node inbounds (NodeID != nil) belong to remote panels and are not
-// part of the local core's config, so they stay editable.
+// IsDeclarativelyManaged reports whether an API client has applied a
+// declarative configuration to this panel. The flag warns local operators that
+// a later reconciliation may restore automated values; it never locks the UI.
 func IsDeclarativelyManaged() bool {
 	setting, err := (&SettingService{}).getSetting(declarativeProvisioningStateKey)
 	return err == nil && setting != nil && strings.TrimSpace(setting.Value) != ""

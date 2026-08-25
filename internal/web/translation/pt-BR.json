@@ -659,7 +659,7 @@
         "peerNumberConfig": "Config Peer {n}"
       },
       "sniffingDestOverride": "Substituição de destino",
-      "declarativelyManaged": "Os inbounds deste nó são gerenciados pelo plano de controle e aqui são somente leitura."
+      "declarativelyManaged": "Um cliente de API aplicou um estado desejado a este nó. Você ainda pode editar aqui, mas a próxima reconciliação pode restaurar os valores dele."
     },
     "clients": {
       "tabBasics": "Básico",
@@ -1003,9 +1003,8 @@
         "blankMeaning": "Deixe um campo em branco para não ativá-lo. O painel nunca preenche uma banda padrão: em branco significa que aquele limite não existe, não que um valor de reserva será usado. Abaixo de cada campo está escrito o que acontece se ele ficar em branco.",
         "blank": "Em branco = desativado",
         "saved": "Política de repartição enviada ao núcleo",
-        "managedTitle": "Gerenciado pelo plano de controle",
-        "managedDesc": "O plano de controle é dono da configuração deste nó e reenvia a própria banda a cada consulta de status, então qualquer alteração feita aqui seria revertida em minutos. Os campos continuam visíveis, mas somente leitura até o nó ser desvinculado. Em uma instalação independente eles são totalmente editáveis.",
-        "managedTooltip": "Somente leitura: o plano de controle é dono dos limites deste nó.",
+        "managedTitle": "Um cliente de API gerencia esta política",
+        "managedDesc": "Um cliente de API aplicou um estado desejado a este nó e reenvia a própria banda a cada consulta de status, então um valor definido aqui pode voltar em minutos. Os campos continuam editáveis e mostram o valor realmente em vigor.",
         "nodeSection": "Nível do nó",
         "avail": "Capacidade do nó (root cap)",
         "availBlank": "O teto que todos os clientes deste nó dividem. Em branco: a repartição justa no nível do nó fica totalmente desligada e sobram apenas os limites por cliente.",
@@ -1020,7 +1019,7 @@
         "exitAboveEnter": "O limiar de saída está acima do de entrada, então o núcleo o ignoraria.",
         "congestionTicks": "Sair após",
         "congestionTicksBlank": "Segundos seguidos abaixo do limiar de saída antes de o modo justo realmente terminar. Em branco: 1 segundo.",
-        "classSection": "Classes (uma classe = um SKU)",
+        "classSection": "Classes (clientes que compartilham uma política de contenção)",
         "classReplaceWhole": "Esta tabela é enviada inteira: uma classe removida aqui é apagada do núcleo. Classes são parâmetros de operação e nunca aparecem para os clientes.",
         "addClass": "Adicionar classe",
         "noClasses": "Sem classes: todos os clientes disputam com o mesmo peso e sem teto de classe.",

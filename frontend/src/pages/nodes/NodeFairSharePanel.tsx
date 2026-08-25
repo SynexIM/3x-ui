@@ -17,20 +17,6 @@ import {
   type FairShareForm,
 } from '@/lib/nodes/fairshare';
 
-// A disabled antd control swallows mouse events, so the Tooltip explaining why
-// it is disabled never fires without a wrapper that still receives them. `block`
-// is for full-width fields; buttons keep their intrinsic width.
-function WhyDisabled({ reason, block, children }: { reason?: string; block?: boolean; children: React.ReactNode }) {
-  if (!reason) return <>{children}</>;
-  return (
-    <Tooltip title={reason}>
-      <span style={block ? { display: 'block', width: '100%' } : { display: 'inline-flex' }}>
-        <span style={{ display: 'block', width: '100%', pointerEvents: 'none' }}>{children}</span>
-      </span>
-    </Tooltip>
-  );
-}
-
 export default function NodeFairSharePanel() {
   const { t } = useTranslation();
   const { policy, status } = useFairShareQuery();
@@ -38,7 +24,6 @@ export default function NodeFairSharePanel() {
   const [form, setForm] = useState<FairShareForm>(EMPTY_FAIR_SHARE_FORM);
 
   const managed = policy.data?.declarativelyManaged === true;
-  const readOnlyReason = managed ? t('pages.nodes.fairShare.managedTooltip') : undefined;
 
   useEffect(() => {
     if (!policy.data) return;
@@ -72,18 +57,15 @@ export default function NodeFairSharePanel() {
     key: 'availMbps' | 'softFloorMbps' | 'hardFloorMbps',
   ) => (
     <Form.Item label={label} tooltip={tip} extra={tip}>
-      <WhyDisabled reason={readOnlyReason} block>
-        <InputNumber
-          value={form[key]}
-          min={0}
-          step={1}
-          disabled={managed}
-          addonAfter="Mbps"
-          placeholder={t('pages.nodes.fairShare.blank')}
-          style={{ width: '100%' }}
-          onChange={(v) => setField(key, (v as Blank<number>) ?? null)}
-        />
-      </WhyDisabled>
+      <InputNumber
+        value={form[key]}
+        min={0}
+        step={1}
+        addonAfter="Mbps"
+        placeholder={t('pages.nodes.fairShare.blank')}
+        style={{ width: '100%' }}
+        onChange={(v) => setField(key, (v as Blank<number>) ?? null)}
+      />
     </Form.Item>
   );
 
@@ -102,19 +84,16 @@ export default function NodeFairSharePanel() {
       validateStatus={invalid ? 'error' : undefined}
       help={invalid}
     >
-      <WhyDisabled reason={readOnlyReason} block>
-        <InputNumber
-          value={form[key]}
-          min={0}
-          max={max}
-          step={1}
-          disabled={managed}
-          addonAfter={addon}
-          placeholder={t('pages.nodes.fairShare.blank')}
-          style={{ width: '100%' }}
-          onChange={(v) => setField(key, (v as Blank<number>) ?? null)}
-        />
-      </WhyDisabled>
+      <InputNumber
+        value={form[key]}
+        min={0}
+        max={max}
+        step={1}
+        addonAfter={addon}
+        placeholder={t('pages.nodes.fairShare.blank')}
+        style={{ width: '100%' }}
+        onChange={(v) => setField(key, (v as Blank<number>) ?? null)}
+      />
     </Form.Item>
   );
 
@@ -129,19 +108,16 @@ export default function NodeFairSharePanel() {
     dataIndex: key,
     width: 170,
     render: (_: unknown, klass: FairShareClassForm, index: number) => (
-      <WhyDisabled reason={readOnlyReason} block>
-        <InputNumber
-          value={klass[key]}
-          min={0}
-          max={max}
-          step={1}
-          disabled={managed}
-          addonAfter={addon}
-          placeholder={t('pages.nodes.fairShare.blank')}
-          style={{ width: '100%' }}
-          onChange={(v) => setClass(index, { [key]: (v as Blank<number>) ?? null })}
-        />
-      </WhyDisabled>
+      <InputNumber
+        value={klass[key]}
+        min={0}
+        max={max}
+        step={1}
+        addonAfter={addon}
+        placeholder={t('pages.nodes.fairShare.blank')}
+        style={{ width: '100%' }}
+        onChange={(v) => setClass(index, { [key]: (v as Blank<number>) ?? null })}
+      />
     ),
   });
 
@@ -208,17 +184,15 @@ export default function NodeFairSharePanel() {
       style={{ marginBottom: 16 }}
       title={t('pages.nodes.fairShare.title')}
       extra={(
-        <WhyDisabled reason={readOnlyReason}>
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            disabled={managed || blocked}
-            loading={save.isPending}
-            onClick={onSave}
-          >
-            {t('save')}
-          </Button>
-        </WhyDisabled>
+        <Button
+          type="primary"
+          icon={<SaveOutlined />}
+          disabled={blocked}
+          loading={save.isPending}
+          onClick={onSave}
+        >
+          {t('save')}
+        </Button>
       )}
     >
       <Alert
@@ -284,16 +258,13 @@ export default function NodeFairSharePanel() {
           size="small"
           title={t('pages.nodes.fairShare.classSection')}
           extra={(
-            <WhyDisabled reason={readOnlyReason}>
-              <Button
-                size="small"
-                icon={<PlusOutlined />}
-                disabled={managed}
-                onClick={() => setForm((p) => ({ ...p, classes: [...p.classes, { ...EMPTY_FAIR_SHARE_CLASS }] }))}
-              >
-                {t('pages.nodes.fairShare.addClass')}
-              </Button>
-            </WhyDisabled>
+            <Button
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => setForm((p) => ({ ...p, classes: [...p.classes, { ...EMPTY_FAIR_SHARE_CLASS }] }))}
+            >
+              {t('pages.nodes.fairShare.addClass')}
+            </Button>
           )}
         >
           <Alert type="info" showIcon style={{ marginBottom: 12 }} message={t('pages.nodes.fairShare.classReplaceWhole')} />
@@ -318,14 +289,11 @@ export default function NodeFairSharePanel() {
                 dataIndex: 'name',
                 width: 180,
                 render: (_: unknown, klass: FairShareClassForm, index: number) => (
-                  <WhyDisabled reason={readOnlyReason} block>
-                    <Input
-                      value={klass.name}
-                      disabled={managed}
-                      placeholder={t('pages.nodes.fairShare.classNameFallback')}
-                      onChange={(e) => setClass(index, { name: e.target.value })}
-                    />
-                  </WhyDisabled>
+                  <Input
+                    value={klass.name}
+                    placeholder={t('pages.nodes.fairShare.classNameFallback')}
+                    onChange={(e) => setClass(index, { name: e.target.value })}
+                  />
                 ),
               },
               classColumn(t('pages.nodes.fairShare.weight'), t('pages.nodes.fairShare.weightBlank'), 'weight', 'x'),
@@ -339,16 +307,13 @@ export default function NodeFairSharePanel() {
                 width: 56,
                 fixed: 'right' as const,
                 render: (_: unknown, __: FairShareClassForm, index: number) => (
-                  <WhyDisabled reason={readOnlyReason}>
-                    <Button
-                      type="text"
-                      danger
-                      disabled={managed}
-                      icon={<DeleteOutlined />}
-                      aria-label={t('delete')}
-                      onClick={() => setForm((p) => ({ ...p, classes: p.classes.filter((_, i) => i !== index) }))}
-                    />
-                  </WhyDisabled>
+                  <Button
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined />}
+                    aria-label={t('delete')}
+                    onClick={() => setForm((p) => ({ ...p, classes: p.classes.filter((_, i) => i !== index) }))}
+                  />
                 ),
               },
             ]}

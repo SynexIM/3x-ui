@@ -659,7 +659,7 @@
         "peerNumberConfig": "Peer {n} 配置"
       },
       "sniffingDestOverride": "目标覆盖",
-      "declarativelyManaged": "本节点的入站由控制面下发，面板这里只读。"
+      "declarativelyManaged": "有 API 调用方给本节点下发过期望配置。你在这里改仍然生效，但下次对账可能把它的值改回来。"
     },
     "clients": {
       "tabBasics": "基本",
@@ -1003,9 +1003,8 @@
         "blankMeaning": "不想启用就留空。面板不会替你填一个默认带宽：留空的意思是这项限制不存在，不是「用一个默认值」。每个字段下面都写了留空会怎样。",
         "blank": "留空 = 不启用",
         "saved": "限速策略已下发到内核",
-        "managedTitle": "由控制面托管",
-        "managedDesc": "控制面拥有本节点的配置，并在每次状态轮询时重新下发它自己的节点带宽，所以在这里改的任何值几分钟内都会被覆盖回去。字段仍然可见，但在本节点脱管之前只读。独立部署时它们完全可写。",
-        "managedTooltip": "只读：本节点的限速由控制面拥有。",
+        "managedTitle": "有 API 调用方在托管这份策略",
+        "managedDesc": "有 API 调用方给本节点下发过期望配置，并在每次状态轮询时重新发送它自己的节点带宽，所以在这里改的值可能几分钟内被改回去。字段仍然可编辑，显示的是当前真正生效的值。",
         "nodeSection": "节点级",
         "avail": "节点总容量（root cap）",
         "availBlank": "本节点上所有客户共享的天花板。留空：节点级公平限速整个关闭，只剩每客户自己的限速。",
@@ -1020,7 +1019,7 @@
         "exitAboveEnter": "退出阈值高于进入阈值，内核会直接忽略它。",
         "congestionTicks": "连续多久才退出",
         "congestionTicksBlank": "要连续多少秒低于退出阈值，公平模式才真的结束。留空：按 1 秒算。",
-        "classSection": "class（一个 class = 一个 SKU）",
+        "classSection": "class（一组共享争抢策略的客户）",
         "classReplaceWhole": "这张表是整份下发的：在这里删掉一个 class，内核里的那个也会被删掉。class 是运营参数，永远不出现在客户界面上。",
         "addClass": "新增 class",
         "noClasses": "没有 class：所有客户同权重争抢，也没有 class 级上限。",

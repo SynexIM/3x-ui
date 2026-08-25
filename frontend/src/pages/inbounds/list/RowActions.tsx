@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Button, Dropdown, Tooltip, type MenuProps } from 'antd';
+import { Button, Dropdown, type MenuProps } from 'antd';
 import {
   MoreOutlined,
   EditOutlined,
@@ -22,19 +22,14 @@ interface RowActionsMenuProps {
   record: DBInboundRecord;
   subEnable: boolean;
   hasClients: boolean;
-  // Editing, cloning and deleting write the inbounds table, which the panel
-  // refuses while a control plane owns the config.
-  declarativelyManaged: boolean;
   onClick: (key: RowAction) => void;
   isMobile?: boolean;
 }
 
-export function buildRowActionsMenu({ record, subEnable, t, isMobile, hasClients, declarativelyManaged }: { record: DBInboundRecord; subEnable: boolean; t: (k: string) => string; isMobile?: boolean; hasClients?: boolean; declarativelyManaged?: boolean }): MenuProps['items'] {
+export function buildRowActionsMenu({ record, subEnable, t, isMobile, hasClients }: { record: DBInboundRecord; subEnable: boolean; t: (k: string) => string; isMobile?: boolean; hasClients?: boolean }): MenuProps['items'] {
   const items: MenuProps['items'] = [];
-  const managed = !!declarativelyManaged;
-  const managedReason = managed ? t('pages.inbounds.declarativelyManaged') : undefined;
   if (isMobile) {
-    items.push({ key: 'edit', icon: <EditOutlined />, label: t('edit'), disabled: managed, title: managedReason });
+    items.push({ key: 'edit', icon: <EditOutlined />, label: t('edit') });
   }
   if (showQrCodeMenu(record)) {
     items.push({ key: 'qrcode', icon: <QrcodeOutlined />, label: t('qrCode') });
@@ -53,7 +48,7 @@ export function buildRowActionsMenu({ record, subEnable, t, isMobile, hasClients
   }
   items.push({ key: 'clipboard', icon: <CopyOutlined />, label: t('pages.inbounds.exportInbound') });
   items.push({ key: 'resetTraffic', icon: <RetweetOutlined />, label: t('pages.inbounds.resetTraffic') });
-  items.push({ key: 'clone', icon: <BlockOutlined />, label: t('pages.inbounds.clone'), disabled: managed, title: managedReason });
+  items.push({ key: 'clone', icon: <BlockOutlined />, label: t('pages.inbounds.clone') });
   if (isInboundMultiUser(record)) {
     items.push({ key: 'attachExisting', icon: <UsergroupAddOutlined />, label: t('pages.inbounds.attachExistingClients') });
   }
@@ -66,31 +61,26 @@ export function buildRowActionsMenu({ record, subEnable, t, isMobile, hasClients
   } else {
     items.push({ type: 'divider' });
   }
-  items.push({ key: 'delete', icon: <DeleteOutlined />, danger: true, label: t('delete'), disabled: managed, title: managedReason });
+  items.push({ key: 'delete', icon: <DeleteOutlined />, danger: true, label: t('delete') });
   return items;
 }
 
-export function RowActionsCell({ record, subEnable, hasClients, declarativelyManaged, onClick }: RowActionsMenuProps) {
+export function RowActionsCell({ record, subEnable, hasClients, onClick }: RowActionsMenuProps) {
   const { t } = useTranslation();
   return (
     <div className="action-buttons">
-      <Tooltip title={declarativelyManaged ? t('pages.inbounds.declarativelyManaged') : undefined}>
-        <span style={{ display: 'inline-flex' }}>
-          <Button
-            type="text"
-            size="small"
-            style={declarativelyManaged ? { fontSize: 16, pointerEvents: 'none' } : { fontSize: 16 }}
-            disabled={declarativelyManaged}
-            icon={<EditOutlined />}
-            aria-label={t('edit')}
-            onClick={() => onClick('edit')}
-          />
-        </span>
-      </Tooltip>
+      <Button
+        type="text"
+        size="small"
+        style={{ fontSize: 16 }}
+        icon={<EditOutlined />}
+        aria-label={t('edit')}
+        onClick={() => onClick('edit')}
+      />
       <Dropdown
         trigger={['click']}
         menu={{
-          items: buildRowActionsMenu({ record, subEnable, t, hasClients, declarativelyManaged }),
+          items: buildRowActionsMenu({ record, subEnable, t, hasClients }),
           onClick: ({ key }) => onClick(key as RowAction),
         }}
       >

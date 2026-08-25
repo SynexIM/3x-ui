@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, waitFor } from '@testing-library/react';
+import { waitFor } from '@testing-library/react';
 import type { QueryClient } from '@tanstack/react-query';
 
 import NodeFairSharePanel from '@/pages/nodes/NodeFairSharePanel';
@@ -65,30 +65,27 @@ describe('NodeFairSharePanel', () => {
     }
   });
 
-  // "Looks clickable, tells you no only after you click" is exactly the
-  // dishonesty this panel exists to avoid: the server refuses the write.
-  it('disables every control while the control plane owns the node', async () => {
+  // Greying the form out would turn the panel into an attachment of whatever
+  // automation touched it — exactly when an operator needs to get in and fix
+  // something. The warning replaces the lock, it does not join it.
+  it('stays editable while an API client manages the node, and says why that matters', async () => {
     await renderLoaded({ declarativelyManaged: true, policy: { ...OFF, availBitPerSec: 1_000_000_000 } });
-    await waitFor(() => expect(document.body.textContent).toContain('Managed by the control plane'));
+    await waitFor(() => expect(document.body.textContent).toContain('An API client is managing this policy'));
+    expect(document.body.textContent).toContain('may be put back within minutes');
     for (const input of numberInputs()) {
-      expect(input.disabled).toBe(true);
+      expect(input.disabled).toBe(false);
     }
-    expect(saveButton().disabled).toBe(true);
-    // The greyed-out field still has to show the value that is really in force.
+    expect(saveButton().disabled).toBe(false);
+    // The editable field still has to show the value that is really in force.
     expect(numberInputs().some((input) => input.value === '1000')).toBe(true);
   });
 
-  // Grey with no reason is just a dead end. A disabled antd control eats mouse
-  // events, so the tooltip only fires if the wrapper is right.
-  it('can actually say why it is greyed out', async () => {
+  // The panel must never name the automation that talks to it: a standalone
+  // install has no such thing, and a fork that assumes one is not a product.
+  it('never names a control plane', async () => {
     await renderLoaded({ declarativelyManaged: true, policy: OFF });
-    await waitFor(() => expect(document.body.textContent).toContain('Managed by the control plane'));
-    const wrapper = numberInputs()[0].closest('.ant-input-number')?.parentElement?.parentElement;
-    expect(wrapper).toBeTruthy();
-    fireEvent.mouseEnter(wrapper as HTMLElement);
-    await waitFor(() =>
-      expect(document.querySelector('.ant-tooltip')?.textContent).toContain('the control plane owns'),
-    );
+    await waitFor(() => expect(document.body.textContent).toContain('An API client is managing this policy'));
+    expect(document.body.textContent?.toLowerCase()).not.toContain('control plane');
   });
 
   it('leaves the controls editable on a standalone install', async () => {
@@ -98,7 +95,7 @@ describe('NodeFairSharePanel', () => {
       expect(input.disabled).toBe(false);
     }
     expect(saveButton().disabled).toBe(false);
-    expect(document.body.textContent).not.toContain('Managed by the control plane');
+    expect(document.body.textContent).not.toContain('An API client is managing this policy');
   });
 
   // congested is the first thing to check when tuning appears to do nothing.

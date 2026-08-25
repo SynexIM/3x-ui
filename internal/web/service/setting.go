@@ -1405,8 +1405,8 @@ func (s *SettingService) GetDefaultSettings(host string) (any, error) {
 		"subDomain":        func() (any, error) { return s.GetSubDomain() },
 		"devChannelEnable": func() (any, error) { return s.GetDevChannelEnable() },
 		"isDevBuild":       func() (any, error) { return config.IsDevBuild(), nil },
-		// The panel refuses local inbound writes while a control plane owns the
-		// config. Without this the refusal is only visible after clicking.
+		// Local edits remain available; this flag warns that API automation has
+		// applied desired state and may restore managed values later.
 		"declarativelyManaged": func() (any, error) { return IsDeclarativelyManaged(), nil },
 	}
 
