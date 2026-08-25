@@ -1250,7 +1250,7 @@ export const sections: readonly Section[] = [
     id: 'api-tokens',
     title: 'API Tokens',
     description:
-      'Manage Bearer tokens used for programmatic auth (bots, central panels acting on this node, CI). Each token has a unique name and an enabled flag — disable to revoke without deleting, delete to revoke permanently. Tokens are stored as SHA-256 hashes and the plaintext is returned only once, in the create response — it cannot be retrieved afterwards, so copy it then. Send one as <code>Authorization: Bearer &lt;token&gt;</code> on any /panel/api/* request — the token is a full-admin credential.',
+      'Manage Bearer tokens used for programmatic auth (bots, central panels acting on this node, CI). Each token has a unique name and an enabled flag — disable to revoke without deleting, delete to revoke permanently. Tokens are stored as SHA-256 hashes and the plaintext is returned only once, in the create response — it cannot be retrieved afterwards, so copy it then. Send one as <code>Authorization: Bearer &lt;token&gt;</code> on any /panel/api/* request. A token with no namespaces is a full-admin credential; give it namespaces to confine it to objects whose tag or email starts with one of its prefixes, so an automation and the person at the panel can share a node without overwriting each other.',
     endpoints: [
       {
         method: 'GET',
@@ -1264,8 +1264,9 @@ export const sections: readonly Section[] = [
         summary: 'Mint a new API token. Name must be unique and 1-64 characters; the token string is server-generated and returned only in this response — it is stored hashed and cannot be retrieved later.',
         params: [
           { name: 'name', in: 'body', type: 'string', desc: 'Human-readable label, e.g. "central-panel-a".' },
+          { name: 'namespaces', in: 'body', type: 'string', optional: true, desc: 'Comma-separated tag/email prefixes this token owns. Empty means unrestricted; otherwise every object it creates, edits or deletes must carry one of these prefixes, and a write naming no object at all is refused.' },
         ],
-        body: '{\n  "name": "central-panel-a"\n}',
+        body: '{\n  "name": "central-panel-a",\n  "namespaces": "ipl_"\n}',
         responseSchema: 'ApiTokenView',
         errorResponse: '{\n  "success": false,\n  "msg": "a token with that name already exists"\n}',
       },
@@ -1287,6 +1288,17 @@ export const sections: readonly Section[] = [
           { name: 'enabled', in: 'body', type: 'boolean', desc: 'New enabled state.' },
         ],
         body: '{\n  "enabled": false\n}',
+        response: '{\n  "success": true\n}',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/setting/apiTokens/setNamespaces/:id',
+        summary: 'Replace the namespaces a token owns. Sending an empty list makes the token unrestricted again. A prefix shorter than two characters, or one containing a comma, is refused: it would own more than anyone meant it to.',
+        params: [
+          { name: 'id', in: 'path', type: 'number', desc: 'Token row ID.' },
+          { name: 'namespaces', in: 'body', type: 'string', desc: 'Comma-separated prefixes, e.g. "ipl_,fleet-".' },
+        ],
+        body: '{\n  "namespaces": "ipl_"\n}',
         response: '{\n  "success": true\n}',
       },
     ],

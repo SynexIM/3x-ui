@@ -24,6 +24,8 @@
   "protocol": "Protocol",
   "search": "Search",
   "filter": "Filter",
+  "managedByAutomation": "Automated",
+  "managedByAutomationDesc": "An API client owns this namespace. You can still edit this here, but the next reconciliation may put its values back.",
   "all": "All",
   "from": "From",
   "to": "To",
@@ -1442,7 +1444,10 @@
         "apiTokenEmpty": "No tokens yet — create one to authenticate bots or remote panels.",
         "apiTokenDeleteWarning": "Any caller using this token will stop authenticating immediately.",
         "apiTokenCreatedTitle": "Token created",
-        "apiTokenCreatedNotice": "Copy this token now. For security it is not stored in readable form and will not be shown again."
+        "apiTokenCreatedNotice": "Copy this token now. For security it is not stored in readable form and will not be shown again.",
+        "apiTokenNamespaces": "Namespaces it owns",
+        "apiTokenNamespacesDesc": "Prefixes of the tags and emails this token may write. Leave empty and the token can write anything, as before. Fill it in and the token can only create, edit or delete objects whose tag or email starts with one of these — and a write that names no object at all is refused. This is how an automation and the person at the panel share one node without overwriting each other.",
+        "apiTokenNamespacesBlank": "Blank = unrestricted, e.g. ipl_"
       },
       "toasts": {
         "modifySettings": "The parameters have been changed.",
@@ -1633,6 +1638,9 @@
         "user": "User",
         "inboundTags": "Inbound tags",
         "outboundTag": "Outbound tag",
+        "ruleTag": "Rule tag",
+        "ruleTagDesc": "A name for this rule. Xray removes a rule by its tag, so a rule saved without one can only ever be found by its position in this list — and never touched from the API.",
+        "ruleTagBlank": "Blank = not addressable from the API",
         "balancerTag": "Balancer tag",
         "balancerTagTooltip": "Routes traffic through one of the configured load balancers"
       },

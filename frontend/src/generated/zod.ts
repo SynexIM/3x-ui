@@ -244,6 +244,7 @@ export const ApiTokenSchema = z.object({
   enabled: z.boolean(),
   id: z.number().int(),
   name: z.string(),
+  namespaces: z.string(),
   token: z.string(),
 });
 export type ApiToken = z.infer<typeof ApiTokenSchema>;
@@ -253,6 +254,7 @@ export const ApiTokenViewSchema = z.object({
   enabled: z.boolean(),
   id: z.number().int(),
   name: z.string(),
+  namespaces: z.array(z.string()),
   token: z.string().optional(),
 });
 export type ApiTokenView = z.infer<typeof ApiTokenViewSchema>;

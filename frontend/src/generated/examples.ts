@@ -222,6 +222,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "enabled": false,
     "id": 0,
     "name": "",
+    "namespaces": "",
     "token": ""
   },
   "ApiTokenView": {
@@ -229,6 +230,9 @@ export const EXAMPLES: Record<string, unknown> = {
     "enabled": true,
     "id": 2,
     "name": "central-panel-a",
+    "namespaces": [
+      ""
+    ],
     "token": "new-token-string"
   },
   "Client": {

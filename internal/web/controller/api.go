@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/web/middleware"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service/panel"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service/tgbot"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/session"
@@ -48,12 +49,14 @@ func (a *APIController) checkAPIAuth(c *gin.Context) {
 	}
 	auth := c.GetHeader("Authorization")
 	if after, ok := strings.CutPrefix(auth, "Bearer "); ok {
-		tok := after
-		if a.apiTokenService.Match(tok) {
+		if token := a.apiTokenService.MatchToken(after); token != nil {
 			if u, err := a.userService.GetFirstUser(); err == nil {
 				session.SetAPIAuthUser(c, u)
 			}
 			c.Set("api_authed", true)
+			// The namespaces travel with the token, so one panel can serve
+			// several automations that never step on each other.
+			c.Set(middleware.NamespaceScopeContextKey, service.ParseNamespaces(token.Namespaces))
 			c.Next()
 			return
 		}
@@ -78,6 +81,9 @@ func (a *APIController) initRouter(g *gin.RouterGroup) {
 	// advertise support, before CSRF/handlers read the body.
 	api.Use(middleware.ConfigEnvelopeMiddleware())
 	api.Use(middleware.CSRFMiddleware())
+	// After the envelope decode, so the scope check reads the same body the
+	// handler will.
+	api.Use(middleware.NamespaceScopeMiddleware())
 
 	api.GET("/openapi.json", ServeOpenAPISpec)
 

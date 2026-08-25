@@ -24,6 +24,8 @@
   "protocol": "プロトコル",
   "search": "検索",
   "filter": "フィルタ",
+  "managedByAutomation": "自動管理",
+  "managedByAutomationDesc": "この名前空間は API クライアントが所有しています。ここでの編集は有効ですが、次の照合でその値に戻される場合があります。",
   "all": "すべて",
   "from": "から",
   "to": "まで",
@@ -1321,7 +1323,10 @@
         "apiTokenEmpty": "トークンがまだありません — ボットやリモートパネルを認証するために作成してください。",
         "apiTokenDeleteWarning": "このトークンを使用しているクライアントは直ちに認証できなくなります。",
         "apiTokenCreatedTitle": "トークンを作成しました",
-        "apiTokenCreatedNotice": "このトークンを今すぐコピーしてください。セキュリティ上、読み取り可能な形式では保存されず、再表示されません。"
+        "apiTokenCreatedNotice": "このトークンを今すぐコピーしてください。セキュリティ上、読み取り可能な形式では保存されず、再表示されません。",
+        "apiTokenNamespaces": "所有する名前空間",
+        "apiTokenNamespacesDesc": "このトークンが書き込める tag / email の接頭辞。空欄なら従来どおり無制限です。指定すると、tag か email がいずれかで始まるオブジェクトしか作成・編集・削除できず、対象を特定できない書き込みは拒否されます。自動化と panel の前にいる人が、互いを上書きせずに 1 台を共有する方法です。",
+        "apiTokenNamespacesBlank": "空欄 = 無制限。例: ipl_"
       },
       "toasts": {
         "modifySettings": "パラメーターが変更されました。",
@@ -1516,6 +1521,9 @@
         "user": "ユーザー",
         "inboundTags": "インバウンドタグ",
         "outboundTag": "アウトバウンドタグ",
+        "ruleTag": "ルールタグ",
+        "ruleTagDesc": "このルールの名前です。Xray はタグでルールを削除するため、タグなしで保存したルールは一覧の順番でしか見つけられず、API からは一切触れません。",
+        "ruleTagBlank": "空欄 = API から指定できません",
         "balancerTag": "バランサータグ",
         "balancerTagTooltip": "設定済みのロードバランサーの1つを通じてトラフィックをルーティング"
       },

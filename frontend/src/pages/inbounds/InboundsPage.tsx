@@ -92,6 +92,7 @@ export default function InboundsPage() {
     tgBotEnable,
     ipLimitEnable,
     declarativelyManaged,
+    managedNamespaces,
     refresh,
     hydrateInbound,
     applyTrafficEvent,
@@ -627,6 +628,7 @@ export default function InboundsPage() {
                       isMobile={isMobile}
                       subEnable={subSettings.enable}
                       declarativelyManaged={declarativelyManaged}
+                      managedNamespaces={managedNamespaces}
                       nodesById={nodesById}
                       hasActiveNode={showNodeInfo}
                       onAddInbound={onAddInbound}

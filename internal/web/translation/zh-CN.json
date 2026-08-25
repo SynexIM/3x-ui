@@ -24,6 +24,8 @@
   "protocol": "协议",
   "search": "搜索",
   "filter": "筛选",
+  "managedByAutomation": "自动化托管",
+  "managedByAutomationDesc": "这个命名空间归某个 API 调用方所有。你在这里改仍然生效，但下次对账可能把它的值改回来。",
   "all": "全部",
   "from": "从",
   "to": "到",
@@ -1321,7 +1323,10 @@
         "apiTokenEmpty": "暂无令牌 — 创建一个用于认证机器人或远程面板。",
         "apiTokenDeleteWarning": "使用此令牌的任何调用方将立即无法认证。",
         "apiTokenCreatedTitle": "令牌已创建",
-        "apiTokenCreatedNotice": "请立即复制此令牌。出于安全考虑，它不会以可读形式存储，也不会再次显示。"
+        "apiTokenCreatedNotice": "请立即复制此令牌。出于安全考虑，它不会以可读形式存储，也不会再次显示。",
+        "apiTokenNamespaces": "它拥有的命名空间",
+        "apiTokenNamespacesDesc": "这把 token 能写的 tag / email 前缀。留空＝不受限，和以前一样。填了以后，它只能增删改「tag 或 email 以其中之一开头」的对象，而且任何一个说不清自己在动谁的写请求都会被拒。这就是自动化和坐在面板前的人共用一台机器却互不覆盖的办法。",
+        "apiTokenNamespacesBlank": "留空＝不受限，例如 ipl_"
       },
       "toasts": {
         "modifySettings": "参数已更改。",
@@ -1516,6 +1521,9 @@
         "user": "用户",
         "inboundTags": "入站标签",
         "outboundTag": "出站标签",
+        "ruleTag": "规则标签",
+        "ruleTagDesc": "给这条规则起的名字。xray 删规则是按标签删的，所以没有标签的规则以后只能靠「它排在第几条」找到，API 永远碰不到它。",
+        "ruleTagBlank": "留空＝API 无法定位这条规则",
         "balancerTag": "均衡器标签",
         "balancerTagTooltip": "通过其中一个已配置的负载均衡器路由流量"
       },

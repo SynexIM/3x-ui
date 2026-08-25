@@ -47,6 +47,7 @@ export default function InboundList({
   isMobile,
   subEnable,
   declarativelyManaged,
+  managedNamespaces,
   nodesById,
   hasActiveNode,
   onAddInbound,
@@ -142,6 +143,7 @@ export default function InboundList({
     subEnable,
     expireDiff,
     trafficDiff,
+    managedNamespaces,
     onRowAction,
     onSwitchEnable,
   });

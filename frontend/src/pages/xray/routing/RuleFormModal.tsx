@@ -18,6 +18,7 @@ export interface RoutingRule {
   sourcePort?: string;
   vlessRoute?: string;
   network?: string;
+  ruleTag?: string;
   sourceIP?: string | string[];
   user?: string | string[];
   inboundTag?: string[];
@@ -40,6 +41,7 @@ interface RuleFormModalProps {
 
 const initialForm = (): RuleFormValues => ({
   enabled: true,
+  ruleTag: '',
   domain: '',
   ip: '',
   port: '',
@@ -90,6 +92,7 @@ export default function RuleFormModal({
         sourcePort: rule.sourcePort || '',
         vlessRoute: rule.vlessRoute || '',
         network: rule.network || '',
+        ruleTag: rule.ruleTag || '',
         sourceIP: Array.isArray(rule.sourceIP) ? rule.sourceIP.join(',') : rule.sourceIP || '',
         user: Array.isArray(rule.user) ? rule.user.join(',') : rule.user || '',
         inboundTag: rule.inboundTag || [],
@@ -112,6 +115,7 @@ export default function RuleFormModal({
     const built: Record<string, unknown> = {
       type: 'field',
       enabled: v.enabled,
+      ruleTag: v.ruleTag.trim() === '' ? undefined : v.ruleTag.trim(),
       domain: csv(v.domain),
       ip: csv(v.ip),
       port: v.port,
@@ -163,6 +167,17 @@ export default function RuleFormModal({
         <Form colon={false} labelCol={{ md: { span: 8 } }} wrapperCol={{ md: { span: 14 } }}>
           <FormField name="enabled" label={t('enable')} valueProp="checked">
             <Switch disabled={isApiRule(rule ?? {})} />
+          </FormField>
+
+          <FormField
+            name="ruleTag"
+            label={
+              <Tooltip title={t('pages.xray.ruleForm.ruleTagDesc')}>
+                {t('pages.xray.ruleForm.ruleTag')} <QuestionCircleOutlined aria-hidden="true" />
+              </Tooltip>
+            }
+          >
+            <Input placeholder={t('pages.xray.ruleForm.ruleTagBlank')} />
           </FormField>
 
           <FormField

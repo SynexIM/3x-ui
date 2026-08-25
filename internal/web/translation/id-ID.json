@@ -24,6 +24,8 @@
   "protocol": "Protokol",
   "search": "Cari",
   "filter": "Filter",
+  "managedByAutomation": "Otomatis",
+  "managedByAutomationDesc": "Namespace ini dimiliki sebuah klien API. Anda tetap bisa menyuntingnya di sini, tetapi rekonsiliasi berikutnya mungkin mengembalikan nilainya.",
   "all": "Semua",
   "from": "Dari",
   "to": "Ke",
@@ -1321,7 +1323,10 @@
         "apiTokenEmpty": "Belum ada token — buat satu untuk mengautentikasi bot atau panel jarak jauh.",
         "apiTokenDeleteWarning": "Setiap pemanggil yang menggunakan token ini akan berhenti terautentikasi segera.",
         "apiTokenCreatedTitle": "Token dibuat",
-        "apiTokenCreatedNotice": "Salin token ini sekarang. Demi keamanan, token tidak disimpan dalam bentuk yang dapat dibaca dan tidak akan ditampilkan lagi."
+        "apiTokenCreatedNotice": "Salin token ini sekarang. Demi keamanan, token tidak disimpan dalam bentuk yang dapat dibaca dan tidak akan ditampilkan lagi.",
+        "apiTokenNamespaces": "Namespace yang dimilikinya",
+        "apiTokenNamespacesDesc": "Awalan tag dan email yang boleh ditulis token ini. Kosong berarti tanpa batas, seperti sebelumnya. Bila diisi, token hanya bisa membuat, menyunting, atau menghapus objek yang tag atau email-nya diawali salah satunya, dan permintaan tulis yang tidak menyebut objek apa pun ditolak. Begitulah otomasi dan orang di depan panel berbagi satu node tanpa saling menimpa.",
+        "apiTokenNamespacesBlank": "Kosong = tanpa batas, mis. ipl_"
       },
       "toasts": {
         "modifySettings": "Parameter telah diubah.",
@@ -1516,6 +1521,9 @@
         "user": "Pengguna",
         "inboundTags": "Tag inbound",
         "outboundTag": "Tag outbound",
+        "ruleTag": "Tag aturan",
+        "ruleTagDesc": "Nama untuk aturan ini. Xray menghapus aturan berdasarkan tag-nya, jadi aturan yang disimpan tanpa tag hanya bisa ditemukan lewat posisinya di daftar ini — dan tak pernah bisa disentuh dari API.",
+        "ruleTagBlank": "Kosong = tak bisa dialamati dari API",
         "balancerTag": "Tag balancer",
         "balancerTagTooltip": "Mengarahkan trafik melalui salah satu balancer yang dikonfigurasi"
       },

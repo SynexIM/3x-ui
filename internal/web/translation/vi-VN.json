@@ -24,6 +24,8 @@
   "protocol": "Giao thức",
   "search": "Tìm kiếm",
   "filter": "Lọc",
+  "managedByAutomation": "Tự động",
+  "managedByAutomationDesc": "Namespace này thuộc về một client API. Bạn vẫn sửa được ở đây, nhưng lần đối soát sau có thể đặt lại giá trị của nó.",
   "all": "Tất cả",
   "from": "Từ",
   "to": "Đến",
@@ -1321,7 +1323,10 @@
         "apiTokenEmpty": "Chưa có token nào — tạo một token để xác thực bot hoặc panel từ xa.",
         "apiTokenDeleteWarning": "Mọi client đang dùng token này sẽ ngừng xác thực ngay lập tức.",
         "apiTokenCreatedTitle": "Đã tạo token",
-        "apiTokenCreatedNotice": "Hãy sao chép token này ngay bây giờ. Vì lý do bảo mật, token không được lưu ở dạng đọc được và sẽ không hiển thị lại."
+        "apiTokenCreatedNotice": "Hãy sao chép token này ngay bây giờ. Vì lý do bảo mật, token không được lưu ở dạng đọc được và sẽ không hiển thị lại.",
+        "apiTokenNamespaces": "Namespace mà token sở hữu",
+        "apiTokenNamespacesDesc": "Tiền tố của tag và email mà token này được ghi. Để trống nghĩa là không giới hạn, như trước đây. Điền vào thì token chỉ tạo, sửa hoặc xoá được các đối tượng có tag hoặc email bắt đầu bằng một trong số đó, và một yêu cầu ghi không nêu tên đối tượng nào sẽ bị từ chối. Đó là cách một hệ tự động và người ngồi trước panel dùng chung một node mà không ghi đè nhau.",
+        "apiTokenNamespacesBlank": "Để trống = không giới hạn, ví dụ ipl_"
       },
       "toasts": {
         "modifySettings": "Các tham số đã được thay đổi.",
@@ -1516,6 +1521,9 @@
         "user": "Người dùng",
         "inboundTags": "Tag inbound",
         "outboundTag": "Tag outbound",
+        "ruleTag": "Nhãn quy tắc",
+        "ruleTagDesc": "Tên của quy tắc này. Xray xoá quy tắc theo nhãn, nên một quy tắc lưu mà không có nhãn về sau chỉ có thể tìm bằng vị trí trong danh sách — và không bao giờ đụng tới được từ API.",
+        "ruleTagBlank": "Để trống = API không định vị được",
         "balancerTag": "Tag balancer",
         "balancerTagTooltip": "Định tuyến lưu lượng qua một trong các bộ cân bằng tải đã cấu hình"
       },

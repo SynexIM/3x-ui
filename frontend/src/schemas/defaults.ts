@@ -18,6 +18,7 @@ export const DefaultsPayloadSchema = z.object({
   webDomain: z.string().optional(),
   subDomain: z.string().optional(),
   declarativelyManaged: z.boolean().optional(),
+  managedNamespaces: z.array(z.string()).optional(),
 }).loose();
 
 export type DefaultsPayload = z.infer<typeof DefaultsPayloadSchema>;

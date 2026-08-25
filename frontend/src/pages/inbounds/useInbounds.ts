@@ -168,6 +168,7 @@ export function useInbounds() {
   const tgBotEnable = !!defaults.tgBotEnable;
   const ipLimitEnable = !!defaults.ipLimitEnable;
   const declarativelyManaged = !!defaults.declarativelyManaged;
+  const managedNamespaces = defaults.managedNamespaces ?? [];
   const pageSize = defaults.pageSize ?? 0;
   const datepicker = (defaults.datepicker as 'gregorian' | 'jalalian') || 'gregorian';
 
@@ -559,6 +560,7 @@ export function useInbounds() {
     tgBotEnable,
     ipLimitEnable,
     declarativelyManaged,
+    managedNamespaces,
     pageSize,
     refresh,
     hydrateInbound,

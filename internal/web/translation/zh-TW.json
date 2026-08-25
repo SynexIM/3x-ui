@@ -24,6 +24,8 @@
   "protocol": "協議",
   "search": "搜尋",
   "filter": "篩選",
+  "managedByAutomation": "自動化託管",
+  "managedByAutomationDesc": "這個命名空間歸某個 API 呼叫方所有。你在這裡改仍然生效，但下次對帳可能把它的值改回來。",
   "all": "全部",
   "from": "從",
   "to": "到",
@@ -1321,7 +1323,10 @@
         "apiTokenEmpty": "尚無令牌 — 建立一個以認證機器人或遠端面板。",
         "apiTokenDeleteWarning": "使用此令牌的任何呼叫方將立即無法認證。",
         "apiTokenCreatedTitle": "權杖已建立",
-        "apiTokenCreatedNotice": "請立即複製此權杖。基於安全考量，它不會以可讀形式儲存，也不會再次顯示。"
+        "apiTokenCreatedNotice": "請立即複製此權杖。基於安全考量，它不會以可讀形式儲存，也不會再次顯示。",
+        "apiTokenNamespaces": "它擁有的命名空間",
+        "apiTokenNamespacesDesc": "這把 token 能寫的 tag / email 前綴。留空＝不受限，和以前一樣。填了以後，它只能增刪改「tag 或 email 以其中之一開頭」的物件，而且任何一個說不清自己在動誰的寫入請求都會被拒。這就是自動化和坐在面板前的人共用一台機器卻互不覆蓋的辦法。",
+        "apiTokenNamespacesBlank": "留空＝不受限，例如 ipl_"
       },
       "toasts": {
         "modifySettings": "參數已更改。",
@@ -1516,6 +1521,9 @@
         "user": "使用者",
         "inboundTags": "入站標籤",
         "outboundTag": "出站標籤",
+        "ruleTag": "規則標籤",
+        "ruleTagDesc": "給這條規則取的名字。xray 刪規則是按標籤刪的，所以沒有標籤的規則以後只能靠「它排在第幾條」找到，API 永遠碰不到它。",
+        "ruleTagBlank": "留空＝API 無法定位這條規則",
         "balancerTag": "均衡器標籤",
         "balancerTagTooltip": "透過其中一個已設定的負載均衡器路由流量"
       },

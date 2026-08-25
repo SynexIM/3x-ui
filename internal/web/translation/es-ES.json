@@ -24,6 +24,8 @@
   "protocol": "Protocolo",
   "search": "Buscar",
   "filter": "Filtrar",
+  "managedByAutomation": "Automatizado",
+  "managedByAutomationDesc": "Un cliente de API es dueño de este espacio de nombres. Puedes editarlo aquí, pero la próxima reconciliación puede restaurar sus valores.",
   "all": "Todos",
   "from": "Desde",
   "to": "Hasta",
@@ -1321,7 +1323,10 @@
         "apiTokenEmpty": "Aún no hay tokens — crea uno para autenticar bots o paneles remotos.",
         "apiTokenDeleteWarning": "Cualquier cliente que use este token dejará de autenticarse inmediatamente.",
         "apiTokenCreatedTitle": "Token creado",
-        "apiTokenCreatedNotice": "Copia este token ahora. Por seguridad, no se almacena de forma legible y no se volverá a mostrar."
+        "apiTokenCreatedNotice": "Copia este token ahora. Por seguridad, no se almacena de forma legible y no se volverá a mostrar.",
+        "apiTokenNamespaces": "Espacios de nombres que posee",
+        "apiTokenNamespacesDesc": "Prefijos de las etiquetas y correos que este token puede escribir. Vacío significa sin restricción, como antes. Con valores, solo puede crear, editar o borrar objetos cuyo tag o email empiece por uno de ellos, y una escritura que no nombre ningún objeto se rechaza. Así una automatización y la persona ante el panel comparten un nodo sin pisarse.",
+        "apiTokenNamespacesBlank": "Vacío = sin restricción, p. ej. ipl_"
       },
       "toasts": {
         "modifySettings": "Los parámetros han sido modificados.",
@@ -1516,6 +1521,9 @@
         "user": "Usuario",
         "inboundTags": "Etiquetas de entradas",
         "outboundTag": "Etiqueta de salida",
+        "ruleTag": "Etiqueta de la regla",
+        "ruleTagDesc": "Un nombre para esta regla. Xray borra una regla por su etiqueta, así que una regla guardada sin ella solo se podrá encontrar por su posición en la lista, y nunca tocar desde la API.",
+        "ruleTagBlank": "Vacío = no direccionable desde la API",
         "balancerTag": "Etiqueta de balanceador",
         "balancerTagTooltip": "Enruta el tráfico a través de uno de los balanceadores configurados"
       },

@@ -21,6 +21,7 @@ export type ProtocolFlags = {
 export interface DBInboundRecord extends ProtocolFlags {
   id: number;
   enable: boolean;
+  tag: string;
   remark: string;
   subSortIndex: number;
   port: number;
@@ -77,6 +78,9 @@ export interface InboundListProps {
   // API automation has applied desired state. Local edits stay available, but
   // the page warns that a later reconciliation may restore managed values.
   declarativelyManaged: boolean;
+  // Tag prefixes some automation owns. Objects inside one are marked so an
+  // operator sees, before editing, that a reconciliation may restore them.
+  managedNamespaces: readonly string[];
   nodesById: Map<number, NodeRecord>;
   hasActiveNode: boolean;
   onAddInbound: () => void;

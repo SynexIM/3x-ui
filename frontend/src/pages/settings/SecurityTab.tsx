@@ -6,10 +6,12 @@ import {
   Form,
   Input,
   Modal,
+  Select,
   Space,
   Spin,
   Switch,
   Tabs,
+  Tooltip,
   message,
 } from 'antd';
 import { ApiOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons';
@@ -31,6 +33,7 @@ interface ApiTokenRow {
   id: number;
   name: string;
   enabled: boolean;
+  namespaces?: string[];
   createdAt: number;
 }
 
@@ -85,6 +88,7 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
   const [apiTokensLoading, setApiTokensLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
+  const [createNamespaces, setCreateNamespaces] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [createdToken, setCreatedToken] = useState<{ name: string; token: string } | null>(null);
 
@@ -154,6 +158,7 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
 
   function openCreateModal() {
     setCreateName('');
+    setCreateNamespaces([]);
     setCreateOpen(true);
   }
 
@@ -165,7 +170,10 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
     }
     setCreating(true);
     try {
-      const msg = await HttpUtil.post('/panel/api/setting/apiTokens/create', { name }) as ApiMsg<{ token?: string }>;
+      const msg = await HttpUtil.post('/panel/api/setting/apiTokens/create', {
+        name,
+        namespaces: createNamespaces.join(','),
+      }) as ApiMsg<{ token?: string }>;
       if (msg?.success) {
         setCreateOpen(false);
         await loadApiTokens();
@@ -191,6 +199,13 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
         if (msg?.success) await loadApiTokens();
       },
     });
+  }
+
+  async function saveTokenNamespaces(row: ApiTokenRow, namespaces: string[]) {
+    const msg = await HttpUtil.post(`/panel/api/setting/apiTokens/setNamespaces/${row.id}`, {
+      namespaces: namespaces.join(','),
+    }) as ApiMsg;
+    if (msg?.success) await loadApiTokens();
   }
 
   async function toggleTokenEnabled(row: ApiTokenRow) {
@@ -325,6 +340,24 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
                         </Button>
                       </div>
                     </div>
+                    <Form.Item
+                      style={{ marginBottom: 0, marginTop: 8 }}
+                      label={(
+                        <Tooltip title={t('pages.settings.security.apiTokenNamespacesDesc')}>
+                          <span>{t('pages.settings.security.apiTokenNamespaces')}</span>
+                        </Tooltip>
+                      )}
+                    >
+                      <Select
+                        mode="tags"
+                        size="small"
+                        value={row.namespaces ?? []}
+                        style={{ width: '100%' }}
+                        tokenSeparators={[',']}
+                        placeholder={t('pages.settings.security.apiTokenNamespacesBlank')}
+                        onChange={(next) => saveTokenNamespaces(row, next as string[])}
+                      />
+                    </Form.Item>
                   </div>
                 ))}
               </Spin>
@@ -350,6 +383,21 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
               placeholder={t('pages.settings.security.apiTokenNamePlaceholder') || 'e.g. central-panel-a'}
               onChange={(e) => setCreateName(e.target.value)}
               onPressEnter={confirmCreateToken}
+            />
+          </Form.Item>
+          <Form.Item
+            label={(
+              <Tooltip title={t('pages.settings.security.apiTokenNamespacesDesc')}>
+                <span>{t('pages.settings.security.apiTokenNamespaces')}</span>
+              </Tooltip>
+            )}
+          >
+            <Select
+              mode="tags"
+              value={createNamespaces}
+              tokenSeparators={[',']}
+              placeholder={t('pages.settings.security.apiTokenNamespacesBlank')}
+              onChange={(next) => setCreateNamespaces(next as string[])}
             />
           </Form.Item>
         </Form>

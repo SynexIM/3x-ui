@@ -943,6 +943,10 @@ export const SCHEMAS: Record<string, unknown> = {
       "name": {
         "type": "string"
       },
+      "namespaces": {
+        "description": "Namespaces is a comma-separated list of tag/email prefixes this token owns.\nEmpty means unrestricted, which is what every token created before this\ncolumn existed keeps being.",
+        "type": "string"
+      },
       "token": {
         "description": "SHA-256 hash; the plaintext is shown only once at creation",
         "type": "string"
@@ -953,6 +957,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "enabled",
       "id",
       "name",
+      "namespaces",
       "token"
     ],
     "type": "object"
@@ -976,6 +981,13 @@ export const SCHEMAS: Record<string, unknown> = {
         "example": "central-panel-a",
         "type": "string"
       },
+      "namespaces": {
+        "description": "Namespaces are the tag/email prefixes this token may write. Empty means\nunrestricted; a non-empty list means every object the token creates,\nedits or deletes must carry one of these prefixes.",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
       "token": {
         "example": "new-token-string",
         "type": "string"
@@ -985,7 +997,8 @@ export const SCHEMAS: Record<string, unknown> = {
       "createdAt",
       "enabled",
       "id",
-      "name"
+      "name",
+      "namespaces"
     ],
     "type": "object"
   },

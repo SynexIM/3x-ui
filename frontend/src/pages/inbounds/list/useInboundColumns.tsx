@@ -1,6 +1,8 @@
 import { useMemo, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Popover, Switch, Tag, Tooltip, type TableColumnType } from 'antd';
+
+import { ManagedTag } from '@/lib/namespaces';
 import { TeamOutlined } from '@ant-design/icons';
 
 import { SizeFormatter, IntlUtil, ColorUtils } from '@/utils';
@@ -32,6 +34,7 @@ interface UseInboundColumnsParams {
   subEnable: boolean;
   expireDiff: number;
   trafficDiff: number;
+  managedNamespaces: readonly string[];
   onRowAction: (action: { key: RowAction; dbInbound: DBInboundRecord }) => void;
   onSwitchEnable: (dbInbound: DBInboundRecord, next: boolean) => void;
 }
@@ -46,6 +49,7 @@ export function useInboundColumns({
   subEnable,
   expireDiff,
   trafficDiff,
+  managedNamespaces,
   onRowAction,
   onSwitchEnable,
 }: UseInboundColumnsParams): TableColumnType<DBInboundRecord>[] {
@@ -133,6 +137,19 @@ export function useInboundColumns({
         ),
       },
     ];
+
+    // Only when some automation actually claims a namespace: an operator who
+    // runs this panel alone should never see a column about a thing that does
+    // not exist here.
+    if (managedNamespaces.length > 0) {
+      cols.push({
+        title: t('managedByAutomation'),
+        key: 'managed',
+        align: 'center',
+        width: 120,
+        render: (_, record) => <ManagedTag name={record.tag} namespaces={managedNamespaces} />,
+      });
+    }
 
     if (hasAnyRemark) {
       cols.push({
@@ -357,5 +374,5 @@ export function useInboundColumns({
     );
 
     return cols;
-  }, [t, hasAnyRemark, hasAnySubSortIndex, hasActiveNode, nodesById, clientCount, inboundSpeed, subEnable, expireDiff, trafficDiff, datepicker, onRowAction, onSwitchEnable]);
+  }, [t, hasAnyRemark, hasAnySubSortIndex, hasActiveNode, nodesById, clientCount, inboundSpeed, subEnable, expireDiff, trafficDiff, datepicker, managedNamespaces, onRowAction, onSwitchEnable]);
 }

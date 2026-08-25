@@ -160,6 +160,10 @@ type ApiToken struct {
 	Token     string `json:"token" gorm:"not null"` // SHA-256 hash; the plaintext is shown only once at creation
 	Enabled   bool   `json:"enabled" gorm:"default:true"`
 	CreatedAt int64  `json:"createdAt" gorm:"autoCreateTime"`
+	// Namespaces is a comma-separated list of tag/email prefixes this token owns.
+	// Empty means unrestricted, which is what every token created before this
+	// column existed keeps being.
+	Namespaces string `json:"namespaces" gorm:"column:namespaces;default:''"`
 }
 
 // MarshalJSON emits settings, streamSettings, and sniffing as nested JSON

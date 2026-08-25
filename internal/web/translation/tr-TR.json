@@ -24,6 +24,8 @@
   "protocol": "Protokol",
   "search": "Ara",
   "filter": "Filtre",
+  "managedByAutomation": "Otomatik",
+  "managedByAutomationDesc": "Bu ad alanı bir API istemcisine ait. Burada düzenleyebilirsiniz, ancak bir sonraki mutabakat kendi değerlerini geri koyabilir.",
   "all": "Tümü",
   "from": "Başlangıç",
   "to": "Bitiş",
@@ -1321,7 +1323,10 @@
         "apiTokenEmpty": "Henüz token yok — botları veya uzak panelleri doğrulamak için bir tane oluşturun.",
         "apiTokenDeleteWarning": "Bu token'ı kullanan tüm bağlantılar anında kimlik doğrulamasını kaybeder.",
         "apiTokenCreatedTitle": "Token Oluşturuldu",
-        "apiTokenCreatedNotice": "Bu token'ı şimdi kopyalayın. Güvenlik nedeniyle okunabilir biçimde saklanmaz ve tekrar gösterilmez."
+        "apiTokenCreatedNotice": "Bu token'ı şimdi kopyalayın. Güvenlik nedeniyle okunabilir biçimde saklanmaz ve tekrar gösterilmez.",
+        "apiTokenNamespaces": "Sahip olduğu ad alanları",
+        "apiTokenNamespacesDesc": "Bu token’ın yazabileceği tag ve e-posta önekleri. Boşsa eskisi gibi sınırsızdır. Doldurulursa yalnızca tag’i veya e-postası bunlardan biriyle başlayan nesneleri oluşturabilir, düzenleyebilir veya silebilir; hiçbir nesneyi adlandırmayan bir yazma isteği reddedilir. Bir otomasyon ile panelin başındaki kişi bir düğümü böyle birbirini ezmeden paylaşır.",
+        "apiTokenNamespacesBlank": "Boş = sınırsız, örn. ipl_"
       },
       "toasts": {
         "modifySettings": "Parametreler değiştirildi.",
@@ -1516,6 +1521,9 @@
         "user": "Kullanıcı",
         "inboundTags": "Gelen Bağlantı Etiketleri",
         "outboundTag": "Giden Bağlantı Etiketi",
+        "ruleTag": "Kural etiketi",
+        "ruleTagDesc": "Bu kuralın adı. Xray bir kuralı etiketiyle siler; etiketsiz kaydedilen bir kural sonradan yalnızca listedeki sırasıyla bulunabilir ve API’den asla dokunulamaz.",
+        "ruleTagBlank": "Boş = API’den adreslenemez",
         "balancerTag": "Dengeleyici Etiketi",
         "balancerTagTooltip": "Trafiği yapılandırılmış yük dengeleyicilerden biri üzerinden yönlendirir"
       },

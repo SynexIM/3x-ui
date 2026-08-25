@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Dropdown, Tag, Tooltip } from 'antd';
+
+import { ManagedTag, useManagedNamespaces } from '@/lib/namespaces';
 import {
   RetweetOutlined,
   MoreOutlined,
@@ -66,6 +68,7 @@ export function useOutboundColumns({
 }: OutboundColumnsParams): ColumnsType<OutboundRow> {
   const { t, i18n } = useTranslation();
   const [showEgressIp, setShowEgressIp] = useState(false);
+  const managedNamespaces = useManagedNamespaces();
   return useMemo(
     () => [
       {
@@ -111,6 +114,7 @@ export function useOutboundColumns({
             </Tooltip>
             <div className="protocol-line">
               <Tag color="green">{record.protocol}</Tag>
+              <ManagedTag name={record.tag} namespaces={managedNamespaces} />
               {[Protocols.VMess, Protocols.VLESS, Protocols.Trojan, Protocols.Shadowsocks].includes(record.protocol as never) && (
                 <>
                   <Tag>{record.streamSettings?.network}</Tag>
@@ -256,6 +260,6 @@ export function useOutboundColumns({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, i18n.language, testMode, rows, outboundTestStates, outboundsTraffic, showEgressIp],
+    [t, i18n.language, testMode, rows, outboundTestStates, outboundsTraffic, showEgressIp, managedNamespaces],
   );
 }

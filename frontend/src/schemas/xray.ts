@@ -94,6 +94,9 @@ export const OutboundTestResultListSchema = z.array(OutboundTestResultSchema);
 
 export const RuleFormSchema = z.object({
   enabled: z.boolean(),
+  // xray removes a rule by its ruleTag; a rule saved without one can never be
+  // addressed again from the API, only found by its position in the list.
+  ruleTag: z.string().default(''),
   domain: z.string(),
   ip: z.string(),
   port: z.string(),

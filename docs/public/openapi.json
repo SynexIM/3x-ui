@@ -969,6 +969,10 @@
           "name": {
             "type": "string"
           },
+          "namespaces": {
+            "description": "Namespaces is a comma-separated list of tag/email prefixes this token owns.\nEmpty means unrestricted, which is what every token created before this\ncolumn existed keeps being.",
+            "type": "string"
+          },
           "token": {
             "description": "SHA-256 hash; the plaintext is shown only once at creation",
             "type": "string"
@@ -979,6 +983,7 @@
           "enabled",
           "id",
           "name",
+          "namespaces",
           "token"
         ],
         "type": "object"
@@ -1002,6 +1007,13 @@
             "example": "central-panel-a",
             "type": "string"
           },
+          "namespaces": {
+            "description": "Namespaces are the tag/email prefixes this token may write. Empty means\nunrestricted; a non-empty list means every object the token creates,\nedits or deletes must carry one of these prefixes.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "token": {
             "example": "new-token-string",
             "type": "string"
@@ -1011,7 +1023,8 @@
           "createdAt",
           "enabled",
           "id",
-          "name"
+          "name",
+          "namespaces"
         ],
         "type": "object"
       },
@@ -3224,7 +3237,7 @@
     },
     {
       "name": "API Tokens",
-      "description": "Manage Bearer tokens used for programmatic auth (bots, central panels acting on this node, CI). Each token has a unique name and an enabled flag — disable to revoke without deleting, delete to revoke permanently. Tokens are stored as SHA-256 hashes and the plaintext is returned only once, in the create response — it cannot be retrieved afterwards, so copy it then. Send one as <code>Authorization: Bearer &lt;token&gt;</code> on any /panel/api/* request — the token is a full-admin credential."
+      "description": "Manage Bearer tokens used for programmatic auth (bots, central panels acting on this node, CI). Each token has a unique name and an enabled flag — disable to revoke without deleting, delete to revoke permanently. Tokens are stored as SHA-256 hashes and the plaintext is returned only once, in the create response — it cannot be retrieved afterwards, so copy it then. Send one as <code>Authorization: Bearer &lt;token&gt;</code> on any /panel/api/* request. A token with no namespaces is a full-admin credential; give it namespaces to confine it to objects whose tag or email starts with one of its prefixes, so an automation and the person at the panel can share a node without overwriting each other."
     },
     {
       "name": "Xray Settings",
@@ -10957,6 +10970,10 @@
                   "name": {
                     "type": "string",
                     "description": "Human-readable label, e.g. \"central-panel-a\"."
+                  },
+                  "namespaces": {
+                    "type": "string",
+                    "description": "Comma-separated tag/email prefixes this token owns. Empty means unrestricted; otherwise every object it creates, edits or deletes must carry one of these prefixes, and a write naming no object at all is refused."
                   }
                 },
                 "required": [
@@ -10964,7 +10981,8 @@
                 ]
               },
               "example": {
-                "name": "central-panel-a"
+                "name": "central-panel-a",
+                "namespaces": "ipl_"
               }
             }
           }
@@ -10995,6 +11013,9 @@
                     "enabled": true,
                     "id": 2,
                     "name": "central-panel-a",
+                    "namespaces": [
+                      ""
+                    ],
                     "token": "new-token-string"
                   }
                 }
@@ -11106,6 +11127,72 @@
               },
               "example": {
                 "enabled": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                },
+                "example": {
+                  "success": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/setting/apiTokens/setNamespaces/{id}": {
+      "post": {
+        "tags": [
+          "API Tokens"
+        ],
+        "summary": "Replace the namespaces a token owns. Sending an empty list makes the token unrestricted again. A prefix shorter than two characters, or one containing a comma, is refused: it would own more than anyone meant it to.",
+        "operationId": "post_panel_api_setting_apiTokens_setNamespaces_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Token row ID.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "namespaces": {
+                    "type": "string",
+                    "description": "Comma-separated prefixes, e.g. \"ipl_,fleet-\"."
+                  }
+                },
+                "required": [
+                  "namespaces"
+                ]
+              },
+              "example": {
+                "namespaces": "ipl_"
               }
             }
           }

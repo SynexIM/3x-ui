@@ -24,6 +24,8 @@
   "protocol": "Protocolo",
   "search": "Pesquisar",
   "filter": "Filtrar",
+  "managedByAutomation": "Automatizado",
+  "managedByAutomationDesc": "Um cliente de API é dono deste namespace. Você ainda pode editar aqui, mas a próxima reconciliação pode restaurar os valores dele.",
   "all": "Todos",
   "from": "De",
   "to": "Até",
@@ -1321,7 +1323,10 @@
         "apiTokenEmpty": "Nenhum token ainda — crie um para autenticar bots ou painéis remotos.",
         "apiTokenDeleteWarning": "Qualquer cliente usando este token deixará de se autenticar imediatamente.",
         "apiTokenCreatedTitle": "Token criado",
-        "apiTokenCreatedNotice": "Copie este token agora. Por segurança, ele não é armazenado de forma legível e não será exibido novamente."
+        "apiTokenCreatedNotice": "Copie este token agora. Por segurança, ele não é armazenado de forma legível e não será exibido novamente.",
+        "apiTokenNamespaces": "Namespaces que ele possui",
+        "apiTokenNamespacesDesc": "Prefixos das tags e e-mails que este token pode escrever. Vazio significa sem restrição, como antes. Preenchido, ele só cria, edita ou apaga objetos cuja tag ou e-mail comece por um deles, e uma escrita que não nomeie objeto algum é recusada. É assim que uma automação e a pessoa no painel dividem um nó sem se sobrescrever.",
+        "apiTokenNamespacesBlank": "Vazio = sem restrição, ex. ipl_"
       },
       "toasts": {
         "modifySettings": "Os parâmetros foram alterados.",
@@ -1516,6 +1521,9 @@
         "user": "Usuário",
         "inboundTags": "Tags de entradas",
         "outboundTag": "Tag de saída",
+        "ruleTag": "Tag da regra",
+        "ruleTagDesc": "Um nome para esta regra. O Xray remove uma regra pela tag, então uma regra salva sem tag só poderá ser encontrada pela posição na lista — e nunca tocada pela API.",
+        "ruleTagBlank": "Vazio = não endereçável pela API",
         "balancerTag": "Tag de balanceador",
         "balancerTagTooltip": "Encaminha tráfego por um dos balanceadores configurados"
       },

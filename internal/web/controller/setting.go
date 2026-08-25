@@ -75,6 +75,7 @@ func (a *SettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/apiTokens/create", a.createApiToken)
 	g.POST("/apiTokens/delete/:id", a.deleteApiToken)
 	g.POST("/apiTokens/setEnabled/:id", a.setApiTokenEnabled)
+	g.POST("/apiTokens/setNamespaces/:id", a.setApiTokenNamespaces)
 	g.POST("/testSmtp", a.testSmtp)
 	g.POST("/testTgBot", a.testTgBot)
 }
@@ -217,10 +218,18 @@ func (a *SettingController) getDefaultXrayConfig(c *gin.Context) {
 
 type apiTokenCreateForm struct {
 	Name string `json:"name" form:"name"`
+	// Namespaces scopes the token to objects whose tag or email starts with one
+	// of these prefixes. Sent as one comma-separated field so a plain HTML form
+	// can express it too.
+	Namespaces string `json:"namespaces" form:"namespaces"`
 }
 
 type apiTokenEnabledForm struct {
 	Enabled bool `json:"enabled" form:"enabled"`
+}
+
+type apiTokenNamespacesForm struct {
+	Namespaces string `json:"namespaces" form:"namespaces"`
 }
 
 func (a *SettingController) listApiTokens(c *gin.Context) {
@@ -238,7 +247,7 @@ func (a *SettingController) createApiToken(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
 		return
 	}
-	row, err := a.apiTokenService.Create(form.Name)
+	row, err := a.apiTokenService.Create(form.Name, service.ParseNamespaces(form.Namespaces))
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
 		return
@@ -267,6 +276,21 @@ func (a *SettingController) setApiTokenEnabled(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), a.apiTokenService.SetEnabled(id, form.Enabled))
+}
+
+func (a *SettingController) setApiTokenNamespaces(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+		return
+	}
+	form := &apiTokenNamespacesForm{}
+	if bindErr := c.ShouldBind(form); bindErr != nil {
+		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), bindErr)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"),
+		a.apiTokenService.SetNamespaces(id, service.ParseNamespaces(form.Namespaces)))
 }
 
 func (a *SettingController) testSmtp(c *gin.Context) {

@@ -1408,6 +1408,9 @@ func (s *SettingService) GetDefaultSettings(host string) (any, error) {
 		// Local edits remain available; this flag warns that API automation has
 		// applied desired state and may restore managed values later.
 		"declarativelyManaged": func() (any, error) { return IsDeclarativelyManaged(), nil },
+		// The tag/email prefixes some automation owns, so the pages can mark
+		// which objects a reconciliation may overwrite.
+		"managedNamespaces": func() (any, error) { return ManagedNamespaces(), nil },
 	}
 
 	result := make(map[string]any)

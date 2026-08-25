@@ -230,6 +230,7 @@ export interface ApiToken {
   enabled: boolean;
   id: number;
   name: string;
+  namespaces: string;
   token: string;
 }
 
@@ -238,6 +239,7 @@ export interface ApiTokenView {
   enabled: boolean;
   id: number;
   name: string;
+  namespaces: string[];
   token?: string;
 }
 

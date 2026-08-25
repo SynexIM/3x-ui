@@ -72,6 +72,7 @@ export default function RoutingTab({
         .map((rule, idx) => {
           const r: RuleRow = { key: idx };
           r.enabled = rule.enabled !== false;
+          r.ruleTag = typeof rule.ruleTag === 'string' ? rule.ruleTag : undefined;
           r.domain = arrJoin(rule.domain);
           r.ip = arrJoin(rule.ip);
           r.port = rule.port;

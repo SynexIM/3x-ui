@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Dropdown, Switch, Tag } from 'antd';
+
+import { ManagedTag, useManagedNamespaces } from '@/lib/namespaces';
 import {
   MoreOutlined,
   EditOutlined,
@@ -46,6 +48,7 @@ export function useRoutingColumns({
   const { t } = useTranslation();
   const { data: inboundOptions } = useInboundOptions();
   const remarkByTag = useMemo(() => buildRemarkByTag(inboundOptions || []), [inboundOptions]);
+  const managedNamespaces = useManagedNamespaces();
   return useMemo(
     () => [
       {
@@ -62,6 +65,7 @@ export function useRoutingColumns({
               onPointerDown={(ev: React.PointerEvent) => onHandlePointerDown(index, ev)}
             />
             <span className="row-index">{index + 1}</span>
+            <ManagedTag name={_r.ruleTag} namespaces={managedNamespaces} />
           </div>
         ),
       },
@@ -209,6 +213,6 @@ export function useRoutingColumns({
           ),
       },
     ],
-    [t, isMobile, rowsLength, showSource, showBalancer, remarkByTag, onHandlePointerDown, openEdit, moveUp, moveDown, confirmDelete, toggleRule],
+    [t, isMobile, rowsLength, showSource, showBalancer, remarkByTag, managedNamespaces, onHandlePointerDown, openEdit, moveUp, moveDown, confirmDelete, toggleRule],
   );
 }
