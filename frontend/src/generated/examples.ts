@@ -751,6 +751,16 @@ export const EXAMPLES: Record<string, unknown> = {
     ],
     "runtimeError": ""
   },
+  "RuntimeInbound": {
+    "clients": 120,
+    "down": 20480,
+    "enabled": true,
+    "loaded": true,
+    "port": 443,
+    "protocol": "vless",
+    "tag": "vless-in",
+    "up": 10240
+  },
   "RuntimeOutbound": {
     "tag": "proxy-jp"
   },
@@ -767,5 +777,38 @@ export const EXAMPLES: Record<string, unknown> = {
     "id": 0,
     "password": "",
     "username": ""
+  },
+  "XrayRuntimeView": {
+    "inbounds": [
+      {
+        "clients": 120,
+        "down": 20480,
+        "enabled": true,
+        "loaded": true,
+        "port": 443,
+        "protocol": "vless",
+        "tag": "vless-in",
+        "up": 10240
+      }
+    ],
+    "onlineClients": 37,
+    "outbounds": [
+      {
+        "tag": "proxy-jp"
+      }
+    ],
+    "pid": 1234,
+    "rules": [
+      {
+        "outboundTag": "proxy-jp",
+        "ruleTag": "ipl_route_ln000001"
+      }
+    ],
+    "running": true,
+    "runtimeError": "",
+    "totalDown": 2097152,
+    "totalUp": 1048576,
+    "uptimeSeconds": 3600,
+    "version": "26.7.28"
   }
 };

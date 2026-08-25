@@ -105,6 +105,7 @@
     "nodes": "節點",
     "settings": "面板設定",
     "xray": "Xray 設定",
+    "runtime": "執行態",
     "routing": "路由",
     "outbounds": "出站",
     "apiDocs": "API 文件",
@@ -1074,6 +1075,19 @@
         "fairShare": "節點限速讀取失敗",
         "saveFairShare": "儲存節點限速"
       }
+    },
+    "runtime": {
+      "readOnly": "這台機器當下真正在跑的東西，直接讀自核心。這一頁永不寫入：別的頁面顯示的是「儲存了什麼」，這裡顯示的是「什麼真的生效了」——你要找的就是這兩者的差。",
+      "core": "核心",
+      "running": "執行中",
+      "stopped": "已停止",
+      "uptime": "已執行",
+      "online": "線上客戶",
+      "version": "版本",
+      "loaded": "核心裡有沒有",
+      "loadedYes": "已載入",
+      "loadedNo": "開著但核心裡沒有",
+      "noneLoaded": "核心說一個都沒有"
     },
     "settings": {
       "defaultTag": "預設",

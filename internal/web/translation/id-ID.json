@@ -105,6 +105,7 @@
     "nodes": "Node",
     "settings": "Pengaturan Panel",
     "xray": "Konfigurasi Xray",
+    "runtime": "Runtime",
     "routing": "Pengalihan",
     "outbounds": "Outbound",
     "apiDocs": "Dokumentasi API",
@@ -1074,6 +1075,19 @@
         "fairShare": "Gagal memuat batas kecepatan node",
         "saveFairShare": "Simpan batas kecepatan node"
       }
+    },
+    "runtime": {
+      "readOnly": "Apa yang benar-benar dijalankan node ini, dibaca dari core-nya sendiri. Halaman ini tidak pernah menulis: tempat lain menampilkan apa yang tersimpan, di sini Anda melihat apa yang benar-benar berlaku — dan selisih keduanya itulah yang Anda cari.",
+      "core": "Core",
+      "running": "Berjalan",
+      "stopped": "Berhenti",
+      "uptime": "Waktu aktif",
+      "online": "Klien daring",
+      "version": "Versi",
+      "loaded": "Ada di core",
+      "loadedYes": "Termuat",
+      "loadedNo": "Aktif tetapi tidak termuat",
+      "noneLoaded": "Core melaporkan tidak ada"
     },
     "settings": {
       "defaultTag": "Bawaan",

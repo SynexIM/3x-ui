@@ -88,9 +88,11 @@ func run(root, outDir string) error {
 				"NodeView",
 				"ObjectApplyResult",
 				"OutboundListView",
+				"RuntimeInbound",
 				"ProbeResultUI",
 				"RealityScanResult",
 				"RoutingRuleListView",
+				"XrayRuntimeView",
 			),
 			Overrides: map[string][]walkOverride{
 				"OutboundListView": {

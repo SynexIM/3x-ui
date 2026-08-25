@@ -30,6 +30,7 @@ import {
   SettingOutlined,
   SunOutlined,
   SwapOutlined,
+  MonitorOutlined,
   TagsOutlined,
   TeamOutlined,
   ToolOutlined,
@@ -51,7 +52,7 @@ const SIDEBAR_PINNED_KEY = 'sidebar-pinned';
 
 let hoveredAcrossRemounts = false;
 
-type IconName = 'dashboard' | 'inbound' | 'team' | 'groups' | 'setting' | 'tool' | 'cluster' | 'hosts' | 'logout' | 'apidocs' | 'outbound' | 'routing';
+type IconName = 'dashboard' | 'inbound' | 'team' | 'groups' | 'setting' | 'tool' | 'cluster' | 'hosts' | 'logout' | 'apidocs' | 'outbound' | 'routing' | 'runtime';
 
 const iconByName: Record<IconName, ComponentType> = {
   dashboard: DashboardOutlined,
@@ -66,6 +67,7 @@ const iconByName: Record<IconName, ComponentType> = {
   apidocs: ApiOutlined,
   outbound: ExportOutlined,
   routing: SwapOutlined,
+  runtime: MonitorOutlined,
 };
 
 function DonateButton({ ariaLabel }: { ariaLabel: string }) {
@@ -203,6 +205,7 @@ export default function AppSidebar() {
     { key: '/routing', icon: 'routing', title: t('menu.routing') },
     { key: '/settings', icon: 'setting', title: t('menu.settings') },
     { key: '/xray', icon: 'tool', title: t('menu.xray') },
+    { key: '/runtime', icon: 'runtime', title: t('menu.runtime') },
     { key: '/api-docs', icon: 'apidocs', title: t('menu.apiDocs') },
     { key: LOGOUT_KEY, icon: 'logout', title: t('logout') },
   ], [t]);

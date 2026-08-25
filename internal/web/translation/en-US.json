@@ -106,6 +106,7 @@
     "hosts": "Hosts",
     "settings": "Panel Settings",
     "xray": "Xray Configs",
+    "runtime": "Runtime",
     "routing": "Routing",
     "outbounds": "Outbounds",
     "apiDocs": "API Docs",
@@ -1191,6 +1192,19 @@
         "fairShare": "Failed to load node speed limits",
         "saveFairShare": "Save node speed limits"
       }
+    },
+    "runtime": {
+      "readOnly": "What this node is actually running, read from the core itself. This page never writes: everywhere else shows what was saved, here you see what took effect — and the gap between the two is what you came to find.",
+      "core": "Core",
+      "running": "Running",
+      "stopped": "Stopped",
+      "uptime": "Uptime",
+      "online": "Online clients",
+      "version": "Version",
+      "loaded": "In the core",
+      "loadedYes": "Loaded",
+      "loadedNo": "Enabled but not loaded",
+      "noneLoaded": "The core reports none"
     },
     "settings": {
       "defaultTag": "Default",

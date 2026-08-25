@@ -105,6 +105,7 @@
     "nodes": "Nós",
     "settings": "Configurações do Painel",
     "xray": "Configurações Xray",
+    "runtime": "Em execução",
     "routing": "Roteamento",
     "outbounds": "Saídas",
     "apiDocs": "Documentação da API",
@@ -1074,6 +1075,19 @@
         "fairShare": "Falha ao carregar os limites de velocidade do nó",
         "saveFairShare": "Salvar limites de velocidade do nó"
       }
+    },
+    "runtime": {
+      "readOnly": "O que este nó está realmente executando, lido do próprio núcleo. Esta página nunca escreve: o resto mostra o que foi salvo, aqui você vê o que entrou em vigor — e a diferença entre os dois é o que veio procurar.",
+      "core": "Núcleo",
+      "running": "Em execução",
+      "stopped": "Parado",
+      "uptime": "Tempo ativo",
+      "online": "Clientes on-line",
+      "version": "Versão",
+      "loaded": "No núcleo",
+      "loadedYes": "Carregado",
+      "loadedNo": "Ativado mas não carregado",
+      "noneLoaded": "O núcleo não relata nenhum"
     },
     "settings": {
       "defaultTag": "Padrão",

@@ -6,7 +6,10 @@ description: 'Manage Bearer tokens used for programmatic auth (bots, central
   Tokens are stored as SHA-256 hashes and the plaintext is returned only once,
   in the create response — it cannot be retrieved afterwards, so copy it then.
   Send one as <code>Authorization: Bearer &lt;token&gt;</code> on any
-  /panel/api/* request — the token is a full-admin credential.'
+  /panel/api/* request. A token with no namespaces is a full-admin credential;
+  give it namespaces to confine it to objects whose tag or email starts with one
+  of its prefixes, so an automation and the person at the panel can share a node
+  without overwriting each other.'
 full: true
 _openapi:
   preload:
@@ -29,6 +32,12 @@ _openapi:
       title: Toggle a token enabled/disabled without deleting it. Disabled tokens are
         rejected by checkAPIAuth on the next request.
       url: '#toggle-a-token-enableddisabled-without-deleting-it-disabled-tokens-are-rejected-by-checkapiauth-on-the-next-request'
+    - depth: 2
+      title: 'Replace the namespaces a token owns. Sending an empty list makes the
+        token unrestricted again. A prefix shorter than two characters, or one
+        containing a comma, is refused: it would own more than anyone meant it
+        to.'
+      url: '#replace-the-namespaces-a-token-owns-sending-an-empty-list-makes-the-token-unrestricted-again-a-prefix-shorter-than-two-characters-or-one-containing-a-comma-is-refused-it-would-own-more-than-anyone-meant-it-to'
   structuredData:
     headings:
       - content: List every API token, enabled or not. The token value is never returned
@@ -44,6 +53,11 @@ _openapi:
       - content: Toggle a token enabled/disabled without deleting it. Disabled tokens
           are rejected by checkAPIAuth on the next request.
         id: toggle-a-token-enableddisabled-without-deleting-it-disabled-tokens-are-rejected-by-checkapiauth-on-the-next-request
+      - content: 'Replace the namespaces a token owns. Sending an empty list makes the
+          token unrestricted again. A prefix shorter than two characters, or one
+          containing a comma, is refused: it would own more than anyone meant it
+          to.'
+        id: replace-the-namespaces-a-token-owns-sending-an-empty-list-makes-the-token-unrestricted-again-a-prefix-shorter-than-two-characters-or-one-containing-a-comma-is-refused-it-would-own-more-than-anyone-meant-it-to
     contents: []
 ---
 
@@ -56,7 +70,7 @@ export default function Layout(props) {
   return (
     <>
       {props.children}
-      <Comp document="./public/openapi.json" webhooks={[]} operations={[{"path":"/panel/api/setting/apiTokens","method":"get"},{"path":"/panel/api/setting/apiTokens/create","method":"post"},{"path":"/panel/api/setting/apiTokens/delete/{id}","method":"post"},{"path":"/panel/api/setting/apiTokens/setEnabled/{id}","method":"post"}]} showTitle />
+      <Comp document="./public/openapi.json" webhooks={[]} operations={[{"path":"/panel/api/setting/apiTokens","method":"get"},{"path":"/panel/api/setting/apiTokens/create","method":"post"},{"path":"/panel/api/setting/apiTokens/delete/{id}","method":"post"},{"path":"/panel/api/setting/apiTokens/setEnabled/{id}","method":"post"},{"path":"/panel/api/setting/apiTokens/setNamespaces/{id}","method":"post"}]} showTitle />
     </>
   );
 }

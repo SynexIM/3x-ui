@@ -703,6 +703,17 @@ export interface RoutingRuleListView {
   runtimeError?: string;
 }
 
+export interface RuntimeInbound {
+  clients: number;
+  down: number;
+  enabled: boolean;
+  loaded: boolean;
+  port: number;
+  protocol: string;
+  tag: string;
+  up: number;
+}
+
 export interface RuntimeOutbound {
   tag: string;
 }
@@ -722,5 +733,19 @@ export interface User {
   id: number;
   password: string;
   username: string;
+}
+
+export interface XrayRuntimeView {
+  inbounds: RuntimeInbound[];
+  onlineClients: number;
+  outbounds: RuntimeOutbound[];
+  pid: number;
+  rules: RuntimeRule[];
+  running: boolean;
+  runtimeError?: string;
+  totalDown: number;
+  totalUp: number;
+  uptimeSeconds: number;
+  version: string;
 }
 

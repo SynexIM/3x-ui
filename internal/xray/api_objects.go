@@ -58,6 +58,28 @@ func (x *XrayAPI) ListOutbounds() ([]RuntimeOutbound, error) {
 	return out, nil
 }
 
+// ListInboundTags reports the inbound tags loaded in the running core. Only
+// tags: the core keeps built handlers, so the panel's own records stay the
+// place to read an inbound's shape — what the core adds is which ones are
+// really listening.
+func (x *XrayAPI) ListInboundTags() ([]string, error) {
+	if x.HandlerServiceClient == nil {
+		return nil, common.NewError("xray HandlerServiceClient is not initialized")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), listRPCTimeout)
+	defer cancel()
+
+	resp, err := (*x.HandlerServiceClient).ListInbounds(ctx, &command.ListInboundsRequest{IsOnlyTags: true})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(resp.GetInbounds()))
+	for _, handler := range resp.GetInbounds() {
+		out = append(out, handler.GetTag())
+	}
+	return out, nil
+}
+
 // ListRules reports the routing rules loaded in the running core.
 //
 // Deliberately ListRule and not ListRuleFull: see RuntimeRule for why the

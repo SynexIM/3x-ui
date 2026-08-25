@@ -747,6 +747,18 @@ export const RoutingRuleListViewSchema = z.object({
 });
 export type RoutingRuleListView = z.infer<typeof RoutingRuleListViewSchema>;
 
+export const RuntimeInboundSchema = z.object({
+  clients: z.number().int(),
+  down: z.number().int(),
+  enabled: z.boolean(),
+  loaded: z.boolean(),
+  port: z.number().int(),
+  protocol: z.string(),
+  tag: z.string(),
+  up: z.number().int(),
+});
+export type RuntimeInbound = z.infer<typeof RuntimeInboundSchema>;
+
 export const RuntimeOutboundSchema = z.object({
   tag: z.string(),
 });
@@ -771,4 +783,19 @@ export const UserSchema = z.object({
   username: z.string(),
 });
 export type User = z.infer<typeof UserSchema>;
+
+export const XrayRuntimeViewSchema = z.object({
+  inbounds: z.array(z.lazy(() => RuntimeInboundSchema)),
+  onlineClients: z.number().int(),
+  outbounds: z.array(z.lazy(() => RuntimeOutboundSchema)),
+  pid: z.number().int(),
+  rules: z.array(z.lazy(() => RuntimeRuleSchema)),
+  running: z.boolean(),
+  runtimeError: z.string().optional(),
+  totalDown: z.number().int(),
+  totalUp: z.number().int(),
+  uptimeSeconds: z.number().int(),
+  version: z.string(),
+});
+export type XrayRuntimeView = z.infer<typeof XrayRuntimeViewSchema>;
 

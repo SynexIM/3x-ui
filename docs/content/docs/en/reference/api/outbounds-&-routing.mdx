@@ -1,0 +1,116 @@
+---
+title: Outbounds & Routing
+description: Outbounds and routing rules as addressable objects. Each write
+  persists to the stored config template first — that template is the authority,
+  and a core start rebuilds itself from it — and then updates the running core
+  over its gRPC API, so no connection is dropped. The whole-template save (POST
+  /panel/api/xray/update) still works and is still the way to rewrite everything
+  at once; these endpoints exist so that adding one outbound does not mean
+  resending, and revalidating, every other object on the node.
+full: true
+_openapi:
+  preload:
+    - ./public/openapi.json
+  toc:
+    - depth: 2
+      title: List the outbounds in the stored template alongside the outbound tags the
+        running core actually holds, so "saved" and "in effect" can be told
+        apart. runtimeError is set when the core is up but did not answer the
+        listing.
+      url: '#list-the-outbounds-in-the-stored-template-alongside-the-outbound-tags-the-running-core-actually-holds-so-saved-and-in-effect-can-be-told-apart-runtimeerror-is-set-when-the-core-is-up-but-did-not-answer-the-listing'
+    - depth: 2
+      title: "Append one outbound and add it to the running core (xray AddOutbound).
+        The tag is the identity every later request uses and must be unique; a
+        body xray-core would refuse is rejected before anything is written.
+        Appended, never inserted: the core's first outbound is fixed at process
+        start."
+      url: '#append-one-outbound-and-add-it-to-the-running-core-xray-addoutbound-the-tag-is-the-identity-every-later-request-uses-and-must-be-unique-a-body-xray-core-would-refuse-is-rejected-before-anything-is-written-appended-never-inserted-the-cores-first-outbound-is-fixed-at-process-start'
+    - depth: 2
+      title: 'Replace the outbound carrying this tag and reload it in the running
+        core. The body must carry the same tag: renaming would orphan every
+        routing rule pointing at the old name, so it is refused. Answers 404
+        when no outbound carries the tag.'
+      url: '#replace-the-outbound-carrying-this-tag-and-reload-it-in-the-running-core-the-body-must-carry-the-same-tag-renaming-would-orphan-every-routing-rule-pointing-at-the-old-name-so-it-is-refused-answers-404-when-no-outbound-carries-the-tag'
+    - depth: 2
+      title: Remove one outbound from the template and from the running core (xray
+        RemoveOutbound). Answers 404 when no outbound carries the tag.
+      url: '#remove-one-outbound-from-the-template-and-from-the-running-core-xray-removeoutbound-answers-404-when-no-outbound-carries-the-tag'
+    - depth: 2
+      title: List the routing rules in the stored template alongside the
+        ruleTag/outboundTag pairs the running core holds. The runtime list also
+        contains the rules the panel injects into the generated config, which is
+        why the two lists are reported separately rather than merged.
+      url: '#list-the-routing-rules-in-the-stored-template-alongside-the-ruletagoutboundtag-pairs-the-running-core-holds-the-runtime-list-also-contains-the-rules-the-panel-injects-into-the-generated-config-which-is-why-the-two-lists-are-reported-separately-rather-than-merged'
+    - depth: 2
+      title: 'Append one routing rule and load it into the running core. A ruleTag is
+        required: xray removes rules by ruleTag, so an untagged rule could never
+        be addressed again. Rules are appended, which is where a first-match
+        router wants the most specific overrides.'
+      url: '#append-one-routing-rule-and-load-it-into-the-running-core-a-ruletag-is-required-xray-removes-rules-by-ruletag-so-an-untagged-rule-could-never-be-addressed-again-rules-are-appended-which-is-where-a-first-match-router-wants-the-most-specific-overrides'
+    - depth: 2
+      title: 'Append many routing rules in one call. All of them are written or none
+        of them are: a half-applied batch would leave the caller unable to say
+        which clients now route where. Accepts a bare JSON array of rules or an
+        object with a "rules" array.'
+      url: '#append-many-routing-rules-in-one-call-all-of-them-are-written-or-none-of-them-are-a-half-applied-batch-would-leave-the-caller-unable-to-say-which-clients-now-route-where-accepts-a-bare-json-array-of-rules-or-an-object-with-a-rules-array'
+    - depth: 2
+      title: Remove the routing rule carrying this ruleTag, from the template and from
+        the running core (xray RemoveRule). Answers 404 when no rule carries the
+        tag.
+      url: '#remove-the-routing-rule-carrying-this-ruletag-from-the-template-and-from-the-running-core-xray-removerule-answers-404-when-no-rule-carries-the-tag'
+  structuredData:
+    headings:
+      - content: List the outbounds in the stored template alongside the outbound tags
+          the running core actually holds, so "saved" and "in effect" can be
+          told apart. runtimeError is set when the core is up but did not answer
+          the listing.
+        id: list-the-outbounds-in-the-stored-template-alongside-the-outbound-tags-the-running-core-actually-holds-so-saved-and-in-effect-can-be-told-apart-runtimeerror-is-set-when-the-core-is-up-but-did-not-answer-the-listing
+      - content: "Append one outbound and add it to the running core (xray AddOutbound).
+          The tag is the identity every later request uses and must be unique; a
+          body xray-core would refuse is rejected before anything is written.
+          Appended, never inserted: the core's first outbound is fixed at
+          process start."
+        id: append-one-outbound-and-add-it-to-the-running-core-xray-addoutbound-the-tag-is-the-identity-every-later-request-uses-and-must-be-unique-a-body-xray-core-would-refuse-is-rejected-before-anything-is-written-appended-never-inserted-the-cores-first-outbound-is-fixed-at-process-start
+      - content: 'Replace the outbound carrying this tag and reload it in the running
+          core. The body must carry the same tag: renaming would orphan every
+          routing rule pointing at the old name, so it is refused. Answers 404
+          when no outbound carries the tag.'
+        id: replace-the-outbound-carrying-this-tag-and-reload-it-in-the-running-core-the-body-must-carry-the-same-tag-renaming-would-orphan-every-routing-rule-pointing-at-the-old-name-so-it-is-refused-answers-404-when-no-outbound-carries-the-tag
+      - content: Remove one outbound from the template and from the running core (xray
+          RemoveOutbound). Answers 404 when no outbound carries the tag.
+        id: remove-one-outbound-from-the-template-and-from-the-running-core-xray-removeoutbound-answers-404-when-no-outbound-carries-the-tag
+      - content: List the routing rules in the stored template alongside the
+          ruleTag/outboundTag pairs the running core holds. The runtime list
+          also contains the rules the panel injects into the generated config,
+          which is why the two lists are reported separately rather than merged.
+        id: list-the-routing-rules-in-the-stored-template-alongside-the-ruletagoutboundtag-pairs-the-running-core-holds-the-runtime-list-also-contains-the-rules-the-panel-injects-into-the-generated-config-which-is-why-the-two-lists-are-reported-separately-rather-than-merged
+      - content: 'Append one routing rule and load it into the running core. A ruleTag
+          is required: xray removes rules by ruleTag, so an untagged rule could
+          never be addressed again. Rules are appended, which is where a
+          first-match router wants the most specific overrides.'
+        id: append-one-routing-rule-and-load-it-into-the-running-core-a-ruletag-is-required-xray-removes-rules-by-ruletag-so-an-untagged-rule-could-never-be-addressed-again-rules-are-appended-which-is-where-a-first-match-router-wants-the-most-specific-overrides
+      - content: 'Append many routing rules in one call. All of them are written or none
+          of them are: a half-applied batch would leave the caller unable to say
+          which clients now route where. Accepts a bare JSON array of rules or
+          an object with a "rules" array.'
+        id: append-many-routing-rules-in-one-call-all-of-them-are-written-or-none-of-them-are-a-half-applied-batch-would-leave-the-caller-unable-to-say-which-clients-now-route-where-accepts-a-bare-json-array-of-rules-or-an-object-with-a-rules-array
+      - content: Remove the routing rule carrying this ruleTag, from the template and
+          from the running core (xray RemoveRule). Answers 404 when no rule
+          carries the tag.
+        id: remove-the-routing-rule-carrying-this-ruletag-from-the-template-and-from-the-running-core-xray-removerule-answers-404-when-no-rule-carries-the-tag
+    contents: []
+---
+
+{/* This file was generated by Fumadocs. Do not edit this file directly. Any changes should be made by running the generation command again. */}
+
+export default function Layout(props) {
+  const { APIPage, OpenAPIPage } = props.components ?? {};
+  // "APIPage" is the old name from v10, this allows both for backward compatibility
+  const Comp = OpenAPIPage ?? APIPage;
+  return (
+    <>
+      {props.children}
+      <Comp document="./public/openapi.json" webhooks={[]} operations={[{"path":"/panel/api/outbounds","method":"get"},{"path":"/panel/api/outbounds","method":"post"},{"path":"/panel/api/outbounds/{tag}","method":"patch"},{"path":"/panel/api/outbounds/{tag}","method":"delete"},{"path":"/panel/api/routing/rules","method":"get"},{"path":"/panel/api/routing/rules","method":"post"},{"path":"/panel/api/routing/rules{batch}","method":"post"},{"path":"/panel/api/routing/rules/{tag}","method":"delete"}]} showTitle />
+    </>
+  );
+}

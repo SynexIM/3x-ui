@@ -76,11 +76,12 @@ _openapi:
         scoped to one node.
       url: '#aggregated-metric-history-for-a-node--same-shape-as-serverhistory-scoped-to-one-node'
     - depth: 2
-      title: This panel's own node-level fair-share policy, plus whether a control
-        plane owns it (declarativelyManaged), in which case the panel refuses
-        writes. Every rate is bit/s; 0 means the field is not enabled, never a
-        default.
-      url: '#this-panels-own-node-level-fair-share-policy-plus-whether-a-control-plane-owns-it-declarativelymanaged-in-which-case-the-panel-refuses-writes-every-rate-is-bits-0-means-the-field-is-not-enabled-never-a-default'
+      title: This panel's own node-level fair-share policy, plus whether an API client
+        has applied desired state to it (declarativelyManaged), in which case a
+        later reconciliation may put the automated values back. Local writes are
+        never refused. Every rate is bit/s; 0 means the field is not enabled,
+        never a default.
+      url: '#this-panels-own-node-level-fair-share-policy-plus-whether-an-api-client-has-applied-desired-state-to-it-declarativelymanaged-in-which-case-a-later-reconciliation-may-put-the-automated-values-back-local-writes-are-never-refused-every-rate-is-bits-0-means-the-field-is-not-enabled-never-a-default'
     - depth: 2
       title: 'Save and push the node-level fair-share policy to the running core
         (SetNodeBandwidth + SetClassPolicy). The class list is replaced whole: a
@@ -149,11 +150,12 @@ _openapi:
       - content: Aggregated metric history for a node — same shape as /server/history,
           scoped to one node.
         id: aggregated-metric-history-for-a-node--same-shape-as-serverhistory-scoped-to-one-node
-      - content: This panel's own node-level fair-share policy, plus whether a control
-          plane owns it (declarativelyManaged), in which case the panel refuses
-          writes. Every rate is bit/s; 0 means the field is not enabled, never a
-          default.
-        id: this-panels-own-node-level-fair-share-policy-plus-whether-a-control-plane-owns-it-declarativelymanaged-in-which-case-the-panel-refuses-writes-every-rate-is-bits-0-means-the-field-is-not-enabled-never-a-default
+      - content: This panel's own node-level fair-share policy, plus whether an API
+          client has applied desired state to it (declarativelyManaged), in
+          which case a later reconciliation may put the automated values back.
+          Local writes are never refused. Every rate is bit/s; 0 means the field
+          is not enabled, never a default.
+        id: this-panels-own-node-level-fair-share-policy-plus-whether-an-api-client-has-applied-desired-state-to-it-declarativelymanaged-in-which-case-a-later-reconciliation-may-put-the-automated-values-back-local-writes-are-never-refused-every-rate-is-bits-0-means-the-field-is-not-enabled-never-a-default
       - content: 'Save and push the node-level fair-share policy to the running core
           (SetNodeBandwidth + SetClassPolicy). The class list is replaced whole:
           a class left out is deleted. Rejected while the node is declaratively

@@ -105,6 +105,7 @@
     "nodes": "Düğümler",
     "settings": "Panel Ayarları",
     "xray": "Xray Yapılandırmaları",
+    "runtime": "Çalışma durumu",
     "routing": "Yönlendirme",
     "outbounds": "Giden Bağlantılar",
     "apiDocs": "API Belgeleri",
@@ -1074,6 +1075,19 @@
         "fairShare": "Düğüm hız sınırları yüklenemedi",
         "saveFairShare": "Düğüm hız sınırlarını kaydet"
       }
+    },
+    "runtime": {
+      "readOnly": "Bu düğümün gerçekten çalıştırdığı şeyler, doğrudan çekirdekten okundu. Bu sayfa asla yazmaz: diğer her yer kaydedileni gösterir, burada yürürlüğe gireni görürsünüz; aradığınız şey ikisi arasındaki farktır.",
+      "core": "Çekirdek",
+      "running": "Çalışıyor",
+      "stopped": "Durdu",
+      "uptime": "Çalışma süresi",
+      "online": "Çevrimiçi istemci",
+      "version": "Sürüm",
+      "loaded": "Çekirdekte",
+      "loadedYes": "Yüklü",
+      "loadedNo": "Etkin ama yüklü değil",
+      "noneLoaded": "Çekirdek hiçbiri demiyor"
     },
     "settings": {
       "defaultTag": "Varsayılan",

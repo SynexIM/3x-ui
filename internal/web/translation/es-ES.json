@@ -105,6 +105,7 @@
     "nodes": "Nodos",
     "settings": "Ajustes del panel",
     "xray": "Configuración Xray",
+    "runtime": "En ejecución",
     "routing": "Enrutamiento",
     "outbounds": "Salidas",
     "apiDocs": "Documentación de la API",
@@ -1074,6 +1075,19 @@
         "fairShare": "No se pudieron cargar los límites de velocidad del nodo",
         "saveFairShare": "Guardar límites de velocidad del nodo"
       }
+    },
+    "runtime": {
+      "readOnly": "Lo que este nodo está ejecutando de verdad, leído del propio núcleo. Esta página nunca escribe: el resto muestra lo guardado, aquí ves lo que tomó efecto, y la diferencia entre ambos es lo que viniste a buscar.",
+      "core": "Núcleo",
+      "running": "En marcha",
+      "stopped": "Detenido",
+      "uptime": "Tiempo activo",
+      "online": "Clientes en línea",
+      "version": "Versión",
+      "loaded": "En el núcleo",
+      "loadedYes": "Cargado",
+      "loadedNo": "Activado pero no cargado",
+      "noneLoaded": "El núcleo no reporta ninguno"
     },
     "settings": {
       "defaultTag": "Predeterminado",

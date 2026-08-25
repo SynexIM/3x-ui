@@ -105,6 +105,7 @@
     "nodes": "节点",
     "settings": "面板设置",
     "xray": "Xray 配置",
+    "runtime": "运行态",
     "routing": "路由",
     "outbounds": "出站",
     "apiDocs": "API 文档",
@@ -1074,6 +1075,19 @@
         "fairShare": "节点限速读取失败",
         "saveFairShare": "保存节点限速"
       }
+    },
+    "runtime": {
+      "readOnly": "这台机器当下真正在跑的东西，直接读自内核。这一页永不写入：别的页面显示的是「保存了什么」，这里显示的是「什么真的生效了」——你要找的就是这两者的差。",
+      "core": "内核",
+      "running": "运行中",
+      "stopped": "已停止",
+      "uptime": "已运行",
+      "online": "在线客户",
+      "version": "版本",
+      "loaded": "内核里有没有",
+      "loadedYes": "已加载",
+      "loadedNo": "开着但内核里没有",
+      "noneLoaded": "内核说一个都没有"
     },
     "settings": {
       "defaultTag": "默认",

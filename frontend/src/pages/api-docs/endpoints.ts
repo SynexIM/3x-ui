@@ -1598,6 +1598,12 @@ export const sections: readonly Section[] = [
       },
       {
         method: 'GET',
+        path: '/panel/api/runtime',
+        summary: 'Read-only snapshot of what this node is actually running: every local inbound with whether the core has really loaded it, the outbound tags and routing rules the core holds, the online client count and the traffic totals. Nothing on this path writes anything — it is the page to open when the panel and the node might disagree.',
+        responseSchema: 'XrayRuntimeView',
+      },
+      {
+        method: 'GET',
         path: '/panel/api/routing/rules',
         summary: 'List the routing rules in the stored template alongside the ruleTag/outboundTag pairs the running core holds. The runtime list also contains the rules the panel injects into the generated config, which is why the two lists are reported separately rather than merged.',
         responseSchema: 'RoutingRuleListView',

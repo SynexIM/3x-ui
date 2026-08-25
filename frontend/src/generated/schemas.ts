@@ -3095,6 +3095,57 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "RuntimeInbound": {
+    "description": "RuntimeInbound is one of this panel's own inbounds, paired with whether the\nrunning core has actually loaded it. Configured and listening are different\nfacts, and the whole point of this view is not to confuse them.",
+    "properties": {
+      "clients": {
+        "example": 120,
+        "type": "integer"
+      },
+      "down": {
+        "example": 20480,
+        "format": "int64",
+        "type": "integer"
+      },
+      "enabled": {
+        "example": true,
+        "type": "boolean"
+      },
+      "loaded": {
+        "description": "Loaded is true when the core reports a handler with this tag.",
+        "example": true,
+        "type": "boolean"
+      },
+      "port": {
+        "example": 443,
+        "type": "integer"
+      },
+      "protocol": {
+        "example": "vless",
+        "type": "string"
+      },
+      "tag": {
+        "example": "vless-in",
+        "type": "string"
+      },
+      "up": {
+        "example": 10240,
+        "format": "int64",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "clients",
+      "down",
+      "enabled",
+      "loaded",
+      "port",
+      "protocol",
+      "tag",
+      "up"
+    ],
+    "type": "object"
+  },
   "RuntimeOutbound": {
     "description": "RuntimeOutbound is one outbound handler the running core currently holds.\nOnly the tag survives the round trip: the core keeps built handlers, not the\nJSON they came from, so the stored template stays the place to read settings.",
     "properties": {
@@ -3163,6 +3214,77 @@ export const SCHEMAS: Record<string, unknown> = {
       "id",
       "password",
       "username"
+    ],
+    "type": "object"
+  },
+  "XrayRuntimeView": {
+    "description": "XrayRuntimeView is the read-only answer to \"what is this node actually\nrunning right now\", assembled from the core rather than from the database.",
+    "properties": {
+      "inbounds": {
+        "items": {
+          "$ref": "#/components/schemas/RuntimeInbound"
+        },
+        "type": "array"
+      },
+      "onlineClients": {
+        "example": 37,
+        "type": "integer"
+      },
+      "outbounds": {
+        "items": {
+          "$ref": "#/components/schemas/RuntimeOutbound"
+        },
+        "type": "array"
+      },
+      "pid": {
+        "example": 1234,
+        "type": "integer"
+      },
+      "rules": {
+        "items": {
+          "$ref": "#/components/schemas/RuntimeRule"
+        },
+        "type": "array"
+      },
+      "running": {
+        "example": true,
+        "type": "boolean"
+      },
+      "runtimeError": {
+        "description": "RuntimeError explains an empty core-side list when the core is up but did\nnot answer, so \"nothing loaded\" is never guessed from silence.",
+        "type": "string"
+      },
+      "totalDown": {
+        "example": 2097152,
+        "format": "int64",
+        "type": "integer"
+      },
+      "totalUp": {
+        "example": 1048576,
+        "format": "int64",
+        "type": "integer"
+      },
+      "uptimeSeconds": {
+        "example": 3600,
+        "format": "int64",
+        "type": "integer"
+      },
+      "version": {
+        "example": "26.7.28",
+        "type": "string"
+      }
+    },
+    "required": [
+      "inbounds",
+      "onlineClients",
+      "outbounds",
+      "pid",
+      "rules",
+      "running",
+      "totalDown",
+      "totalUp",
+      "uptimeSeconds",
+      "version"
     ],
     "type": "object"
   }

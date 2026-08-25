@@ -35,6 +35,10 @@ func (a *XrayObjectController) initRouter(g *gin.RouterGroup) {
 	g.PATCH("/outbounds/:tag", a.updateOutbound)
 	g.DELETE("/outbounds/:tag", a.deleteOutbound)
 
+	// Read-only: what the node is actually running right now, straight from the
+	// core. Nothing on this path writes anything.
+	g.GET("/runtime", a.runtimeSnapshot)
+
 	g.GET("/routing/rules", a.listRoutingRules)
 	g.POST("/routing/rules", a.addRoutingRule)
 	// The escaped colon keeps gin from reading ":batch" as a path parameter;
@@ -75,6 +79,15 @@ func (a *XrayObjectController) updateOutbound(c *gin.Context) {
 func (a *XrayObjectController) deleteOutbound(c *gin.Context) {
 	result, err := a.objectService.DeleteOutbound(c.Param("tag"))
 	a.answer(c, result, err)
+}
+
+func (a *XrayObjectController) runtimeSnapshot(c *gin.Context) {
+	view, err := a.objectService.RuntimeSnapshot()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.getSettings"), err)
+		return
+	}
+	jsonObj(c, view, nil)
 }
 
 func (a *XrayObjectController) listRoutingRules(c *gin.Context) {

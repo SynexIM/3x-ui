@@ -105,6 +105,7 @@
     "nodes": "Nút",
     "settings": "Cài đặt bảng điều khiển",
     "xray": "Cấu hình Xray",
+    "runtime": "Trạng thái chạy",
     "routing": "Định tuyến",
     "outbounds": "Outbound",
     "apiDocs": "Tài liệu API",
@@ -1074,6 +1075,19 @@
         "fairShare": "Không tải được giới hạn tốc độ của nút",
         "saveFairShare": "Lưu giới hạn tốc độ của nút"
       }
+    },
+    "runtime": {
+      "readOnly": "Node này thực sự đang chạy gì, đọc thẳng từ core. Trang này không bao giờ ghi: nơi khác hiển thị những gì đã lưu, ở đây bạn thấy những gì thực sự có hiệu lực — và khoảng cách giữa hai điều đó là thứ bạn cần tìm.",
+      "core": "Core",
+      "running": "Đang chạy",
+      "stopped": "Đã dừng",
+      "uptime": "Thời gian chạy",
+      "online": "Khách đang online",
+      "version": "Phiên bản",
+      "loaded": "Có trong core",
+      "loadedYes": "Đã nạp",
+      "loadedNo": "Đang bật nhưng chưa nạp",
+      "noneLoaded": "Core báo không có cái nào"
     },
     "settings": {
       "defaultTag": "Mặc định",

@@ -429,3 +429,104 @@ func ruleTag(raw json.RawMessage) (string, error) {
 	}
 	return tag, nil
 }
+
+// ------------------------------------------------------------ runtime status
+
+// RuntimeInbound is one of this panel's own inbounds, paired with whether the
+// running core has actually loaded it. Configured and listening are different
+// facts, and the whole point of this view is not to confuse them.
+type RuntimeInbound struct {
+	Tag      string `json:"tag" example:"vless-in"`
+	Protocol string `json:"protocol" example:"vless"`
+	Port     int    `json:"port" example:"443"`
+	Enabled  bool   `json:"enabled" example:"true"`
+	// Loaded is true when the core reports a handler with this tag.
+	Loaded  bool  `json:"loaded" example:"true"`
+	Clients int   `json:"clients" example:"120"`
+	Up      int64 `json:"up" example:"10240"`
+	Down    int64 `json:"down" example:"20480"`
+}
+
+// XrayRuntimeView is the read-only answer to "what is this node actually
+// running right now", assembled from the core rather than from the database.
+type XrayRuntimeView struct {
+	Running       bool                   `json:"running" example:"true"`
+	PID           int                    `json:"pid" example:"1234"`
+	Version       string                 `json:"version" example:"26.7.28"`
+	UptimeSeconds uint64                 `json:"uptimeSeconds" example:"3600"`
+	Inbounds      []RuntimeInbound       `json:"inbounds"`
+	Outbounds     []xray.RuntimeOutbound `json:"outbounds"`
+	Rules         []xray.RuntimeRule     `json:"rules"`
+	OnlineClients int                    `json:"onlineClients" example:"37"`
+	TotalUp       int64                  `json:"totalUp" example:"1048576"`
+	TotalDown     int64                  `json:"totalDown" example:"2097152"`
+	// RuntimeError explains an empty core-side list when the core is up but did
+	// not answer, so "nothing loaded" is never guessed from silence.
+	RuntimeError string `json:"runtimeError,omitempty" example:""`
+}
+
+// RuntimeSnapshot reads the running core and pairs it with this panel's own
+// records. Nothing here writes: it is the page an operator opens to find out
+// whether what the panel shows is what the node is doing.
+func (s *XrayObjectService) RuntimeSnapshot() (*XrayRuntimeView, error) {
+	view := &XrayRuntimeView{
+		Running:   s.xrayService.IsXrayRunning(),
+		PID:       s.xrayService.GetXrayPID(),
+		Version:   s.xrayService.GetXrayVersion(),
+		Inbounds:  []RuntimeInbound{},
+		Outbounds: []xray.RuntimeOutbound{},
+		Rules:     []xray.RuntimeRule{},
+	}
+	if process := currentXrayProcess(); process != nil && process.IsRunning() {
+		view.UptimeSeconds = process.GetUptime()
+	}
+
+	inbounds, err := (&InboundService{}).GetAllInbounds()
+	if err != nil {
+		return nil, err
+	}
+
+	loaded := map[string]bool{}
+	if view.Running {
+		if err := s.xrayService.withRunningAPI(func(api *xray.XrayAPI) error {
+			tags, err := api.ListInboundTags()
+			if err != nil {
+				return err
+			}
+			for _, tag := range tags {
+				loaded[tag] = true
+			}
+			if view.Outbounds, err = api.ListOutbounds(); err != nil {
+				return err
+			}
+			view.Rules, err = api.ListRules()
+			return err
+		}); err != nil {
+			view.RuntimeError = err.Error()
+		}
+	}
+
+	for _, inbound := range inbounds {
+		// Node inbounds belong to a remote panel's core, not this one.
+		if inbound.NodeID != nil {
+			continue
+		}
+		view.Inbounds = append(view.Inbounds, RuntimeInbound{
+			Tag:      inbound.Tag,
+			Protocol: string(inbound.Protocol),
+			Port:     inbound.Port,
+			Enabled:  inbound.Enable,
+			Loaded:   loaded[inbound.Tag],
+			Clients:  len(inbound.ClientStats),
+			Up:       inbound.Up,
+			Down:     inbound.Down,
+		})
+		view.TotalUp += inbound.Up
+		view.TotalDown += inbound.Down
+	}
+
+	if online, ok, err := s.xrayService.GetOnlineUsers(); err == nil && ok {
+		view.OnlineClients = len(online)
+	}
+	return view, nil
+}
