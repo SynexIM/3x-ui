@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-// The delta operations the control plane may send. They cover what changes
+// The delta operations an API client may send. They cover what changes
 // often — who is on the line and where their traffic leaves — and nothing else.
 // Anything outside this set (adding an inbound, changing a listen port, moving
 // node bandwidth) goes through the full Apply, which stays the reconciliation
@@ -62,16 +62,16 @@ type DeclarativeDeltaRequest struct {
 	// delta is refused rather than guessed at.
 	BaseHash string               `json:"baseHash"`
 	Ops      []DeclarativeDeltaOp `json:"ops"`
-	// ResultHash is what the control plane expects the folded state to hash to.
+	// ResultHash is what the caller expects the folded state to hash to.
 	// It is the end-to-end check that both sides built the same world; without
 	// it a subtly different fold would be applied and silently disagree with
-	// what the control plane believes is on the node.
+	// what the caller believes is on the node.
 	ResultHash string `json:"resultHash"`
 }
 
 // DeclarativeDeltaBaseMismatchError says the delta was computed against a
 // configuration this node is no longer running. It carries the current identity
-// so the control plane can either recompute or fall back to a full apply
+// so the caller can either recompute or fall back to a full apply
 // without a second round trip.
 type DeclarativeDeltaBaseMismatchError struct {
 	CurrentHash     string
@@ -257,7 +257,7 @@ func applyDeltaOp(config *DeclarativeNodeConfig, op DeclarativeDeltaOp) error {
 			return fmt.Errorf("outbound %q is not part of the applied configuration", op.OutboundTag)
 		}
 		// Dropping an egress a rule still points at fails validation several
-		// steps later, as a hash the control plane cannot explain. Say it here.
+		// steps later, as a hash the caller cannot explain. Say it here.
 		for _, rule := range config.Routing.Rules {
 			if rule.OutboundTag == op.OutboundTag {
 				return fmt.Errorf("outbound %q still carries account %q; drop the rule first", op.OutboundTag, rule.AccountEmail)

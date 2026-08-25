@@ -212,7 +212,7 @@ func (s *DeclarativeProvisioningService) apply(request *DeclarativeApplyRequest)
 // joined with whatever went wrong on the way back.
 //
 // A rollback that fails quietly is worse than the failure it is undoing: the
-// node keeps the rejected template, and the control plane hears only about the
+// node keeps the rejected template, and the caller hears only about the
 // original problem, so neither side knows this node needs a human. The node
 // bandwidth is re-pushed too, because the rollback restart drops it.
 func (s *DeclarativeProvisioningService) rollback(previousTemplate string, previous *persistedDeclarativeState, cause error) error {

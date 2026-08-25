@@ -630,7 +630,7 @@ func (p *process) waitReady() error {
 }
 
 // startupErr describes a core that exited while starting, carrying xray's own
-// last log line — "failed to build inbound ..." and friends. The control plane
+// last log line — "failed to build inbound ..." and friends. The caller
 // acts on this text, so it must say why rather than just that.
 func (p *process) startupErr() error {
 	reason := strings.TrimSpace(p.GetResult())

@@ -130,7 +130,7 @@ func fiveProtocolConfig(t *testing.T) DeclarativeNodeConfig {
 // The whole point of the whitelist entry: a template carrying all five
 // protocols of a line has to be accepted, and the compiled result has to be
 // something xray-core's own loader builds. Anything less and the template is
-// 422 in one piece, which is what kept the control plane from provisioning at
+// 422 in one piece, which is what kept the caller from provisioning at
 // all.
 func TestFiveProtocolTemplateWithHysteriaIsAccepted(t *testing.T) {
 	config := fiveProtocolConfig(t)

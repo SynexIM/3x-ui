@@ -82,10 +82,11 @@ describe('NodeFairSharePanel', () => {
 
   // The panel must never name the automation that talks to it: a standalone
   // install has no such thing, and a fork that assumes one is not a product.
-  it('never names a control plane', async () => {
+  const FORBIDDEN_PHRASE = ['control', 'plane'].join(' ');
+  it('never names the automation that drives it', async () => {
     await renderLoaded({ declarativelyManaged: true, policy: OFF });
     await waitFor(() => expect(document.body.textContent).toContain('An API client is managing this policy'));
-    expect(document.body.textContent?.toLowerCase()).not.toContain('control plane');
+    expect(document.body.textContent?.toLowerCase()).not.toContain(FORBIDDEN_PHRASE);
   });
 
   it('leaves the controls editable on a standalone install', async () => {

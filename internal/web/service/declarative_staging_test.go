@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// chunk splits a document the way a control plane would: fixed-size pieces, each
+// chunk splits a document the way an API client would: fixed-size pieces, each
 // comfortably under the 10 MiB request body cap.
 func chunk(raw []byte, size int) [][]byte {
 	pieces := make([][]byte, 0, len(raw)/size+1)
@@ -81,7 +81,7 @@ func TestStagedUploadRefusesWhatItCannotAssemble(t *testing.T) {
 	})
 }
 
-// A control plane that dies mid-upload leaves its bytes behind. Without the
+// A caller that dies mid-upload leaves its bytes behind. Without the
 // expiry they would be held until the panel restarts.
 func TestStagedUploadExpiresWhenTheUploaderDisappears(t *testing.T) {
 	previous := stagedUploadTTL

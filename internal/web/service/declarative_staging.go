@@ -15,7 +15,7 @@ var (
 	ErrStagedUploadTooLarge = errors.New("staged upload exceeds the maximum size")
 )
 
-// How long an upload survives without a new chunk: a control plane that dies
+// How long an upload survives without a new chunk: a caller that dies
 // mid-upload would otherwise hold its bytes until the panel restarts.
 var stagedUploadTTL = 10 * time.Minute
 
@@ -162,7 +162,7 @@ func assembleStagedApply(raw []byte, expectedHash string) (*DeclarativeApplyRequ
 		return nil, err
 	}
 	if hash != expectedHash {
-		return nil, fmt.Errorf("the staged configuration hashes to %s but %s was expected; the upload is not the configuration the control plane meant to send", hash, expectedHash)
+		return nil, fmt.Errorf("the staged configuration hashes to %s but %s was expected; the upload is not the configuration the caller meant to send", hash, expectedHash)
 	}
 	return request, nil
 }

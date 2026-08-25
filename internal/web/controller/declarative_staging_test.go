@@ -20,7 +20,7 @@ import (
 )
 
 // hashOfStagedConfig reproduces the panel's config identity from the public
-// struct alone — the same thing the control plane has to do to send a commit.
+// struct alone — the same thing a caller has to do to send a commit.
 func hashOfStagedConfig(t *testing.T, document []byte) string {
 	t.Helper()
 	request := &service.DeclarativeApplyRequest{}
@@ -159,7 +159,7 @@ func TestStagedFullApplyIsRefusedWhenItIsNotWhatWasPromised(t *testing.T) {
 }
 
 // A staged config that is illegal must be refused exactly like a single-shot
-// one: 422, not 500, and with a reason the control plane can act on.
+// one: 422, not 500, and with a reason the caller can act on.
 func TestAStagedIllegalConfigIsRefusedTheSameWayAWholeOneIs(t *testing.T) {
 	engine := declarativeRouter(t)
 	document, err := json.Marshal(map[string]any{
@@ -178,7 +178,7 @@ func TestAStagedIllegalConfigIsRefusedTheSameWayAWholeOneIs(t *testing.T) {
 	}
 	stageAll(t, engine, "upload-illegal", document, 64)
 
-	// Commit with the hash the control plane would have computed, so the
+	// Commit with the hash the caller would have computed, so the
 	// refusal can only come from the config itself.
 	body, _ := json.Marshal(map[string]string{
 		"uploadId":     "upload-illegal",

@@ -624,7 +624,7 @@ func (s *SubService) GetLink(inbound *model.Inbound, email string) string {
 }
 
 // GetLinkAtEndpoint keeps 3x-ui as the only share-link formatter while letting
-// a control plane choose the customer-facing ingress address for this one
+// an API client choose the customer-facing ingress address for this one
 // delivery. It mutates a shallow copy only; the stored inbound and running
 // xray listener stay unchanged.
 func (s *SubService) GetLinkAtEndpoint(inbound *model.Inbound, email, host string, port int) string {

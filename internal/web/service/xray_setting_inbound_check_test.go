@@ -40,7 +40,7 @@ func TestCheckXrayConfigRejectsInboundsXrayRefuses(t *testing.T) {
 			if err == nil {
 				t.Fatal("an inbound xray-core refuses must not pass validation")
 			}
-			// The control plane acts on this text, so it has to name the inbound.
+			// The caller acts on this text, so it has to name the inbound.
 			if !strings.Contains(err.Error(), "in-") {
 				t.Fatalf("error should name the rejected inbound, got %q", err.Error())
 			}

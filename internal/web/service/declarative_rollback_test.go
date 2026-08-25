@@ -67,7 +67,7 @@ func TestAnIllegalInboundNeverReplacesWhatTheNodeIsRunning(t *testing.T) {
 		t.Fatal("an inbound xray-core refuses must not be applied")
 	}
 	if !strings.Contains(err.Error(), "line-ss") {
-		t.Fatalf("the refusal must name the inbound the control plane has to fix; got %q", err.Error())
+		t.Fatalf("the refusal must name the inbound the caller has to fix; got %q", err.Error())
 	}
 
 	stored, storeErr := (&SettingService{}).GetXrayConfigTemplate()

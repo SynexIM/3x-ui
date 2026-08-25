@@ -47,7 +47,7 @@ func NewXraySettingController(g *gin.RouterGroup) *XraySettingController {
 
 // initRouter sets up the routes for Xray settings management.
 func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
-	// The control plane's incremental surface. Full applies keep riding on
+	// The incremental surface for an API client. Full applies keep riding on
 	// POST /panel/api/xray/update below; this is the same operation with a
 	// smaller request body.
 	g.POST("/declarative/apply-delta", a.applyDeclarativeDelta)

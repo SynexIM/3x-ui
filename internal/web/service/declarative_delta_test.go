@@ -257,7 +257,7 @@ func seedDeclarativeState(t *testing.T, config DeclarativeNodeConfig, revision i
 }
 
 // A delta computed against a configuration the node is no longer running must
-// be refused with the node's current identity, so the control plane can either
+// be refused with the node's current identity, so the caller can either
 // recompute or fall back to a full apply.
 func TestApplyDeltaRefusesAStaleBaseHash(t *testing.T) {
 	setupConflictDB(t)
@@ -300,7 +300,7 @@ func TestApplyDeltaRefusesWhenNothingHasBeenApplied(t *testing.T) {
 }
 
 // resultHash is the end-to-end agreement check. When the fold does not land
-// where the control plane expected, the delta must be refused before anything
+// where the caller expected, the delta must be refused before anything
 // is written — the two sides no longer describe the same node.
 func TestApplyDeltaRefusesAFoldThatLandsSomewhereElse(t *testing.T) {
 	setupConflictDB(t)
@@ -394,7 +394,7 @@ func TestReleasingALineIsADeltaAndNotAFullApply(t *testing.T) {
 }
 
 // Without removeOutbound the release above is unreachable: every other op can
-// be applied and the fold still differs from the control plane's state by the
+// be applied and the fold still differs from the caller's state by the
 // orphan egress alone.
 func TestWithoutRemovingTheEgressAReleaseCannotReachTheExpectedHash(t *testing.T) {
 	folded, err := foldDeclarativeDelta(deltaBaseConfig(), []DeclarativeDeltaOp{

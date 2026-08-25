@@ -7,7 +7,7 @@ This repository is an open-source fork of [MHSanaei/3x-ui](https://github.com/MH
 - Mixed clients and native Xray hot reload
 - Per-client and node-level traffic shaping
 - Declarative node configuration and bounded reconciliation
-- Panel-side delivery links and runtime readback used by the SynexIM control plane
+- Panel-side delivery links and runtime readback for API-driven fleet management
 
 The upstream module path is intentionally preserved for source compatibility. The
 release artifacts, updater, container images, and issue tracker belong to this

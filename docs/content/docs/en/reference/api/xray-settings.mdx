@@ -64,10 +64,10 @@ _openapi:
         committed or expired.
       url: '#apply-everything-staged-under-one-upload-id-as-a-single-whole-node-configuration-through-the-same-path-as-a-single-shot-full-apply--so-an-illegal-config-is-still-422-with-the-previous-configuration-restored-and-a-port-conflict-is-still-refused-here-the-upload-is-consumed-whatever-the-outcome-answers-404-when-the-upload-is-unknown-already-committed-or-expired'
     - depth: 2
-      title: Discard a staged upload the control plane has given up on, instead of
-        waiting for it to expire. Always answers 204, including for an upload id
-        the panel does not hold.
-      url: '#discard-a-staged-upload-the-control-plane-has-given-up-on-instead-of-waiting-for-it-to-expire-always-answers-204-including-for-an-upload-id-the-panel-does-not-hold'
+      title: Discard a staged upload the caller has given up on, instead of waiting
+        for it to expire. Always answers 204, including for an upload id the
+        panel does not hold.
+      url: '#discard-a-staged-upload-the-caller-has-given-up-on-instead-of-waiting-for-it-to-expire-always-answers-204-including-for-an-upload-id-the-panel-does-not-hold'
     - depth: 2
       title: Generate customer connection strings and PNG QR data URLs from the
         applied declarative config. The advertised host and port come from each
@@ -187,10 +187,10 @@ _openapi:
           consumed whatever the outcome. Answers 404 when the upload is unknown,
           already committed or expired.
         id: apply-everything-staged-under-one-upload-id-as-a-single-whole-node-configuration-through-the-same-path-as-a-single-shot-full-apply--so-an-illegal-config-is-still-422-with-the-previous-configuration-restored-and-a-port-conflict-is-still-refused-here-the-upload-is-consumed-whatever-the-outcome-answers-404-when-the-upload-is-unknown-already-committed-or-expired
-      - content: Discard a staged upload the control plane has given up on, instead of
-          waiting for it to expire. Always answers 204, including for an upload
-          id the panel does not hold.
-        id: discard-a-staged-upload-the-control-plane-has-given-up-on-instead-of-waiting-for-it-to-expire-always-answers-204-including-for-an-upload-id-the-panel-does-not-hold
+      - content: Discard a staged upload the caller has given up on, instead of waiting
+          for it to expire. Always answers 204, including for an upload id the
+          panel does not hold.
+        id: discard-a-staged-upload-the-caller-has-given-up-on-instead-of-waiting-for-it-to-expire-always-answers-204-including-for-an-upload-id-the-panel-does-not-hold
       - content: Generate customer connection strings and PNG QR data URLs from the
           applied declarative config. The advertised host and port come from
           each custom share address, never the node listener.
