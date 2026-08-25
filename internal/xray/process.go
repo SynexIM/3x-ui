@@ -291,6 +291,18 @@ func (p *process) GetXrayVersion() string {
 	return p.version
 }
 
+// GetPID returns the operating-system pid of the running core, or 0 when
+// nothing is running. It is how a caller tells a hot reload from a fast
+// restart: a changed pid means every connection on the node was dropped.
+func (p *Process) GetPID() int {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	if p.cmd == nil || p.cmd.Process == nil {
+		return 0
+	}
+	return p.cmd.Process.Pid
+}
+
 // GetAPIPort returns the API port used by the Xray process.
 func (p *Process) GetAPIPort() int {
 	p.mu.RLock()

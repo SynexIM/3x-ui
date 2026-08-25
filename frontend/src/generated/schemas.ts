@@ -2779,6 +2779,64 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "ObjectApplyResult": {
+    "description": "ObjectApplyResult says what happened to the running core, which is the part\na caller cannot see from the stored template alone.",
+    "properties": {
+      "count": {
+        "description": "Count is how many objects the call wrote; 1 except for a batch.",
+        "example": 1,
+        "type": "integer"
+      },
+      "hotApplied": {
+        "description": "HotApplied is true when the running core was updated over the gRPC API,\nso no connection was dropped.",
+        "example": true,
+        "type": "boolean"
+      },
+      "requiresRestart": {
+        "description": "RequiresRestart is true when the change is persisted but the running core\ncannot take it without being restarted.",
+        "example": false,
+        "type": "boolean"
+      },
+      "tag": {
+        "example": "proxy-jp",
+        "type": "string"
+      },
+      "xrayRunning": {
+        "description": "XrayRunning is false when there was no core to update at all.",
+        "example": true,
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "count",
+      "hotApplied",
+      "requiresRestart",
+      "tag",
+      "xrayRunning"
+    ],
+    "type": "object"
+  },
+  "OutboundListView": {
+    "description": "OutboundListView pairs what is persisted with what the core is really\nrunning, so \"saved\" and \"in effect\" can never be confused for one another.",
+    "properties": {
+      "outbounds": {},
+      "runtime": {
+        "items": {
+          "$ref": "#/components/schemas/RuntimeOutbound"
+        },
+        "type": "array"
+      },
+      "runtimeError": {
+        "description": "RuntimeError explains why Runtime is empty when the core is up but did\nnot answer, instead of letting it read as \"the core has no outbounds\".",
+        "type": "string"
+      }
+    },
+    "required": [
+      "outbounds",
+      "runtime"
+    ],
+    "type": "object"
+  },
   "OutboundTraffics": {
     "description": "OutboundTraffics tracks traffic statistics for Xray outbound connections.",
     "properties": {
@@ -3001,6 +3059,57 @@ export const SCHEMAS: Record<string, unknown> = {
       "tls13",
       "tlsVersion",
       "x25519"
+    ],
+    "type": "object"
+  },
+  "RoutingRuleListView": {
+    "description": "RoutingRuleListView is the routing counterpart of OutboundListView.",
+    "properties": {
+      "rules": {},
+      "runtime": {
+        "items": {
+          "$ref": "#/components/schemas/RuntimeRule"
+        },
+        "type": "array"
+      },
+      "runtimeError": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "rules",
+      "runtime"
+    ],
+    "type": "object"
+  },
+  "RuntimeOutbound": {
+    "description": "RuntimeOutbound is one outbound handler the running core currently holds.\nOnly the tag survives the round trip: the core keeps built handlers, not the\nJSON they came from, so the stored template stays the place to read settings.",
+    "properties": {
+      "tag": {
+        "example": "proxy-jp",
+        "type": "string"
+      }
+    },
+    "required": [
+      "tag"
+    ],
+    "type": "object"
+  },
+  "RuntimeRule": {
+    "description": "RuntimeRule is one routing rule the running core currently holds.\n\nOnly the two tags are readable today. The core's richer ListRuleFull would\nalso report the rule's user and inbound conditions, but on xray-core\n26.7.28 calling it PANICS THE WHOLE CORE: ListRule builds each Route with a\nnil embedded routing.Context, and ListRuleFull then calls GetUser() on it\n(app/router/router.go ListRule + app/router/command/command.go:146). Until\nthat is fixed upstream, the conditions are read from the stored template,\nwhich is the authority for them anyway.",
+    "properties": {
+      "outboundTag": {
+        "example": "proxy-jp",
+        "type": "string"
+      },
+      "ruleTag": {
+        "example": "ipl_route_ln000001",
+        "type": "string"
+      }
+    },
+    "required": [
+      "outboundTag",
+      "ruleTag"
     ],
     "type": "object"
   },

@@ -667,6 +667,22 @@ export const NodeViewSchema = z.object({
 });
 export type NodeView = z.infer<typeof NodeViewSchema>;
 
+export const ObjectApplyResultSchema = z.object({
+  count: z.number().int(),
+  hotApplied: z.boolean(),
+  requiresRestart: z.boolean(),
+  tag: z.string(),
+  xrayRunning: z.boolean(),
+});
+export type ObjectApplyResult = z.infer<typeof ObjectApplyResultSchema>;
+
+export const OutboundListViewSchema = z.object({
+  outbounds: z.unknown(),
+  runtime: z.array(z.lazy(() => RuntimeOutboundSchema)),
+  runtimeError: z.string().optional(),
+});
+export type OutboundListView = z.infer<typeof OutboundListViewSchema>;
+
 export const OutboundTrafficsSchema = z.object({
   down: z.number().int(),
   id: z.number().int(),
@@ -721,6 +737,24 @@ export const RealityScanResultSchema = z.object({
   x25519: z.boolean(),
 });
 export type RealityScanResult = z.infer<typeof RealityScanResultSchema>;
+
+export const RoutingRuleListViewSchema = z.object({
+  rules: z.unknown(),
+  runtime: z.array(z.lazy(() => RuntimeRuleSchema)),
+  runtimeError: z.string().optional(),
+});
+export type RoutingRuleListView = z.infer<typeof RoutingRuleListViewSchema>;
+
+export const RuntimeOutboundSchema = z.object({
+  tag: z.string(),
+});
+export type RuntimeOutbound = z.infer<typeof RuntimeOutboundSchema>;
+
+export const RuntimeRuleSchema = z.object({
+  outboundTag: z.string(),
+  ruleTag: z.string(),
+});
+export type RuntimeRule = z.infer<typeof RuntimeRuleSchema>;
 
 export const SettingSchema = z.object({
   id: z.number().int(),

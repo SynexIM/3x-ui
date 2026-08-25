@@ -72,6 +72,8 @@ func run(root, outDir string) error {
 			Path: resolveRel(root, "internal/xray"),
 			StructAllow: setOf(
 				"ClientTraffic",
+				"RuntimeOutbound",
+				"RuntimeRule",
 			),
 		},
 		{
@@ -84,9 +86,20 @@ func run(root, outDir string) error {
 				"InboundOption",
 				"NodeMutationRequest",
 				"NodeView",
+				"ObjectApplyResult",
+				"OutboundListView",
 				"ProbeResultUI",
 				"RealityScanResult",
+				"RoutingRuleListView",
 			),
+			Overrides: map[string][]walkOverride{
+				"OutboundListView": {
+					{Field: "Outbounds", Kind: KindAny},
+				},
+				"RoutingRuleListView": {
+					{Field: "Rules", Kind: KindAny},
+				},
+			},
 		},
 		{
 			Path:        resolveRel(root, "internal/web/service/panel"),

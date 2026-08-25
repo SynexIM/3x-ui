@@ -630,6 +630,20 @@ export interface NodeView {
   xrayVersion: string;
 }
 
+export interface ObjectApplyResult {
+  count: number;
+  hotApplied: boolean;
+  requiresRestart: boolean;
+  tag: string;
+  xrayRunning: boolean;
+}
+
+export interface OutboundListView {
+  outbounds: unknown;
+  runtime: RuntimeOutbound[];
+  runtimeError?: string;
+}
+
 export interface OutboundTraffics {
   down: number;
   id: number;
@@ -679,6 +693,21 @@ export interface RealityScanResult {
   tls13: boolean;
   tlsVersion: string;
   x25519: boolean;
+}
+
+export interface RoutingRuleListView {
+  rules: unknown;
+  runtime: RuntimeRule[];
+  runtimeError?: string;
+}
+
+export interface RuntimeOutbound {
+  tag: string;
+}
+
+export interface RuntimeRule {
+  outboundTag: string;
+  ruleTag: string;
 }
 
 export interface Setting {

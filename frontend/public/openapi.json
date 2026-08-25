@@ -2805,6 +2805,64 @@
         ],
         "type": "object"
       },
+      "ObjectApplyResult": {
+        "description": "ObjectApplyResult says what happened to the running core, which is the part\na caller cannot see from the stored template alone.",
+        "properties": {
+          "count": {
+            "description": "Count is how many objects the call wrote; 1 except for a batch.",
+            "example": 1,
+            "type": "integer"
+          },
+          "hotApplied": {
+            "description": "HotApplied is true when the running core was updated over the gRPC API,\nso no connection was dropped.",
+            "example": true,
+            "type": "boolean"
+          },
+          "requiresRestart": {
+            "description": "RequiresRestart is true when the change is persisted but the running core\ncannot take it without being restarted.",
+            "example": false,
+            "type": "boolean"
+          },
+          "tag": {
+            "example": "proxy-jp",
+            "type": "string"
+          },
+          "xrayRunning": {
+            "description": "XrayRunning is false when there was no core to update at all.",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "count",
+          "hotApplied",
+          "requiresRestart",
+          "tag",
+          "xrayRunning"
+        ],
+        "type": "object"
+      },
+      "OutboundListView": {
+        "description": "OutboundListView pairs what is persisted with what the core is really\nrunning, so \"saved\" and \"in effect\" can never be confused for one another.",
+        "properties": {
+          "outbounds": {},
+          "runtime": {
+            "items": {
+              "$ref": "#/components/schemas/RuntimeOutbound"
+            },
+            "type": "array"
+          },
+          "runtimeError": {
+            "description": "RuntimeError explains why Runtime is empty when the core is up but did\nnot answer, instead of letting it read as \"the core has no outbounds\".",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outbounds",
+          "runtime"
+        ],
+        "type": "object"
+      },
       "OutboundTraffics": {
         "description": "OutboundTraffics tracks traffic statistics for Xray outbound connections.",
         "properties": {
@@ -3030,6 +3088,57 @@
         ],
         "type": "object"
       },
+      "RoutingRuleListView": {
+        "description": "RoutingRuleListView is the routing counterpart of OutboundListView.",
+        "properties": {
+          "rules": {},
+          "runtime": {
+            "items": {
+              "$ref": "#/components/schemas/RuntimeRule"
+            },
+            "type": "array"
+          },
+          "runtimeError": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rules",
+          "runtime"
+        ],
+        "type": "object"
+      },
+      "RuntimeOutbound": {
+        "description": "RuntimeOutbound is one outbound handler the running core currently holds.\nOnly the tag survives the round trip: the core keeps built handlers, not the\nJSON they came from, so the stored template stays the place to read settings.",
+        "properties": {
+          "tag": {
+            "example": "proxy-jp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag"
+        ],
+        "type": "object"
+      },
+      "RuntimeRule": {
+        "description": "RuntimeRule is one routing rule the running core currently holds.\n\nOnly the two tags are readable today. The core's richer ListRuleFull would\nalso report the rule's user and inbound conditions, but on xray-core\n26.7.28 calling it PANICS THE WHOLE CORE: ListRule builds each Route with a\nnil embedded routing.Context, and ListRuleFull then calls GetUser() on it\n(app/router/router.go ListRule + app/router/command/command.go:146). Until\nthat is fixed upstream, the conditions are read from the stored template,\nwhich is the authority for them anyway.",
+        "properties": {
+          "outboundTag": {
+            "example": "proxy-jp",
+            "type": "string"
+          },
+          "ruleTag": {
+            "example": "ipl_route_ln000001",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outboundTag",
+          "ruleTag"
+        ],
+        "type": "object"
+      },
       "Setting": {
         "description": "Setting stores key-value configuration settings for the 3x-ui panel.",
         "properties": {
@@ -3120,6 +3229,10 @@
     {
       "name": "Xray Settings",
       "description": "Xray configuration template, outbound management, Warp/Nord integration, and config testing. All endpoints under /panel/api/xray."
+    },
+    {
+      "name": "Outbounds & Routing",
+      "description": "Outbounds and routing rules as addressable objects. Each write persists to the stored config template first — that template is the authority, and a core start rebuilds itself from it — and then updates the running core over its gRPC API, so no connection is dropped. The whole-template save (POST /panel/api/xray/update) still works and is still the way to rewrite everything at once; these endpoints exist so that adding one outbound does not mean resending, and revalidating, every other object on the node."
     },
     {
       "name": "Subscription Server",
@@ -12399,6 +12512,461 @@
                       "type": "string"
                     },
                     "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/outbounds": {
+      "get": {
+        "tags": [
+          "Outbounds & Routing"
+        ],
+        "summary": "List the outbounds in the stored template alongside the outbound tags the running core actually holds, so \"saved\" and \"in effect\" can be told apart. runtimeError is set when the core is up but did not answer the listing.",
+        "operationId": "get_panel_api_outbounds",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/OutboundListView"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "outbounds": null,
+                    "runtime": [
+                      {
+                        "tag": "proxy-jp"
+                      }
+                    ],
+                    "runtimeError": ""
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Outbounds & Routing"
+        ],
+        "summary": "Append one outbound and add it to the running core (xray AddOutbound). The tag is the identity every later request uses and must be unique; a body xray-core would refuse is rejected before anything is written. Appended, never inserted: the core's first outbound is fixed at process start.",
+        "operationId": "post_panel_api_outbounds",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "outbound": {
+                    "type": "object",
+                    "description": "One outbound object in xray config shape, including a unique \"tag\"."
+                  }
+                },
+                "required": [
+                  "outbound"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/ObjectApplyResult"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "count": 1,
+                    "hotApplied": true,
+                    "requiresRestart": false,
+                    "tag": "proxy-jp",
+                    "xrayRunning": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/outbounds/{tag}": {
+      "patch": {
+        "tags": [
+          "Outbounds & Routing"
+        ],
+        "summary": "Replace the outbound carrying this tag and reload it in the running core. The body must carry the same tag: renaming would orphan every routing rule pointing at the old name, so it is refused. Answers 404 when no outbound carries the tag.",
+        "operationId": "patch_panel_api_outbounds_tag",
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "path",
+            "required": true,
+            "description": "Outbound tag to replace.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "outbound": {
+                    "type": "object",
+                    "description": "The full replacement outbound object, carrying the same tag."
+                  }
+                },
+                "required": [
+                  "outbound"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/ObjectApplyResult"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "count": 1,
+                    "hotApplied": true,
+                    "requiresRestart": false,
+                    "tag": "proxy-jp",
+                    "xrayRunning": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Outbounds & Routing"
+        ],
+        "summary": "Remove one outbound from the template and from the running core (xray RemoveOutbound). Answers 404 when no outbound carries the tag.",
+        "operationId": "delete_panel_api_outbounds_tag",
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "path",
+            "required": true,
+            "description": "Outbound tag to remove.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/ObjectApplyResult"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "count": 1,
+                    "hotApplied": true,
+                    "requiresRestart": false,
+                    "tag": "proxy-jp",
+                    "xrayRunning": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/routing/rules": {
+      "get": {
+        "tags": [
+          "Outbounds & Routing"
+        ],
+        "summary": "List the routing rules in the stored template alongside the ruleTag/outboundTag pairs the running core holds. The runtime list also contains the rules the panel injects into the generated config, which is why the two lists are reported separately rather than merged.",
+        "operationId": "get_panel_api_routing_rules",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/RoutingRuleListView"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "rules": null,
+                    "runtime": [
+                      {
+                        "outboundTag": "proxy-jp",
+                        "ruleTag": "ipl_route_ln000001"
+                      }
+                    ],
+                    "runtimeError": ""
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Outbounds & Routing"
+        ],
+        "summary": "Append one routing rule and load it into the running core. A ruleTag is required: xray removes rules by ruleTag, so an untagged rule could never be addressed again. Rules are appended, which is where a first-match router wants the most specific overrides.",
+        "operationId": "post_panel_api_routing_rules",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rule": {
+                    "type": "object",
+                    "description": "One routing rule in xray config shape, including a unique \"ruleTag\"."
+                  }
+                },
+                "required": [
+                  "rule"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/ObjectApplyResult"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "count": 1,
+                    "hotApplied": true,
+                    "requiresRestart": false,
+                    "tag": "proxy-jp",
+                    "xrayRunning": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/routing/rules{batch}": {
+      "post": {
+        "tags": [
+          "Outbounds & Routing"
+        ],
+        "summary": "Append many routing rules in one call. All of them are written or none of them are: a half-applied batch would leave the caller unable to say which clients now route where. Accepts a bare JSON array of rules or an object with a \"rules\" array.",
+        "operationId": "post_panel_api_routing_rules_batch",
+        "parameters": [
+          {
+            "name": "batch",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rules": {
+                    "type": "array",
+                    "description": "Routing rules to append, each with a unique \"ruleTag\"."
+                  }
+                },
+                "required": [
+                  "rules"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/ObjectApplyResult"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "count": 1,
+                    "hotApplied": true,
+                    "requiresRestart": false,
+                    "tag": "proxy-jp",
+                    "xrayRunning": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/routing/rules/{tag}": {
+      "delete": {
+        "tags": [
+          "Outbounds & Routing"
+        ],
+        "summary": "Remove the routing rule carrying this ruleTag, from the template and from the running core (xray RemoveRule). Answers 404 when no rule carries the tag.",
+        "operationId": "delete_panel_api_routing_rules_tag",
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "path",
+            "required": true,
+            "description": "ruleTag of the rule to remove.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/ObjectApplyResult"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "count": 1,
+                    "hotApplied": true,
+                    "requiresRestart": false,
+                    "tag": "proxy-jp",
+                    "xrayRunning": true
                   }
                 }
               }

@@ -672,6 +672,22 @@ export const EXAMPLES: Record<string, unknown> = {
     "xrayState": "running",
     "xrayVersion": "25.10.31"
   },
+  "ObjectApplyResult": {
+    "count": 1,
+    "hotApplied": true,
+    "requiresRestart": false,
+    "tag": "proxy-jp",
+    "xrayRunning": true
+  },
+  "OutboundListView": {
+    "outbounds": null,
+    "runtime": [
+      {
+        "tag": "proxy-jp"
+      }
+    ],
+    "runtimeError": ""
+  },
   "OutboundTraffics": {
     "down": 0,
     "id": 0,
@@ -720,6 +736,23 @@ export const EXAMPLES: Record<string, unknown> = {
     "tls13": true,
     "tlsVersion": "1.3",
     "x25519": true
+  },
+  "RoutingRuleListView": {
+    "rules": null,
+    "runtime": [
+      {
+        "outboundTag": "proxy-jp",
+        "ruleTag": "ipl_route_ln000001"
+      }
+    ],
+    "runtimeError": ""
+  },
+  "RuntimeOutbound": {
+    "tag": "proxy-jp"
+  },
+  "RuntimeRule": {
+    "outboundTag": "proxy-jp",
+    "ruleTag": "ipl_route_ln000001"
   },
   "Setting": {
     "id": 0,

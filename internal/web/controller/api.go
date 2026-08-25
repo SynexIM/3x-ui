@@ -21,6 +21,7 @@ type APIController struct {
 	hostController        *HostController
 	settingController     *SettingController
 	xraySettingController *XraySettingController
+	xrayObjectController  *XrayObjectController
 	userService           panel.UserService
 	apiTokenService       panel.ApiTokenService
 	Tgbot                 tgbot.Tgbot
@@ -105,6 +106,10 @@ func (a *APIController) initRouter(g *gin.RouterGroup) {
 	// /panel/api/xray/*.
 	a.settingController = NewSettingController(api)
 	a.xraySettingController = NewXraySettingController(api)
+
+	// Outbounds and routing rules as addressable objects, hot-applied one at a
+	// time. Paths are /panel/api/outbounds and /panel/api/routing/rules.
+	a.xrayObjectController = NewXrayObjectController(api)
 
 	// Extra routes
 	api.POST("/backuptotgbot", a.BackuptoTgbot)

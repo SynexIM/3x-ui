@@ -1273,9 +1273,35 @@ func (s *XrayService) ApplyDesiredConfigHotOnly() error {
 		return nil
 	}
 	if !s.tryHotApply(process, desired) {
-		return errors.New("client mutation could not be hot-applied; Xray restart is forbidden on the provisioning path")
+		return ErrXrayHotApplyImpossible
 	}
 	return nil
+}
+
+// ErrXrayHotApplyImpossible means the desired config differs from the running
+// one in a section the core has no reload API for (log, dns, policy, ...), so
+// only a process restart can close the gap. Callers that persist first use it
+// to tell "saved, restart pending" apart from "the core rejected this".
+var ErrXrayHotApplyImpossible = errors.New("this change has no runtime reload API; only a restart can apply it")
+
+// withRunningAPI runs one read-only call against the running core's gRPC API.
+// It does not wait for readiness: a listing that arrives a second after a
+// restart should say so rather than block the request for five seconds.
+func (s *XrayService) withRunningAPI(call func(api *xray.XrayAPI) error) error {
+	process := currentXrayProcess()
+	if process == nil || !process.IsRunning() {
+		return errors.New("xray is not running")
+	}
+	apiPort := process.GetAPIPort()
+	if apiPort <= 0 {
+		return errors.New("the running core has no API port")
+	}
+	api := xray.XrayAPI{}
+	if err := api.Init(apiPort); err != nil {
+		return err
+	}
+	defer api.Close()
+	return call(&api)
 }
 
 // tryHotApply attempts to reconcile the running Xray instance with newCfg
@@ -1484,6 +1510,16 @@ func (s *XrayService) GetXrayAPIPort() int {
 		return 0
 	}
 	return process.GetAPIPort()
+}
+
+// GetXrayPID returns the pid of the running core, or 0 when it is down. A
+// changed pid is the difference between "reloaded" and "everyone reconnected".
+func (s *XrayService) GetXrayPID() int {
+	process := currentXrayProcess()
+	if process == nil || !process.IsRunning() {
+		return 0
+	}
+	return process.GetPID()
 }
 
 // IsNeedRestartAndSetFalse checks if restart is needed and resets the flag to false.

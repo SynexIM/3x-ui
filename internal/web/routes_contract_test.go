@@ -72,7 +72,9 @@ func registeredContractRoutes(t *testing.T) map[string]bool {
 	}
 	routes := make(map[string]bool)
 	for _, r := range engine.Routes() {
-		routes[r.Method+" "+r.Path] = true
+		// gin keeps the backslash a route uses to escape a literal ':' in its
+		// pattern; the URL a caller sends never has it.
+		routes[r.Method+" "+strings.ReplaceAll(r.Path, "\\:", ":")] = true
 	}
 	if len(routes) == 0 {
 		t.Fatal("no routes registered; router construction is broken")

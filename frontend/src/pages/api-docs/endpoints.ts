@@ -1545,6 +1545,82 @@ export const sections: readonly Section[] = [
   },
 
   {
+    id: 'outbounds-routing',
+    title: 'Outbounds & Routing',
+    description:
+      'Outbounds and routing rules as addressable objects. Each write persists to the stored config template first — that template is the authority, and a core start rebuilds itself from it — and then updates the running core over its gRPC API, so no connection is dropped. The whole-template save (POST /panel/api/xray/update) still works and is still the way to rewrite everything at once; these endpoints exist so that adding one outbound does not mean resending, and revalidating, every other object on the node.',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/panel/api/outbounds',
+        summary: 'List the outbounds in the stored template alongside the outbound tags the running core actually holds, so "saved" and "in effect" can be told apart. runtimeError is set when the core is up but did not answer the listing.',
+        responseSchema: 'OutboundListView',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/outbounds',
+        summary: 'Append one outbound and add it to the running core (xray AddOutbound). The tag is the identity every later request uses and must be unique; a body xray-core would refuse is rejected before anything is written. Appended, never inserted: the core\'s first outbound is fixed at process start.',
+        params: [
+          { name: 'outbound', in: 'body (json)', type: 'object', desc: 'One outbound object in xray config shape, including a unique "tag".' },
+        ],
+        responseSchema: 'ObjectApplyResult',
+      },
+      {
+        method: 'PATCH',
+        path: '/panel/api/outbounds/:tag',
+        summary: 'Replace the outbound carrying this tag and reload it in the running core. The body must carry the same tag: renaming would orphan every routing rule pointing at the old name, so it is refused. Answers 404 when no outbound carries the tag.',
+        params: [
+          { name: 'tag', in: 'path', type: 'string', desc: 'Outbound tag to replace.' },
+          { name: 'outbound', in: 'body (json)', type: 'object', desc: 'The full replacement outbound object, carrying the same tag.' },
+        ],
+        responseSchema: 'ObjectApplyResult',
+      },
+      {
+        method: 'DELETE',
+        path: '/panel/api/outbounds/:tag',
+        summary: 'Remove one outbound from the template and from the running core (xray RemoveOutbound). Answers 404 when no outbound carries the tag.',
+        params: [
+          { name: 'tag', in: 'path', type: 'string', desc: 'Outbound tag to remove.' },
+        ],
+        responseSchema: 'ObjectApplyResult',
+      },
+      {
+        method: 'GET',
+        path: '/panel/api/routing/rules',
+        summary: 'List the routing rules in the stored template alongside the ruleTag/outboundTag pairs the running core holds. The runtime list also contains the rules the panel injects into the generated config, which is why the two lists are reported separately rather than merged.',
+        responseSchema: 'RoutingRuleListView',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/routing/rules',
+        summary: 'Append one routing rule and load it into the running core. A ruleTag is required: xray removes rules by ruleTag, so an untagged rule could never be addressed again. Rules are appended, which is where a first-match router wants the most specific overrides.',
+        params: [
+          { name: 'rule', in: 'body (json)', type: 'object', desc: 'One routing rule in xray config shape, including a unique "ruleTag".' },
+        ],
+        responseSchema: 'ObjectApplyResult',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/routing/rules:batch',
+        summary: 'Append many routing rules in one call. All of them are written or none of them are: a half-applied batch would leave the caller unable to say which clients now route where. Accepts a bare JSON array of rules or an object with a "rules" array.',
+        params: [
+          { name: 'rules', in: 'body (json)', type: 'array', desc: 'Routing rules to append, each with a unique "ruleTag".' },
+        ],
+        responseSchema: 'ObjectApplyResult',
+      },
+      {
+        method: 'DELETE',
+        path: '/panel/api/routing/rules/:tag',
+        summary: 'Remove the routing rule carrying this ruleTag, from the template and from the running core (xray RemoveRule). Answers 404 when no rule carries the tag.',
+        params: [
+          { name: 'tag', in: 'path', type: 'string', desc: 'ruleTag of the rule to remove.' },
+        ],
+        responseSchema: 'ObjectApplyResult',
+      },
+    ],
+  },
+
+  {
     id: 'subscription',
     title: 'Subscription Server',
     description:
