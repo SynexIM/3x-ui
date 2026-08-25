@@ -38,21 +38,21 @@ var defaultRealityScanCandidates = []string{
 }
 
 type RealityScanResult struct {
-	Target      string   `json:"target" example:"www.cloudflare.com:443"`
-	Host        string   `json:"host" example:"www.cloudflare.com"`
-	IP          string   `json:"ip" example:"104.16.124.96"`
-	Port        int      `json:"port" example:"443"`
-	Feasible    bool     `json:"feasible" example:"true"`
-	TLS13       bool     `json:"tls13" example:"true"`
-	TLSVersion  string   `json:"tlsVersion" example:"1.3"`
-	H2          bool     `json:"h2" example:"true"`
-	ALPN        string   `json:"alpn" example:"h2"`
-	X25519      bool     `json:"x25519" example:"true"`
-	CurveID     string   `json:"curveID" example:"X25519"`
-	CertValid   bool     `json:"certValid" example:"true"`
-	CertSubject string   `json:"certSubject" example:"cloudflare.com"`
-	CertIssuer  string   `json:"certIssuer" example:"Google Trust Services"`
-	NotAfter    string   `json:"notAfter" example:"2026-08-01T00:00:00Z"`
+	Target      string `json:"target" example:"www.cloudflare.com:443"`
+	Host        string `json:"host" example:"www.cloudflare.com"`
+	IP          string `json:"ip" example:"104.16.124.96"`
+	Port        int    `json:"port" example:"443"`
+	Feasible    bool   `json:"feasible" example:"true"`
+	TLS13       bool   `json:"tls13" example:"true"`
+	TLSVersion  string `json:"tlsVersion" example:"1.3"`
+	H2          bool   `json:"h2" example:"true"`
+	ALPN        string `json:"alpn" example:"h2"`
+	X25519      bool   `json:"x25519" example:"true"`
+	CurveID     string `json:"curveID" example:"X25519"`
+	CertValid   bool   `json:"certValid" example:"true"`
+	CertSubject string `json:"certSubject" example:"cloudflare.com"`
+	CertIssuer  string `json:"certIssuer" example:"Google Trust Services"`
+	NotAfter    string `json:"notAfter" example:"2026-08-01T00:00:00Z"`
 	// CertRecordBytes estimates the size of this target's Certificate record on
 	// the wire. REALITY reads the target's handshake into a fixed buffer and
 	// abandons the borrowed handshake when one record exceeds it. The failure
