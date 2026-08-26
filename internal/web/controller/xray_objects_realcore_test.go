@@ -160,6 +160,25 @@ func (f *realCoreFixture) runtimeRuleTags() []string {
 	return tags
 }
 
+// runtimeRule returns one rule as the running core reports it, so a test can
+// assert on the matching conditions and not just the tag.
+func (f *realCoreFixture) runtimeRule(ruleTag string) (xray.RuntimeRule, bool) {
+	f.t.Helper()
+	view, err := f.objects.ListRoutingRules()
+	if err != nil {
+		f.t.Fatalf("list rules: %v", err)
+	}
+	if view.RuntimeError != "" {
+		f.t.Fatalf("the core did not answer ListRuleFull: %s", view.RuntimeError)
+	}
+	for _, entry := range view.Runtime {
+		if entry.RuleTag == ruleTag {
+			return entry, true
+		}
+	}
+	return xray.RuntimeRule{}, false
+}
+
 // TestRealCoreObjectWritesKeepTheProcessAndItsConnections is the acceptance for
 // "add and remove an outbound and a routing rule without restarting xray and
 // without dropping a live connection", driven through the HTTP handlers.
@@ -191,6 +210,14 @@ func TestRealCoreObjectWritesKeepTheProcessAndItsConnections(t *testing.T) {
 	}
 	if tags := f.runtimeRuleTags(); !contains(tags, "probe-rule") {
 		t.Fatalf("the core does not have the rule; it has %v", tags)
+	}
+	// ListRuleFull's whole point: the runtime listing carries the rule's own
+	// matching conditions, so it is comparable with the stored template instead
+	// of being tag-deep. Reading these used to segfault the core.
+	if rule, ok := f.runtimeRule("probe-rule"); !ok {
+		t.Fatal("probe-rule missing from the runtime listing")
+	} else if rule.User != "probe@example.com" || rule.OutboundTag != "probe-out" {
+		t.Fatalf("runtime rule lost its conditions: %+v", rule)
 	}
 	echoOver(t, live, "after-rule-add")
 

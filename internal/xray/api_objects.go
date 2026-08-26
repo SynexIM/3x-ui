@@ -26,19 +26,19 @@ type RuntimeOutbound struct {
 
 // RuntimeRule is one routing rule the running core currently holds.
 //
-// Only the two tags are readable here. The core's richer ListRuleFull would
-// also report the rule's user and inbound conditions, but the xray-core this
-// module pins panics the WHOLE CORE when it is called: ListRule builds each
-// Route with a nil embedded routing.Context and ListRuleFull then calls
-// GetUser() on it (app/router/router.go ListRule + app/router/command
-// command.go:146). Fixed in the fork at 7300d185 and verified against a real
-// core, but that commit has no released module version yet, so switching this
-// call over has to wait for the dependency bump — doing it sooner would take
-// the node down on every listing. The conditions are read from the stored
-// template meanwhile, which is the authority for them anyway.
+// User and InboundTag are the rule's own matching conditions, which is what a
+// reconciler needs: "does the rule the core is running still point this
+// customer at this outbound?" cannot be answered from the two tags alone.
+//
+// They are empty for a rule that carries no such condition, and — because the
+// wire type is singular while a rule's condition is a list — report the first
+// entry. That matches the one-route-per-customer shape this panel is driven
+// with; a hand-written multi-user rule reports only its first user.
 type RuntimeRule struct {
 	RuleTag     string `json:"ruleTag" example:"ipl_route_ln000001"`
 	OutboundTag string `json:"outboundTag" example:"proxy-jp"`
+	User        string `json:"user" example:"ln000001@ipl"`
+	InboundTag  string `json:"inboundTag" example:"inbound-vless"`
 }
 
 // ListOutbounds reports the outbound tags loaded in the running core, which is
@@ -85,8 +85,14 @@ func (x *XrayAPI) ListInboundTags() ([]string, error) {
 
 // ListRules reports the routing rules loaded in the running core.
 //
-// Deliberately ListRule and not ListRuleFull: see RuntimeRule for why the
-// richer call takes the core down with it.
+// ListRuleFull, not ListRule: the full call also returns each rule's user and
+// inbound conditions, which is what makes a runtime listing comparable with the
+// stored template instead of merely tag-deep.
+//
+// It used to kill the core — ListRule built each Route with a nil embedded
+// routing.Context and ListRuleFull then called the promoted GetUser() on it.
+// Fixed in our fork at 7300d185; this call is only safe against a core built
+// from that commit or later, which go.mod now pins.
 func (x *XrayAPI) ListRules() ([]RuntimeRule, error) {
 	if x.RoutingServiceClient == nil {
 		return nil, common.NewError("xray RoutingServiceClient is not initialized")
@@ -94,7 +100,7 @@ func (x *XrayAPI) ListRules() ([]RuntimeRule, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), listRPCTimeout)
 	defer cancel()
 
-	resp, err := (*x.RoutingServiceClient).ListRule(ctx, &routerService.ListRuleRequest{})
+	resp, err := (*x.RoutingServiceClient).ListRuleFull(ctx, &routerService.ListRuleFullRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +108,9 @@ func (x *XrayAPI) ListRules() ([]RuntimeRule, error) {
 	for _, rule := range resp.GetRules() {
 		out = append(out, RuntimeRule{
 			RuleTag:     rule.GetRuleTag(),
-			OutboundTag: rule.GetTag(),
+			OutboundTag: rule.GetOutboundTag(),
+			User:        rule.GetUser(),
+			InboundTag:  rule.GetInboundTag(),
 		})
 	}
 	return out, nil

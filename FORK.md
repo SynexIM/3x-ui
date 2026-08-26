@@ -88,17 +88,16 @@ surfaces its gRPC error instead of rendering an empty list.
   process restart, but connections through that one outbound do end. Exit
   condition: an `AlterOutbound` operation that can replace a handler's settings
   in place.
-- **Runtime rules are listed with `ListRule`, not `ListRuleFull`.** On the
-  pinned xray-core, `ListRuleFull` **kills the core**: `ListRule` builds each
-  `Route` with a nil embedded `routing.Context`, and `ListRuleFull` then calls
-  the promoted `GetUser()` on it. Verified here against a real process — the
-  pinned binary answers the call with a connection EOF because it has just
-  segfaulted. Fixed in our xray-core fork at `7300d185` and verified against a
-  binary built from it (the call then returns each rule's `user` and
-  `inboundTag` correctly), but that commit has no released module version, so
-  the panel keeps using `ListRule` until the dependency is bumped. Exit
-  condition: bump `github.com/xtls/xray-core` past `7300d185`, then switch
-  `XrayAPI.ListRules` back to `ListRuleFull` and widen `RuntimeRule`.
+- **`ListRuleFull` once killed the core; fixed in our fork and now in use.**
+  `ListRule` built each `Route` with a nil embedded `routing.Context`, and
+  `ListRuleFull` then called the promoted `GetUser()` on it — a nil-interface
+  method call that segfaulted the whole process, so the panel had to list
+  runtime rules tag-deep with `ListRule`. Fixed in xray-core at `7300d185`
+  (`Route` answers those two from the rule's own conditions when there is no
+  live context) and pinned here since
+  `v0.0.0-20260825234629-7300d185bb8a`. The panel now calls `ListRuleFull`, and
+  a real-core test asserts a rule's `user` survives the round trip — reverting
+  the call makes it fail with an empty `User`.
 
 ## Licensing and attribution
 
