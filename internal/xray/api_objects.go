@@ -26,13 +26,16 @@ type RuntimeOutbound struct {
 
 // RuntimeRule is one routing rule the running core currently holds.
 //
-// Only the two tags are readable today. The core's richer ListRuleFull would
-// also report the rule's user and inbound conditions, but on xray-core
-// 26.7.28 calling it PANICS THE WHOLE CORE: ListRule builds each Route with a
-// nil embedded routing.Context, and ListRuleFull then calls GetUser() on it
-// (app/router/router.go ListRule + app/router/command/command.go:146). Until
-// that is fixed upstream, the conditions are read from the stored template,
-// which is the authority for them anyway.
+// Only the two tags are readable here. The core's richer ListRuleFull would
+// also report the rule's user and inbound conditions, but the xray-core this
+// module pins panics the WHOLE CORE when it is called: ListRule builds each
+// Route with a nil embedded routing.Context and ListRuleFull then calls
+// GetUser() on it (app/router/router.go ListRule + app/router/command
+// command.go:146). Fixed in the fork at 7300d185 and verified against a real
+// core, but that commit has no released module version yet, so switching this
+// call over has to wait for the dependency bump — doing it sooner would take
+// the node down on every listing. The conditions are read from the stored
+// template meanwhile, which is the authority for them anyway.
 type RuntimeRule struct {
 	RuleTag     string `json:"ruleTag" example:"ipl_route_ln000001"`
 	OutboundTag string `json:"outboundTag" example:"proxy-jp"`

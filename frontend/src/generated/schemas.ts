@@ -3160,7 +3160,7 @@ export const SCHEMAS: Record<string, unknown> = {
     "type": "object"
   },
   "RuntimeRule": {
-    "description": "RuntimeRule is one routing rule the running core currently holds.\n\nOnly the two tags are readable today. The core's richer ListRuleFull would\nalso report the rule's user and inbound conditions, but on xray-core\n26.7.28 calling it PANICS THE WHOLE CORE: ListRule builds each Route with a\nnil embedded routing.Context, and ListRuleFull then calls GetUser() on it\n(app/router/router.go ListRule + app/router/command/command.go:146). Until\nthat is fixed upstream, the conditions are read from the stored template,\nwhich is the authority for them anyway.",
+    "description": "RuntimeRule is one routing rule the running core currently holds.\n\nOnly the two tags are readable here. The core's richer ListRuleFull would\nalso report the rule's user and inbound conditions, but the xray-core this\nmodule pins panics the WHOLE CORE when it is called: ListRule builds each\nRoute with a nil embedded routing.Context and ListRuleFull then calls\nGetUser() on it (app/router/router.go ListRule + app/router/command\ncommand.go:146). Fixed in the fork at 7300d185 and verified against a real\ncore, but that commit has no released module version yet, so switching this\ncall over has to wait for the dependency bump — doing it sooner would take\nthe node down on every listing. The conditions are read from the stored\ntemplate meanwhile, which is the authority for them anyway.",
     "properties": {
       "outboundTag": {
         "example": "proxy-jp",
