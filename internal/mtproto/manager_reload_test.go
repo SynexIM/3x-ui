@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -33,25 +34,56 @@ func TestMain(m *testing.M) {
 		}
 		select {}
 	}
-	os.Exit(m.Run())
+	code := m.Run()
+	if fakeMtgDir != "" {
+		os.RemoveAll(fakeMtgDir)
+	}
+	os.Exit(code)
 }
 
+var (
+	fakeMtgOnce sync.Once
+	fakeMtgDir  string
+	fakeMtgErr  error
+)
+
+// installFakeMtg 让测试二进制自己客串 mtg 子进程。
+//
+// 这个二进制 **43 MB**（它把整个项目都链进来了）。原来每个用例都重新拷一份，
+// 全量并行跑的时候光写盘就可能把 `waitSpawnCount` 那 5 秒等光——于是每次随机
+// 挂掉一个用例，而且挂的还不是同一个，看起来就像"随机失败"。
+//
+// 拷贝改成**每个包一次**：内容本来就完全一样，没有任何理由拷四遍。
+// 需要逐用例隔离的是 pid 文件，它仍然放在各自的 t.TempDir() 里。
 func installFakeMtg(t *testing.T) string {
 	t.Helper()
-	binDir := t.TempDir()
-	self, err := os.Executable()
-	if err != nil {
-		t.Fatalf("locate test binary: %v", err)
+	fakeMtgOnce.Do(func() {
+		dir, err := os.MkdirTemp("", "mtg-fake-bin-")
+		if err != nil {
+			fakeMtgErr = err
+			return
+		}
+		self, err := os.Executable()
+		if err != nil {
+			fakeMtgErr = err
+			return
+		}
+		payload, err := os.ReadFile(self)
+		if err != nil {
+			fakeMtgErr = err
+			return
+		}
+		if err := os.WriteFile(filepath.Join(dir, GetBinaryName()), payload, 0o755); err != nil {
+			fakeMtgErr = err
+			return
+		}
+		fakeMtgDir = dir
+	})
+	if fakeMtgErr != nil {
+		t.Fatalf("install fake mtg: %v", fakeMtgErr)
 	}
-	payload, err := os.ReadFile(self)
-	if err != nil {
-		t.Fatalf("read test binary: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(binDir, GetBinaryName()), payload, 0o755); err != nil {
-		t.Fatalf("install fake mtg: %v", err)
-	}
-	pidFile := filepath.Join(binDir, "mtg-pids.txt")
-	t.Setenv("XUI_BIN_FOLDER", binDir)
+	pidFile := filepath.Join(t.TempDir(), "mtg-pids.txt")
+	t.Setenv("XUI_BIN_FOLDER", fakeMtgDir)
 	t.Setenv("MTG_FAKE_CHILD", "1")
 	t.Setenv("MTG_FAKE_PIDFILE", pidFile)
 	return pidFile
