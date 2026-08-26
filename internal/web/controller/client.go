@@ -39,11 +39,12 @@ type ClientController struct {
 }
 
 // requireClientMutationHotApply is the dedicated-line availability redline.
-// It runs even when the narrow service operation returned needRestart=false:
-// the service has already persisted the desired client, and the process
-// snapshot is the proof that the whole runtime reached that desired state.
-func requireClientMutationHotApply(c *gin.Context, xrayService *service.XrayService) bool {
-	if err := xrayService.ApplyDesiredConfigHotOnly(); err != nil {
+// It runs even when the persistence operation returned needRestart=false:
+// saving the client is not proof that the core accepted the matching user
+// operation. Passing the affected identities also keeps the runtime work
+// independent of the number of unrelated clients on the machine.
+func requireClientMutationHotApply(c *gin.Context, xrayService *service.XrayService, emails ...string) bool {
+	if err := xrayService.ApplyClientMutationHotOnly(emails...); err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return false
 	}
@@ -194,7 +195,7 @@ func (a *ClientController) create(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
-	if !requireClientMutationHotApply(c, &a.xrayService) {
+	if !requireClientMutationHotApply(c, &a.xrayService, payload.Client.Email) {
 		return
 	}
 	jsonMsgObj(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientAddSuccess"), pendingNodeObj(a.inboundService.AnyNodePending(payload.InboundIds)), nil)
@@ -214,7 +215,7 @@ func (a *ClientController) update(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
-	if !requireClientMutationHotApply(c, &a.xrayService) {
+	if !requireClientMutationHotApply(c, &a.xrayService, email, updated.Email) {
 		return
 	}
 	jsonMsgObj(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), pendingNodeObj(a.clientService.HasPendingNode(&a.inboundService, email)), nil)
@@ -229,7 +230,7 @@ func (a *ClientController) delete(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
-	if !requireClientMutationHotApply(c, &a.xrayService) {
+	if !requireClientMutationHotApply(c, &a.xrayService, email) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientDeleteSuccess"), nil)
@@ -256,7 +257,7 @@ func (a *ClientController) attach(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
-	if !requireClientMutationHotApply(c, &a.xrayService) {
+	if !requireClientMutationHotApply(c, &a.xrayService, email) {
 		return
 	}
 	jsonMsgObj(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientAddSuccess"), pendingNodeObj(a.inboundService.AnyNodePending(body.InboundIds)), nil)
@@ -636,7 +637,7 @@ func (a *ClientController) detach(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
-	if !requireClientMutationHotApply(c, &a.xrayService) {
+	if !requireClientMutationHotApply(c, &a.xrayService, email) {
 		return
 	}
 	jsonMsgObj(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientDeleteSuccess"), pendingNodeObj(a.inboundService.AnyNodePending(body.InboundIds)), nil)

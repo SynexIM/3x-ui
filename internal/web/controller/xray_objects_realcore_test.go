@@ -45,6 +45,13 @@ type realCoreFixture struct {
 }
 
 func newRealCoreFixture(t *testing.T) *realCoreFixture {
+	return newRealCoreFixtureSeeded(t, nil)
+}
+
+// newRealCoreFixtureSeeded lets a caller populate the panel database and edit
+// the template before the core starts, so a test can measure a write against a
+// machine that already holds a realistic amount of state.
+func newRealCoreFixtureSeeded(t *testing.T, seed func(t *testing.T, template map[string]any)) *realCoreFixture {
 	t.Helper()
 	bin := os.Getenv("XRAY_E2E_BINARY")
 	if bin == "" {
@@ -96,6 +103,9 @@ func newRealCoreFixture(t *testing.T) *realCoreFixture {
 		"policy": map[string]any{"system": map[string]any{"statsInboundUplink": true, "statsInboundDownlink": true}},
 		"stats":  map[string]any{},
 	}
+	if seed != nil {
+		seed(t, template)
+	}
 	encoded, err := json.Marshal(template)
 	if err != nil {
 		t.Fatal(err)
@@ -114,6 +124,7 @@ func newRealCoreFixture(t *testing.T) *realCoreFixture {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
 	NewXrayObjectController(engine.Group("/panel/api"))
+	NewClientController(engine.Group("/panel/api/clients"))
 	f.server = httptest.NewServer(engine)
 	t.Cleanup(f.server.Close)
 	return f

@@ -420,6 +420,10 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 
 const internalDefaultOutboundTag = "xui-internal-default"
 
+// hotDefaultRuleTag names the catch-all rule below. Without a ruleTag the core
+// has no handle on it, and a rule appended after a catch-all never matches.
+const hotDefaultRuleTag = "xui-internal-default-route"
+
 // Keep Xray's immutable first outbound private; a final rule makes the user's
 // first outbound the hot-switchable effective default. The bootstrap fails closed.
 func ensureHotReloadableDefaultOutbound(cfg *xray.Config) {
@@ -465,20 +469,27 @@ func ensureHotReloadableDefaultOutbound(cfg *xray.Config) {
 			return
 		}
 	}
-	rules, _ := routing["rules"].([]any)
-	rules = append(rules, map[string]any{
+	defaultRule := map[string]any{
 		"type":        "field",
+		"ruleTag":     hotDefaultRuleTag,
 		"network":     "tcp,udp",
 		"outboundTag": defaultTag,
-	})
+	}
+	rules, _ := routing["rules"].([]any)
+	rules = append(rules, defaultRule)
 	routing["rules"] = rules
 	encodedRouting, err := json.Marshal(routing)
+	if err != nil {
+		return
+	}
+	encodedDefaultRule, err := json.Marshal(defaultRule)
 	if err != nil {
 		return
 	}
 
 	cfg.OutboundConfigs = json_util.RawMessage(encodedOutbounds)
 	cfg.RouterConfig = json_util.RawMessage(encodedRouting)
+	cfg.HotDefaultRule = json_util.RawMessage(encodedDefaultRule)
 }
 
 // PanelEgressInboundTag is the tag of the loopback SOCKS inbound injected into
@@ -1284,9 +1295,9 @@ func (s *XrayService) ApplyDesiredConfigHotOnly() error {
 // to tell "saved, restart pending" apart from "the core rejected this".
 var ErrXrayHotApplyImpossible = errors.New("this change has no runtime reload API; only a restart can apply it")
 
-// withRunningAPI runs one read-only call against the running core's gRPC API.
-// It does not wait for readiness: a listing that arrives a second after a
-// restart should say so rather than block the request for five seconds.
+// withRunningAPI runs one call against the running core's gRPC API.
+// It does not wait for readiness: a write or listing that arrives a second
+// after a restart should say so rather than block the request for five seconds.
 func (s *XrayService) withRunningAPI(call func(api *xray.XrayAPI) error) error {
 	process := currentXrayProcess()
 	if process == nil || !process.IsRunning() {

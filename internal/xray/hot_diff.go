@@ -270,6 +270,14 @@ var userDiffableProtocols = map[string]struct{}{
 	"vless": {}, "vmess": {}, "trojan": {}, "mixed": {}, "shadowsocks": {}, "hysteria": {},
 }
 
+// UserDiffableProtocol reports whether the core can add and remove this
+// protocol's users one at a time. The rest only reload as a whole handler,
+// which drops every live connection on that inbound.
+func UserDiffableProtocol(protocol string) bool {
+	_, ok := userDiffableProtocols[protocol]
+	return ok
+}
+
 // diffInboundUsers emits per-user AlterInbound ops when two same-tag inbounds
 // differ only in settings.clients, so the handler (and its listener) survives.
 func diffInboundUsers(oldIb, newIb *InboundConfig, diff *HotDiff) bool {

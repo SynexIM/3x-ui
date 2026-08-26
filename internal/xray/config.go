@@ -25,9 +25,16 @@ type Config struct {
 	Metrics          json_util.RawMessage `json:"metrics"`
 	Geodata          json_util.RawMessage `json:"geodata,omitempty"`
 	Env              json_util.RawMessage `json:"env,omitempty"`
+
+	// HotDefaultRule is the catch-all rule the panel appends so the first user
+	// outbound stays hot-switchable. Kept out of the config file — RouterConfig
+	// already carries it — and kept here so a single-rule hot append can lift
+	// it out of the way and put it back last, where a catch-all has to be.
+	HotDefaultRule json_util.RawMessage `json:"-"`
 }
 
-// Equals compares two Config instances for deep equality.
+// Equals compares two Config instances for deep equality. HotDefaultRule is
+// derived from RouterConfig, which is compared, so it is deliberately skipped.
 func (c *Config) Equals(other *Config) bool {
 	if len(c.InboundConfigs) != len(other.InboundConfigs) {
 		return false

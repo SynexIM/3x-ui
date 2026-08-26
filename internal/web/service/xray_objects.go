@@ -116,6 +116,8 @@ func (s *XrayObjectService) AddOutbound(raw json.RawMessage) (*ObjectApplyResult
 			return common.NewErrorf("an outbound tagged %q already exists", tag)
 		}
 		return encodeArray(cfg, "outbounds", append(outbounds, raw))
+	}, func() error {
+		return s.xrayService.ApplyOutboundHotOnly(tag, raw)
 	})
 }
 
@@ -144,6 +146,8 @@ func (s *XrayObjectService) UpdateOutbound(tag string, raw json.RawMessage) (*Ob
 		}
 		outbounds[idx] = raw
 		return encodeArray(cfg, "outbounds", outbounds)
+	}, func() error {
+		return s.xrayService.ApplyOutboundHotOnly(tag, raw)
 	})
 }
 
@@ -161,6 +165,8 @@ func (s *XrayObjectService) DeleteOutbound(tag string) (*ObjectApplyResult, erro
 			return ErrXrayObjectNotFound
 		}
 		return encodeArray(cfg, "outbounds", append(outbounds[:idx:idx], outbounds[idx+1:]...))
+	}, func() error {
+		return s.xrayService.ApplyOutboundHotOnly(tag, nil)
 	})
 }
 
@@ -221,6 +227,8 @@ func (s *XrayObjectService) AddRoutingRules(rules []json.RawMessage) (*ObjectApp
 			}
 		}
 		return writeTemplateRules(cfg, append(existing, rules...))
+	}, func() error {
+		return s.xrayService.AppendRoutingRulesHotOnly(rules)
 	})
 }
 
@@ -246,6 +254,8 @@ func (s *XrayObjectService) DeleteRoutingRule(tag string) (*ObjectApplyResult, e
 			return ErrXrayObjectNotFound
 		}
 		return writeTemplateRules(cfg, kept)
+	}, func() error {
+		return s.xrayService.RemoveRoutingRuleHotOnly(tag)
 	})
 }
 
@@ -253,7 +263,12 @@ func (s *XrayObjectService) DeleteRoutingRule(tag string) (*ObjectApplyResult, e
 
 // mutate runs one read-modify-write cycle over the template and then makes the
 // running core match it, rolling the template back if the core refuses.
-func (s *XrayObjectService) mutate(tag string, count int, edit func(cfg map[string]json.RawMessage) error) (*ObjectApplyResult, error) {
+//
+// apply drives the core's primitive for this one object rather than rebuilding
+// and diffing the whole runtime config. The legacy template JSON still has to
+// be rewritten here; the scale acceptance reports that persistence cost
+// separately instead of hiding it inside the runtime result.
+func (s *XrayObjectService) mutate(tag string, count int, edit func(cfg map[string]json.RawMessage) error, apply func() error) (*ObjectApplyResult, error) {
 	xrayTemplateWriteLock.Lock()
 	defer xrayTemplateWriteLock.Unlock()
 
@@ -276,7 +291,7 @@ func (s *XrayObjectService) mutate(tag string, count int, edit func(cfg map[stri
 	if !result.XrayRunning {
 		return result, nil
 	}
-	switch err := s.xrayService.ApplyDesiredConfigHotOnly(); {
+	switch err := apply(); {
 	case err == nil:
 		result.HotApplied = true
 	case errors.Is(err, ErrXrayHotApplyImpossible):
