@@ -339,6 +339,43 @@ func (s *ClientService) SyncInboundAdd(tx *gorm.DB, inboundId int, clients []mod
 	return nil
 }
 
+// EmailsAlreadyOnInbound reports which of the given emails are already linked to
+// the inbound, asking only about those emails.
+//
+// The caller used to answer this by parsing the inbound's whole settings blob and
+// building a set of every email on it — 70ms at 50k clients, to decide something
+// about one email. The normalized tables answer the same question with an index
+// seek, and they are the side the running Xray users are built from.
+//
+// Returns lowercased emails, matching how the caller compares them.
+func (s *ClientService) EmailsAlreadyOnInbound(tx *gorm.DB, inboundId int, emails []string) (map[string]struct{}, error) {
+	if tx == nil {
+		tx = database.GetDB()
+	}
+	out := make(map[string]struct{}, len(emails))
+	wanted := make([]string, 0, len(emails))
+	for _, email := range emails {
+		trimmed := strings.TrimSpace(email)
+		if trimmed != "" {
+			wanted = append(wanted, trimmed)
+		}
+	}
+	if len(wanted) == 0 {
+		return out, nil
+	}
+	var found []string
+	if err := tx.Model(&model.ClientInbound{}).
+		Joins("JOIN clients ON clients.id = client_inbounds.client_id").
+		Where("client_inbounds.inbound_id = ? AND clients.email IN ?", inboundId, wanted).
+		Pluck("clients.email", &found).Error; err != nil {
+		return nil, err
+	}
+	for _, email := range found {
+		out[strings.ToLower(email)] = struct{}{}
+	}
+	return out, nil
+}
+
 func (s *ClientService) DetachInbound(tx *gorm.DB, inboundId int) error {
 	if tx == nil {
 		tx = database.GetDB()

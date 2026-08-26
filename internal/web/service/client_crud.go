@@ -111,7 +111,10 @@ func (s *ClientService) Create(inboundSvc *InboundService, payload *ClientCreate
 		}
 	}
 
-	emailSubIDs, sidErr := inboundSvc.getAllEmailSubIDs()
+	// Scoped to the one email being added, not every email in the panel.
+	// The global scan is still right for bulk attach, which genuinely asks about
+	// hundreds at once; here it was 71ms of pure waste per add at 50k.
+	emailSubIDs, sidErr := inboundSvc.emailSubIDsFor([]string{client.Email})
 	if sidErr != nil {
 		return false, sidErr
 	}
@@ -625,7 +628,10 @@ func (s *ClientService) Attach(inboundSvc *InboundService, id int, inboundIds []
 	clientWire.Flow = flow
 	clientWire.UpdatedAt = time.Now().UnixMilli()
 
-	emailSubIDs, sidErr := inboundSvc.getAllEmailSubIDs()
+	// Scoped to the one email being attached, not every email in the panel.
+	// The global scan is still right for bulk attach, which genuinely asks about
+	// hundreds at once; here it was 71ms of pure waste per add at 50k.
+	emailSubIDs, sidErr := inboundSvc.emailSubIDsFor([]string{existing.Email})
 	if sidErr != nil {
 		return false, sidErr
 	}

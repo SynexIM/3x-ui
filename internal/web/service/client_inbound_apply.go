@@ -319,24 +319,27 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 		return false, err
 	}
 
-	existingClients, err := inboundSvc.GetClients(oldInbound)
-	if err != nil {
-		return false, err
-	}
-
 	// A client already on this inbound is skipped instead of appended again:
 	// checkEmailsExistForClients exempts a matching subId so one identity can
 	// live on several inbounds, which let retried or raced adds duplicate the
 	// same email inside a single settings array (#5770). clients and
 	// interfaceClients are parsed from the same data.Settings array, so they
 	// stay index-aligned while filtering.
-	if len(existingClients) > 0 && len(clients) > 0 {
-		existingEmails := make(map[string]struct{}, len(existingClients))
-		for _, c := range existingClients {
-			if c.Email != "" {
-				existingEmails[strings.ToLower(c.Email)] = struct{}{}
-			}
+	//
+	// Asked of the normalized tables about **these** emails rather than by
+	// parsing the whole settings blob: the old shape cost 70ms at 50k clients to
+	// decide something about one email.
+	incomingEmails := make([]string, 0, len(clients))
+	for _, c := range clients {
+		if c.Email != "" {
+			incomingEmails = append(incomingEmails, c.Email)
 		}
+	}
+	existingEmails, err := s.EmailsAlreadyOnInbound(nil, oldInbound.Id, incomingEmails)
+	if err != nil {
+		return false, err
+	}
+	if len(existingEmails) > 0 && len(clients) > 0 {
 		keptClients := make([]model.Client, 0, len(clients))
 		keptWire := make([]any, 0, len(interfaceClients))
 		for i, c := range clients {
@@ -358,6 +361,13 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 	}
 
 	if oldInbound.Protocol == model.WireGuard {
+		// Only WireGuard still needs the full membership (it derives peer
+		// defaults from what is already there). Parsing the blob is O(N), so it
+		// stays inside this branch instead of running for every protocol.
+		existingClients, gcErr := inboundSvc.GetClients(oldInbound)
+		if gcErr != nil {
+			return false, gcErr
+		}
 		if dErr := defaultWireguardClients(existingClients, clients, interfaceClients); dErr != nil {
 			return false, dErr
 		}
@@ -409,7 +419,18 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 	}
 
 	oldClients, _ := oldSettings["clients"].([]any)
-	oldClients = compactOrphans(database.GetDB(), oldClients)
+	// No orphan sweep on the add path.
+	//
+	// compactOrphans asks the clients table about **every** email already in the
+	// blob, 400 at a time — 50ms and 125 queries at 50k, to append one entry. It
+	// is a sweep, and a sweep does not belong in a single write: the same
+	// argument that took the whole-config rebuild out of one object write, and
+	// the whole-membership rebuild out of SyncInbound.
+	//
+	// Orphans are still removed. The delete paths above and below still compact
+	// (there the set is already in hand), and `POST /panel/api/clients/delOrphans`
+	// sweeps on demand. What is gone is making every add pay for a scan of
+	// everyone else.
 	oldClients = append(oldClients, interfaceClients...)
 
 	oldSettings["clients"] = oldClients
