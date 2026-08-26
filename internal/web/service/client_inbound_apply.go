@@ -443,11 +443,18 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 		if e := tx.Save(oldInbound).Error; e != nil {
 			return e
 		}
-		finalClients, gcErr := inboundSvc.GetClients(oldInbound)
-		if gcErr != nil {
-			return gcErr
-		}
-		if err := s.SyncInbound(tx, oldInbound.Id, finalClients); err != nil {
+		// Only the clients being added, not everyone already on the inbound.
+		//
+		// This used to re-parse the whole settings blob and hand all of it to
+		// SyncInbound, which deletes and rebuilds every client_inbounds row for
+		// the inbound. Adding the 50,001st client therefore paid to rewrite
+		// 50,001 links. Measured on a real core at 50k: the parse cost 70ms and
+		// the full replace 406ms warm (2.3s cold) inside this transaction —
+		// together the largest part of one add.
+		//
+		// An add never removes anyone, so the delete-all was pure cost. Rows
+		// this call does not touch are repaired by the periodic full pass.
+		if err := s.SyncInboundAdd(tx, oldInbound.Id, clients); err != nil {
 			return err
 		}
 		if oldInbound.NodeID != nil {

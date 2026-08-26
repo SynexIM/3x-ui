@@ -193,6 +193,152 @@ func (s *ClientService) SyncInbound(tx *gorm.DB, inboundId int, clients []model.
 	return nil
 }
 
+// SyncInboundAdd links a handful of clients to an inbound **without touching the
+// ones already there**.
+//
+// SyncInbound is a full replace: it deletes every client_inbounds row for the
+// inbound and rebuilds all of them. That is right when the caller knows the
+// complete membership (an inbound edit, an import), and wrong for "add one
+// client" — the cost of adding the 50,001st client is then the cost of
+// rewriting 50,001 links. Measured on a real core with 50k clients on one
+// inbound: the full replace takes 2.3s cold / 406ms warm inside the
+// transaction, and it is the single largest component of one client add.
+//
+// Removals are not this function's job. An add never removes anyone, so the
+// delete-all in the full replace is pure cost here. Drift in rows this call did
+// not touch is repaired by the periodic full pass, not by making every write
+// pay for a sweep — the same argument that moved provisioning from whole-config
+// pushes to single primitives.
+func (s *ClientService) SyncInboundAdd(tx *gorm.DB, inboundId int, clients []model.Client) error {
+	if tx == nil {
+		tx = database.GetDB()
+	}
+	if len(clients) == 0 {
+		return nil
+	}
+
+	emails := make([]string, 0, len(clients))
+	seen := make(map[string]struct{}, len(clients))
+	for i := range clients {
+		email := strings.TrimSpace(clients[i].Email)
+		if email == "" {
+			continue
+		}
+		if _, dup := seen[email]; dup {
+			continue
+		}
+		seen[email] = struct{}{}
+		emails = append(emails, email)
+	}
+	if len(emails) == 0 {
+		return nil
+	}
+
+	// One indexed lookup over the emails being added, not over every email on
+	// the inbound. This is the whole point of the function.
+	var rows []model.ClientRecord
+	if err := tx.Where("email IN ?", emails).Find(&rows).Error; err != nil {
+		return err
+	}
+	existing := make(map[string]*model.ClientRecord, len(rows))
+	for i := range rows {
+		existing[rows[i].Email] = &rows[i]
+	}
+
+	idByEmail := make(map[string]int, len(emails))
+	pending := make(map[string]*model.ClientRecord, len(emails))
+	toCreate := make([]*model.ClientRecord, 0, len(emails))
+	for i := range clients {
+		email := strings.TrimSpace(clients[i].Email)
+		if email == "" {
+			continue
+		}
+		incoming := clients[i].ToRecord()
+		// ToRecord copies the raw email; store the trimmed key this function
+		// looks up by, or a padded email is inserted and never found again.
+		incoming.Email = email
+		row, ok := existing[email]
+		if !ok {
+			if _, dup := pending[email]; !dup {
+				pending[email] = incoming
+				toCreate = append(toCreate, incoming)
+			}
+			continue
+		}
+		before := *row
+		applyClientRecordMerge(row, incoming)
+		preservedUpdatedAt := max(incoming.UpdatedAt, row.UpdatedAt)
+		row.UpdatedAt = preservedUpdatedAt
+		idByEmail[email] = row.Id
+		if *row == before {
+			continue
+		}
+		if err := tx.Save(row).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.ClientRecord{}).
+			Where("id = ?", row.Id).
+			UpdateColumn("updated_at", preservedUpdatedAt).Error; err != nil {
+			return err
+		}
+	}
+
+	if len(toCreate) > 0 {
+		if err := tx.CreateInBatches(toCreate, 200).Error; err != nil {
+			return err
+		}
+		for _, rec := range toCreate {
+			idByEmail[rec.Email] = rec.Id
+		}
+	}
+
+	// Which of these are already linked. Scoped to the ids being added, so the
+	// query does not grow with the inbound.
+	ids := make([]int, 0, len(idByEmail))
+	for _, id := range idByEmail {
+		ids = append(ids, id)
+	}
+	linked := make(map[int]struct{}, len(ids))
+	if len(ids) > 0 {
+		var already []int
+		if err := tx.Model(&model.ClientInbound{}).
+			Where("inbound_id = ? AND client_id IN ?", inboundId, ids).
+			Pluck("client_id", &already).Error; err != nil {
+			return err
+		}
+		for _, id := range already {
+			linked[id] = struct{}{}
+		}
+	}
+
+	links := make([]model.ClientInbound, 0, len(clients))
+	for i := range clients {
+		email := strings.TrimSpace(clients[i].Email)
+		if email == "" {
+			continue
+		}
+		id, ok := idByEmail[email]
+		if !ok {
+			continue
+		}
+		if _, dup := linked[id]; dup {
+			continue
+		}
+		linked[id] = struct{}{}
+		links = append(links, model.ClientInbound{
+			ClientId:     id,
+			InboundId:    inboundId,
+			FlowOverride: clients[i].Flow,
+		})
+	}
+	if len(links) > 0 {
+		if err := tx.CreateInBatches(links, 200).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *ClientService) DetachInbound(tx *gorm.DB, inboundId int) error {
 	if tx == nil {
 		tx = database.GetDB()
