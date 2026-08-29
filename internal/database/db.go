@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -57,9 +58,12 @@ func Dialect() string {
 }
 
 const (
-	defaultUsername       = "admin"
-	defaultPassword       = "admin"
-	sqliteBackupDirPrefix = ".x-ui-backup-"
+	defaultUsername              = "admin"
+	defaultPassword              = "admin"
+	sqliteBackupDirPrefix        = ".x-ui-backup-"
+	bootstrapCredentialsFilename = "bootstrap-credentials.json"
+	managedBootstrapTokenName    = "ipline-bootstrap"
+	managedBootstrapNamespace    = "ipl_"
 )
 
 func allModels() []any {
@@ -152,6 +156,9 @@ func initModels() error {
 		return err
 	}
 	if err := migrateClientRateLimitColumns(); err != nil {
+		return err
+	}
+	if err := migrateClientEgressTagColumn(); err != nil {
 		return err
 	}
 	if IsPostgres() {
@@ -341,6 +348,13 @@ func migrateClientRateLimitColumns() error {
 		}
 	}
 	return nil
+}
+
+func migrateClientEgressTagColumn() error {
+	if !db.Migrator().HasColumn(&model.ClientRecord{}, "egress_tag") {
+		return nil
+	}
+	return db.Exec("UPDATE clients SET egress_tag = '' WHERE egress_tag IS NULL").Error
 }
 
 func migrateHostVerifyPeerCertByNameColumn() error {
@@ -2092,6 +2106,104 @@ func isTableEmpty(tableName string) (bool, error) {
 	return count == 0, err
 }
 
+type bootstrapCredentials struct {
+	Token string `json:"token"`
+}
+
+func ensureManagedBootstrapCredentials() error {
+	if os.Getenv("IPLINE_MANAGED") != "1" {
+		return nil
+	}
+
+	target := filepath.Join(config.GetDBFolderPath(), bootstrapCredentialsFilename)
+	credentials, err := readBootstrapCredentials(target)
+	if err == nil {
+		return ensureManagedBootstrapToken(credentials.Token)
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	var existing model.ApiToken
+	err = db.Where("name = ?", managedBootstrapTokenName).Take(&existing).Error
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	credentials = bootstrapCredentials{Token: random.Seq(48)}
+	if err := writeBootstrapCredentials(target, credentials); err != nil {
+		return err
+	}
+	return ensureManagedBootstrapToken(credentials.Token)
+}
+
+func readBootstrapCredentials(target string) (bootstrapCredentials, error) {
+	contents, err := os.ReadFile(target)
+	if err != nil {
+		return bootstrapCredentials{}, err
+	}
+	var credentials bootstrapCredentials
+	if err := json.Unmarshal(contents, &credentials); err != nil {
+		return bootstrapCredentials{}, err
+	}
+	if credentials.Token == "" {
+		return bootstrapCredentials{}, errors.New("managed bootstrap credential has no token")
+	}
+	return credentials, nil
+}
+
+func writeBootstrapCredentials(target string, credentials bootstrapCredentials) error {
+	contents, err := json.Marshal(credentials)
+	if err != nil {
+		return err
+	}
+	temporary, err := os.CreateTemp(filepath.Dir(target), ".bootstrap-credentials-")
+	if err != nil {
+		return err
+	}
+	temporaryName := temporary.Name()
+	defer os.Remove(temporaryName)
+	if err := temporary.Chmod(0o600); err != nil {
+		temporary.Close()
+		return err
+	}
+	if _, err := temporary.Write(append(contents, '\n')); err != nil {
+		temporary.Close()
+		return err
+	}
+	if err := temporary.Sync(); err != nil {
+		temporary.Close()
+		return err
+	}
+	if err := temporary.Close(); err != nil {
+		return err
+	}
+	return os.Link(temporaryName, target)
+}
+
+func ensureManagedBootstrapToken(token string) error {
+	var existing model.ApiToken
+	err := db.Where("name = ?", managedBootstrapTokenName).Take(&existing).Error
+	if err == nil {
+		if subtle.ConstantTimeCompare([]byte(existing.Token), []byte(crypto.HashTokenSHA256(token))) != 1 {
+			return errors.New("managed bootstrap credential does not match its API token")
+		}
+		return nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	return db.Create(&model.ApiToken{
+		Name:       managedBootstrapTokenName,
+		Token:      crypto.HashTokenSHA256(token),
+		Enabled:    true,
+		Namespaces: managedBootstrapNamespace,
+	}).Error
+}
+
 func InitDB(dbPath string) error {
 	var gormLogger logger.Interface
 	if config.IsDebug() {
@@ -2184,6 +2296,9 @@ func InitDB(dbPath string) error {
 	}
 
 	if err := initUser(); err != nil {
+		return err
+	}
+	if err := ensureManagedBootstrapCredentials(); err != nil {
 		return err
 	}
 	return runSeeders(isUsersEmpty)

@@ -254,6 +254,7 @@ export interface Client {
   committed_burst_bytes?: number;
   conn_limit?: number;
   created_at?: number;
+  egress_tag?: string;
   email: string;
   enable: boolean;
   expiryTime: number;
@@ -295,6 +296,7 @@ export interface ClientRecord {
   committed_burst_bytes: number;
   conn_limit: number;
   createdAt: number;
+  egress_tag: string;
   email: string;
   enable: boolean;
   expiryTime: number;
@@ -719,8 +721,10 @@ export interface RuntimeOutbound {
 }
 
 export interface RuntimeRule {
+  inboundTag: string;
   outboundTag: string;
   ruleTag: string;
+  user: string;
 }
 
 export interface Setting {

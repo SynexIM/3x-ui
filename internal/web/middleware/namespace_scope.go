@@ -18,7 +18,7 @@ const NamespaceScopeContextKey = "api_token_namespaces"
 // identityKeys are the JSON keys that name an object on this panel. A request
 // that mentions any of them is talking about a specific object, and a scoped
 // token may only talk about objects inside its own namespaces.
-var identityKeys = map[string]bool{"tag": true, "ruleTag": true, "email": true}
+var identityKeys = map[string]bool{"tag": true, "ruleTag": true, "email": true, "egress_tag": true}
 
 // maxScopeInspectionBytes bounds how much of a body the scope check will read.
 // A body larger than this is refused for a scoped token rather than waved

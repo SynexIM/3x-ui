@@ -114,4 +114,4 @@ require (
 	lukechampine.com/blake3 v1.4.1 // indirect
 )
 
-replace github.com/xtls/xray-core => github.com/SynexIM/xray-core v0.0.0-20260825234629-7300d185bb8a
+replace github.com/xtls/xray-core => github.com/SynexIM/xray-core v0.0.0-20260829125528-23d0a44ceabd

@@ -8,6 +8,7 @@ This repository is an open-source fork of [MHSanaei/3x-ui](https://github.com/MH
 - Outbounds and routing rules as single, addressable objects
 - Namespace-scoped API tokens, so an automation and an operator share one panel
 - Per-client and node-level traffic shaping
+- Per-client fixed egress selection via Xray `egress_tag`
 - Declarative node configuration and bounded reconciliation
 - Panel-side delivery links and runtime readback for API-driven fleet management
 

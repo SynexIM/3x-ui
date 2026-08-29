@@ -39,6 +39,7 @@ func TestUpdateInboundMtprotoUnchangedDoesNotRestart(t *testing.T) {
 			`{"email":"mtga","secret":"`+mtprotoTestSecretA+`","enable":true},`+
 			`{"email":"mtgb","secret":"`+mtprotoTestSecretB+`","enable":true}]}`)
 	seeded := loadInboundByTag(t, "mt-apply")
+	mtproto.GetManager().Remove(seeded.Id)
 	seedNormalizedInbound(t, seeded, []model.Client{
 		{Email: "mtga", Secret: mtprotoTestSecretA, Enable: true},
 		{Email: "mtgb", Secret: mtprotoTestSecretB, Enable: true},

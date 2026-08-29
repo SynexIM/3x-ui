@@ -302,6 +302,9 @@ func (s *XrayService) hotUserMap(db *gorm.DB, ib hotInbound, record *model.Clien
 	user["committed_bps"] = client.CommittedBps
 	user["committed_burst_bytes"] = client.CommittedBurstBytes
 	user["conn_limit"] = uint64(client.ConnLimit)
+	if client.EgressTag != "" {
+		user["egress_tag"] = client.EgressTag
+	}
 
 	switch ib.Protocol {
 	case model.VLESS:

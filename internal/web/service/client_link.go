@@ -62,6 +62,9 @@ func applyClientRecordMerge(row *model.ClientRecord, incoming *model.ClientRecor
 	row.ConnLimit = incoming.ConnLimit
 	row.RateUnit = incoming.RateUnit
 	row.BurstUnit = incoming.BurstUnit
+	if incoming.EgressTag != "" {
+		row.EgressTag = incoming.EgressTag
+	}
 	row.TotalGB = incoming.TotalGB
 	row.ExpiryTime = incoming.ExpiryTime
 	row.Enable = incoming.Enable

@@ -147,9 +147,13 @@ func (s *SubService) primeLinkClients(inboundId int, clients []model.Client, com
 // cannot come back through the stale blob. Writes still go through the relation
 // only — ParseInboundDraftClients stays reserved for request drafts.
 func (s *SubService) linkClients(inbound *model.Inbound) ([]model.Client, error) {
-	clients, err := s.inboundService.GetAttachedClients(inbound.Id)
-	if err == nil && len(clients) > 0 {
-		return clients, nil
+	var clients []model.Client
+	var err error
+	if database.GetDB() != nil {
+		clients, err = s.inboundService.GetAttachedClients(inbound.Id)
+		if err == nil && len(clients) > 0 {
+			return clients, nil
+		}
 	}
 	legacy, parseErr := service.ParseInboundDraftClients(inbound.Settings)
 	if parseErr != nil || len(legacy) == 0 {

@@ -1031,6 +1031,7 @@ type Client struct {
 	CommittedBps        uint64 `json:"committed_bps,omitempty" form:"committed_bps"`
 	CommittedBurstBytes uint64 `json:"committed_burst_bytes,omitempty" form:"committed_burst_bytes"`
 	ConnLimit           uint32 `json:"conn_limit,omitempty" form:"conn_limit"`
+	EgressTag           string `json:"egress_tag,omitempty" form:"egress_tag"`
 
 	// Display units the operator picked, so reopening the form shows the number
 	// they typed. camelCase keeps them clearly out of xray's snake_case set.
@@ -1073,6 +1074,7 @@ type ClientRecord struct {
 	ConnLimit           uint32 `json:"conn_limit" gorm:"column:conn_limit;default:0"`
 	RateUnit            string `json:"rateUnit" gorm:"column:rate_unit;default:''"`
 	BurstUnit           string `json:"burstUnit" gorm:"column:burst_unit;default:''"`
+	EgressTag           string `json:"egress_tag" gorm:"column:egress_tag;default:''"`
 	// Owned solely by the node-snapshot sweep, which soft-orphans instead of
 	// deleting; orphans from any other cause stay at zero and are never reaped.
 	SyncOrphanedAt int64 `json:"-" gorm:"column:sync_orphaned_at;default:0"`
@@ -1251,6 +1253,7 @@ func (c *Client) ToRecord() *ClientRecord {
 		ConnLimit:           c.ConnLimit,
 		RateUnit:            c.RateUnit,
 		BurstUnit:           c.BurstUnit,
+		EgressTag:           c.EgressTag,
 
 		PrivateKey:   c.PrivateKey,
 		PublicKey:    c.PublicKey,
@@ -1311,6 +1314,7 @@ func (r *ClientRecord) ToClient() *Client {
 		ConnLimit:           r.ConnLimit,
 		RateUnit:            r.RateUnit,
 		BurstUnit:           r.BurstUnit,
+		EgressTag:           r.EgressTag,
 
 		PrivateKey:   r.PrivateKey,
 		PublicKey:    r.PublicKey,

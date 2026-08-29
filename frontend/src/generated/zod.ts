@@ -270,6 +270,7 @@ export const ClientSchema = z.object({
   committed_burst_bytes: z.number().int().optional(),
   conn_limit: z.number().int().optional(),
   created_at: z.number().int().optional(),
+  egress_tag: z.string().optional(),
   email: z.string(),
   enable: z.boolean(),
   expiryTime: z.number().int(),
@@ -313,6 +314,7 @@ export const ClientRecordSchema = z.object({
   committed_burst_bytes: z.number().int(),
   conn_limit: z.number().int(),
   createdAt: z.number().int(),
+  egress_tag: z.string(),
   email: z.string(),
   enable: z.boolean(),
   expiryTime: z.number().int(),
@@ -765,8 +767,10 @@ export const RuntimeOutboundSchema = z.object({
 export type RuntimeOutbound = z.infer<typeof RuntimeOutboundSchema>;
 
 export const RuntimeRuleSchema = z.object({
+  inboundTag: z.string(),
   outboundTag: z.string(),
   ruleTag: z.string(),
+  user: z.string(),
 });
 export type RuntimeRule = z.infer<typeof RuntimeRuleSchema>;
 

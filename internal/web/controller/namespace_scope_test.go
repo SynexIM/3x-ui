@@ -165,6 +165,14 @@ func TestAScopedTokenIsConfinedToItsOwnNamespaces(t *testing.T) {
 			t.Fatalf("a rule naming a client outside the namespace answered %d, want 403: %s", status, body)
 		}
 	})
+
+	t.Run("a client cannot point at an unowned egress", func(t *testing.T) {
+		status, body := f.call(scoped, http.MethodPost, "/panel/api/clients/add",
+			`{"client":{"email":"ipl_line@example.invalid","egress_tag":"hand-made"},"inboundIds":[]}`)
+		if status != http.StatusForbidden {
+			t.Fatalf("an unowned egress tag answered %d, want 403: %s", status, body)
+		}
+	})
 }
 
 // Every token created before namespaces existed has none, and must keep

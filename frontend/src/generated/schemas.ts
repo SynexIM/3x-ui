@@ -1048,6 +1048,9 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "type": "integer"
       },
+      "egress_tag": {
+        "type": "string"
+      },
       "email": {
         "description": "Client email identifier",
         "type": "string"
@@ -1213,6 +1216,9 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "type": "integer"
       },
+      "egress_tag": {
+        "type": "string"
+      },
       "email": {
         "type": "string"
       },
@@ -1293,6 +1299,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "committed_burst_bytes",
       "conn_limit",
       "createdAt",
+      "egress_tag",
       "email",
       "enable",
       "expiryTime",
@@ -3160,8 +3167,12 @@ export const SCHEMAS: Record<string, unknown> = {
     "type": "object"
   },
   "RuntimeRule": {
-    "description": "RuntimeRule is one routing rule the running core currently holds.\n\nOnly the two tags are readable here. The core's richer ListRuleFull would\nalso report the rule's user and inbound conditions, but the xray-core this\nmodule pins panics the WHOLE CORE when it is called: ListRule builds each\nRoute with a nil embedded routing.Context and ListRuleFull then calls\nGetUser() on it (app/router/router.go ListRule + app/router/command\ncommand.go:146). Fixed in the fork at 7300d185 and verified against a real\ncore, but that commit has no released module version yet, so switching this\ncall over has to wait for the dependency bump — doing it sooner would take\nthe node down on every listing. The conditions are read from the stored\ntemplate meanwhile, which is the authority for them anyway.",
+    "description": "RuntimeRule is one routing rule the running core currently holds.\n\nUser and InboundTag are the rule's own matching conditions, which is what a\nreconciler needs: \"does the rule the core is running still point this\ncustomer at this outbound?\" cannot be answered from the two tags alone.\n\nThey are empty for a rule that carries no such condition, and — because the\nwire type is singular while a rule's condition is a list — report the first\nentry. That matches the one-route-per-customer shape this panel is driven\nwith; a hand-written multi-user rule reports only its first user.",
     "properties": {
+      "inboundTag": {
+        "example": "inbound-vless",
+        "type": "string"
+      },
       "outboundTag": {
         "example": "proxy-jp",
         "type": "string"
@@ -3169,11 +3180,17 @@ export const SCHEMAS: Record<string, unknown> = {
       "ruleTag": {
         "example": "ipl_route_ln000001",
         "type": "string"
+      },
+      "user": {
+        "example": "ln000001@ipl",
+        "type": "string"
       }
     },
     "required": [
+      "inboundTag",
       "outboundTag",
-      "ruleTag"
+      "ruleTag",
+      "user"
     ],
     "type": "object"
   },

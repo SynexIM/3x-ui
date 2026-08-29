@@ -17,7 +17,7 @@ const (
 
 func limitedClient(email, id string) model.Client {
 	return model.Client{
-		Email: email, ID: id, Password: id, Auth: id, Enable: true,
+		Email: email, ID: id, Password: id, Auth: id, Enable: true, EgressTag: "dedicated-us",
 		BandwidthBps: testPIR, CommittedBps: testCIR, CommittedBurstBytes: testCBS,
 		ConnLimit: testConnLimit,
 		RateUnit:  "Mbps", BurstUnit: "MB",
@@ -78,6 +78,9 @@ func assertLimits(t *testing.T, where string, obj map[string]any) {
 		if got != expect {
 			t.Errorf("%s: %s = %v, want %v", where, key, got, expect)
 		}
+	}
+	if got := obj["egress_tag"]; got != "dedicated-us" {
+		t.Errorf("%s: egress_tag = %v, want dedicated-us", where, got)
 	}
 	for _, key := range []string{"rateUnit", "burstUnit"} {
 		if _, leaked := obj[key]; leaked {
@@ -143,6 +146,9 @@ func TestGeneratedConfigOmitsAbsentRateLimits(t *testing.T) {
 			t.Errorf("unlimited client carries %q into the config: %#v", key, obj)
 		}
 	}
+	if _, present := obj["egress_tag"]; present {
+		t.Errorf("unassigned client carries egress_tag into the config: %#v", obj)
+	}
 }
 
 // The limits must survive the DB round-trip, or the form saves and the next
@@ -162,6 +168,9 @@ func TestRateLimitsRoundTripThroughDatabase(t *testing.T) {
 	c := clients[0]
 	if c.BandwidthBps != testPIR || c.CommittedBps != testCIR || c.CommittedBurstBytes != testCBS || c.ConnLimit != testConnLimit {
 		t.Errorf("limits lost in the DB round-trip: %d/%d/%d/%d", c.BandwidthBps, c.CommittedBps, c.CommittedBurstBytes, c.ConnLimit)
+	}
+	if c.EgressTag != "dedicated-us" {
+		t.Errorf("egress_tag lost in the DB round-trip: %q", c.EgressTag)
 	}
 	if c.RateUnit != "Mbps" || c.BurstUnit != "MB" {
 		t.Errorf("display units lost: rate=%q burst=%q — the form would reopen with a different number", c.RateUnit, c.BurstUnit)

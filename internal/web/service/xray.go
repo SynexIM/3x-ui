@@ -143,8 +143,8 @@ func RemoveIndex(s []any, index int) []any {
 }
 
 // GetXrayConfig retrieves and builds the Xray configuration from settings and inbounds.
-// addClientRateLimits writes the three xray limit keys onto an emitted client
-// object. Zero means unlimited and is left out so configs stay diff-clean.
+// addClientRateLimits writes runtime protocol.User fields onto an emitted client.
+// Zero-valued limits and an empty egress tag are omitted so configs stay diff-clean.
 func addClientRateLimits(entry map[string]any, c model.Client) {
 	if c.BandwidthBps > 0 {
 		entry["bandwidth_bps"] = c.BandwidthBps
@@ -157,6 +157,9 @@ func addClientRateLimits(entry map[string]any, c model.Client) {
 	}
 	if c.ConnLimit > 0 {
 		entry["conn_limit"] = c.ConnLimit
+	}
+	if c.EgressTag != "" {
+		entry["egress_tag"] = c.EgressTag
 	}
 }
 

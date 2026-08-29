@@ -7,7 +7,7 @@ boundary aligned.
 | Change | Restarts Xray? | Runtime mechanism |
 | --- | --- | --- |
 | Add/remove a non-API inbound | No | HandlerService |
-| Add/remove/change a VLESS, VMess, Trojan, or Hysteria user | No | HandlerService user operation |
+| Add/remove/change a VLESS, VMess, Trojan, or Hysteria user (including rate limits or `egress_tag`) | No | HandlerService user operation |
 | Change a Mixed or HTTP account | No | Replace only that inbound handler |
 | Add/remove/change a non-default outbound | No | HandlerService |
 | Change routing rules or balancers | No | RoutingService |

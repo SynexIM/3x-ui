@@ -12,7 +12,7 @@ import (
 func TestApplyUserRateLimitsFromPanelClient(t *testing.T) {
 	// Values arrive as float64 after a JSON round-trip through settings.
 	var src map[string]any
-	raw := `{"email":"line-042","bandwidth_bps":100000000,"committed_bps":20000000,"committed_burst_bytes":50000000,"conn_limit":4}`
+	raw := `{"email":"line-042","bandwidth_bps":100000000,"committed_bps":20000000,"committed_burst_bytes":50000000,"conn_limit":4,"egress_tag":"dedicated-us"}`
 	if err := json.Unmarshal([]byte(raw), &src); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -29,6 +29,9 @@ func TestApplyUserRateLimitsFromPanelClient(t *testing.T) {
 	}
 	if u.ConnLimit != 4 {
 		t.Errorf("conn_limit = %d, want 4", u.ConnLimit)
+	}
+	if u.EgressTag != "dedicated-us" {
+		t.Errorf("egress_tag = %q, want dedicated-us", u.EgressTag)
 	}
 }
 

@@ -248,6 +248,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "committed_burst_bytes": 0,
     "conn_limit": 0,
     "created_at": 0,
+    "egress_tag": "",
     "email": "",
     "enable": false,
     "expiryTime": 0,
@@ -287,6 +288,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "committed_burst_bytes": 0,
     "conn_limit": 0,
     "createdAt": 0,
+    "egress_tag": "",
     "email": "",
     "enable": false,
     "expiryTime": 0,
@@ -745,8 +747,10 @@ export const EXAMPLES: Record<string, unknown> = {
     "rules": null,
     "runtime": [
       {
+        "inboundTag": "inbound-vless",
         "outboundTag": "proxy-jp",
-        "ruleTag": "ipl_route_ln000001"
+        "ruleTag": "ipl_route_ln000001",
+        "user": "ln000001@ipl"
       }
     ],
     "runtimeError": ""
@@ -765,8 +769,10 @@ export const EXAMPLES: Record<string, unknown> = {
     "tag": "proxy-jp"
   },
   "RuntimeRule": {
+    "inboundTag": "inbound-vless",
     "outboundTag": "proxy-jp",
-    "ruleTag": "ipl_route_ln000001"
+    "ruleTag": "ipl_route_ln000001",
+    "user": "ln000001@ipl"
   },
   "Setting": {
     "id": 0,
@@ -800,8 +806,10 @@ export const EXAMPLES: Record<string, unknown> = {
     "pid": 1234,
     "rules": [
       {
+        "inboundTag": "inbound-vless",
         "outboundTag": "proxy-jp",
-        "ruleTag": "ipl_route_ln000001"
+        "ruleTag": "ipl_route_ln000001",
+        "user": "ln000001@ipl"
       }
     ],
     "running": true,
