@@ -16,19 +16,17 @@ func TestFailedDeleteWithdrawsTombstone(t *testing.T) {
 	db := database.GetDB()
 
 	const email = "retry@x"
-	broken := mkInbound(t, 30401, model.VLESS, `{"clients": [ THIS IS NOT JSON`)
-	rec := &model.ClientRecord{Email: email, Enable: true, UUID: "33333333-3333-3333-3333-333333333333"}
-	if err := db.Create(rec).Error; err != nil {
-		t.Fatalf("create client record: %v", err)
-	}
-	if err := db.Create(&model.ClientInbound{ClientId: rec.Id, InboundId: broken.Id}).Error; err != nil {
-		t.Fatalf("attach client: %v", err)
+	broken := mkInbound(t, 30401, model.VLESS, `{"clients":[]}`)
+	seedNormalizedInbound(t, broken, []model.Client{{Email: email, Enable: true, ID: "33333333-3333-3333-3333-333333333333"}})
+	rec := lookupClientRecord(t, email)
+	if err := db.Model(&model.Inbound{}).Where("id = ?", broken.Id).Update("node_id", 9999).Error; err != nil {
+		t.Fatalf("point fixture at missing node: %v", err)
 	}
 
 	t.Cleanup(func() { withdrawClientTombstones(email) })
 
 	if _, err := svc.Delete(inboundSvc, rec.Id, false); err == nil {
-		t.Fatal("setup: delete was expected to fail on the unparseable inbound settings")
+		t.Fatal("setup: delete was expected to fail while the node is unavailable")
 	}
 
 	var surviving int64

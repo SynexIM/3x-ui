@@ -97,6 +97,7 @@ func TestDelInboundClientByEmail_DisabledNodeClientMarksDirty(t *testing.T) {
 		t.Fatalf("create inbound: %v", err)
 	}
 
+	seedNormalizedInbound(t, central, []model.Client{{Email: "a@x", Enable: false}})
 	inboundSvc := &InboundService{}
 	clientSvc := &ClientService{}
 	if _, err := clientSvc.DelInboundClientByEmail(inboundSvc, central.Id, "a@x", false, false); err != nil {

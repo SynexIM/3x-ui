@@ -1,6 +1,7 @@
 package service
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -10,13 +11,10 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
 
-// TestMigrationRequirements_BackfillsClientTrafficsWithMultiDomainInbound guards the
-// PostgreSQL fix where the externalProxy detection query (executed via .Scan) errored on
-// json_extract and rolled back the whole transaction — including the client_traffics
-// backfill at inbound.go:3093-3106, leaving clients with no traffic rows. A MultiDomain
-// inbound is present so that query returns rows and the function runs to completion; both
-// the backfill and the MultiDomain→ExternalProxy migration must then commit.
-func TestMigrationRequirements_BackfillsClientTrafficsWithMultiDomainInbound(t *testing.T) {
+// TestMigrationRequirementsRunsAfterClientsTableBackfill preserves the legacy
+// JSON-only migration boundary: a restart explicitly runs ClientsTable before
+// the normal migration work, which then must complete its MultiDomain rewrite.
+func TestMigrationRequirementsRunsAfterClientsTableBackfill(t *testing.T) {
 	dbDir := t.TempDir()
 	t.Setenv("XUI_DB_FOLDER", dbDir)
 	if err := database.InitDB(filepath.Join(dbDir, "x-ui.db")); err != nil {
@@ -59,25 +57,27 @@ func TestMigrationRequirements_BackfillsClientTrafficsWithMultiDomainInbound(t *
 		t.Fatalf("create multidomain inbound: %v", err)
 	}
 
-	var before int64
-	if err := db.Model(xray.ClientTraffic{}).Count(&before).Error; err != nil {
-		t.Fatalf("count client_traffics before: %v", err)
+	if err := db.Where("seeder_name = ?", "ClientsTable").Delete(&model.HistoryOfSeeders{}).Error; err != nil {
+		t.Fatalf("clear ClientsTable history: %v", err)
 	}
-	if before != 0 {
-		t.Fatalf("expected no client_traffics before migration, got %d", before)
+	if err := database.CloseDB(); err != nil {
+		t.Fatalf("close before explicit startup seeder: %v", err)
+	}
+	if err := database.InitDB(filepath.Join(dbDir, "x-ui.db")); err != nil {
+		t.Fatalf("restart for ClientsTable: %v", err)
+	}
+	db = database.GetDB()
+	var seeded model.ClientRecord
+	if err := db.Where("email = ?", backfillEmail).First(&seeded).Error; err != nil {
+		t.Fatalf("ClientsTable did not backfill %s: %v", backfillEmail, err)
+	}
+	var links int64
+	if err := db.Model(&model.ClientInbound{}).Where("client_id = ? AND inbound_id = ?", seeded.Id, clientInbound.Id).Count(&links).Error; err != nil || links != 1 {
+		t.Fatalf("ClientsTable linkage = %d, err=%v, want 1", links, err)
 	}
 
 	svc := InboundService{}
 	svc.MigrationRequirements()
-
-	// The backfill must have committed: the settings-only client now owns a row.
-	// Before the fix this was rolled back whenever the externalProxy detection query
-	// errored (it does on Postgres via json_extract), so the MultiDomain inbound below
-	// is deliberately present to make that query return rows and run to completion.
-	var ct xray.ClientTraffic
-	if err := db.Model(xray.ClientTraffic{}).Where("email = ?", backfillEmail).First(&ct).Error; err != nil {
-		t.Fatalf("client_traffics row not backfilled for %s: %v", backfillEmail, err)
-	}
 
 	// The MultiDomain→ExternalProxy migration must have committed too: the detection
 	// query ran (.Scan executes it) and the loop rewrote the inbound's streamSettings.
@@ -138,17 +138,13 @@ func TestMigrationRemoveOrphanedTraffics(t *testing.T) {
 	const attachedEmail = "attached@example.com"
 	attachedClient := model.Client{Email: attachedEmail, ID: "11111111-1111-1111-1111-111111111111", SubID: attachedEmail, Enable: true}
 	attachedIb := mkInbound(t, 30003, model.VLESS, clientsSettings(t, []model.Client{attachedClient}))
-	if err := clientSvc.SyncInbound(nil, attachedIb.Id, []model.Client{attachedClient}); err != nil {
-		t.Fatalf("seed attached client: %v", err)
-	}
+	seedNormalizedInbound(t, attachedIb, []model.Client{attachedClient})
 	mkTraffic(t, attachedIb.Id, attachedEmail, 0, 0, 0, 0, true)
 
 	const detachedEmail = "detached@example.com"
 	detachedClient := model.Client{Email: detachedEmail, ID: "22222222-2222-2222-2222-222222222222", SubID: detachedEmail, Enable: true}
 	detachedIb := mkInbound(t, 30004, model.VLESS, clientsSettings(t, []model.Client{detachedClient}))
-	if err := clientSvc.SyncInbound(nil, detachedIb.Id, []model.Client{detachedClient}); err != nil {
-		t.Fatalf("seed detached client: %v", err)
-	}
+	seedNormalizedInbound(t, detachedIb, []model.Client{detachedClient})
 	mkTraffic(t, detachedIb.Id, detachedEmail, 123, 456, 0, 0, true)
 	detachedRec := lookupClientRecord(t, detachedEmail)
 	if _, err := clientSvc.Detach(inboundSvc, detachedRec.Id, []int{detachedIb.Id}); err != nil {
@@ -163,8 +159,21 @@ func TestMigrationRemoveOrphanedTraffics(t *testing.T) {
 	const trulyOrphanedEmail = "deleted@example.com"
 	mkTraffic(t, attachedIb.Id, trulyOrphanedEmail, 0, 0, 0, 0, true)
 
+	if err := db.Where("seeder_name = ?", "ClientsTable").Delete(&model.HistoryOfSeeders{}).Error; err != nil {
+		t.Fatalf("clear ClientsTable history: %v", err)
+	}
+	if err := database.CloseDB(); err != nil {
+		t.Fatalf("close before JSON-only seeder: %v", err)
+	}
+	if err := database.InitDB(filepath.Join(os.Getenv("XUI_DB_FOLDER"), "x-ui.db")); err != nil {
+		t.Fatalf("restart for ClientsTable: %v", err)
+	}
+	db = database.GetDB()
+	var seeded model.ClientRecord
+	if err := db.Where("email = ?", jsonOnlyEmail).First(&seeded).Error; err != nil {
+		t.Fatalf("ClientsTable did not backfill JSON-only client: %v", err)
+	}
 	inboundSvc.MigrationRemoveOrphanedTraffics()
-
 	cases := []struct {
 		name  string
 		email string

@@ -106,9 +106,7 @@ func nodeInbound(t *testing.T, nodeID, port int, clients []model.Client) *model.
 	if err := database.GetDB().Create(ib).Error; err != nil {
 		t.Fatalf("create node inbound: %v", err)
 	}
-	if err := (&ClientService{}).SyncInbound(nil, ib.Id, clients); err != nil {
-		t.Fatalf("seed SyncInbound: %v", err)
-	}
+	seedNormalizedInbound(t, ib, clients)
 	return ib
 }
 

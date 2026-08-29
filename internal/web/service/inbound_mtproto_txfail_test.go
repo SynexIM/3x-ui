@@ -23,6 +23,7 @@ func TestUpdateInboundLocalMtprotoDefersPushUntilCommit(t *testing.T) {
 	seedInboundConflict(t, "mt-txfail", "", 46150, model.MTProto, "",
 		`{"clients":[{"email":"mtx","secret":"`+mtprotoTestSecretA+`","enable":true}]}`)
 	seeded := loadInboundByTag(t, "mt-txfail")
+	seedNormalizedInbound(t, seeded, []model.Client{{Email: "mtx", Secret: mtprotoTestSecretA, Enable: true}})
 	seedClientTraffic(t, seeded.Id, "mtx", true)
 
 	db := database.GetDB()
@@ -58,6 +59,7 @@ func TestSetInboundEnableRoutedMtprotoRequestsRestart(t *testing.T) {
 	seedInboundConflict(t, "mt-route", "", 46160, model.MTProto, "",
 		`{"clients":[{"email":"mtr","secret":"`+mtprotoTestSecretA+`","enable":true}],"routeThroughXray":true,"routeXrayPort":12345}`)
 	seeded := loadInboundByTag(t, "mt-route")
+	seedNormalizedInbound(t, seeded, []model.Client{{Email: "mtr", Secret: mtprotoTestSecretA, Enable: true}})
 	if err := database.GetDB().Model(&model.Inbound{}).Where("id = ?", seeded.Id).Update("enable", false).Error; err != nil {
 		t.Fatalf("force disable: %v", err)
 	}

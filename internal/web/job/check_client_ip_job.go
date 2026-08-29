@@ -359,7 +359,7 @@ func (j *CheckClientIpJob) processObserved(observed map[string]map[string]int64,
 	for _, d := range disconnects {
 		clients, cached := clientsCache[d.inbound.Id]
 		if !cached {
-			clients, _ = service.ParseInboundSettingsClients(d.inbound.Settings)
+			clients, _ = (&service.InboundService{}).GetClients(d.inbound)
 			clientsCache[d.inbound.Id] = clients
 		}
 		j.disconnectClientTemporarily(d.inbound, d.email, clients)
@@ -708,12 +708,15 @@ func getAPIPortFromConfigData(configData []byte) (int, error) {
 	return 0, errors.New("api inbound port not found")
 }
 
-// getInboundByEmail resolves the inbound that owns a client email. It prefers
-// the exact clients/client_inbounds relation; a substring "settings LIKE
-// %email%" can match the wrong inbound (an email that is a substring of another,
-// or text that merely appears elsewhere in the settings JSON). The LIKE + JSON
-// scan stays only as a fallback for clients not yet present in the relation, so
-// nothing regresses when the join finds no row.
+// getInboundByEmail resolves the inbound that owns a client email through the
+// clients/client_inbounds relation, and only through it.
+//
+// There used to be a "settings LIKE %email%" fallback for clients not yet in
+// the relation. It is gone: the relation is now the authority every write goes
+// through, and the fallback answered the wrong inbound whenever an email was a
+// substring of another or merely appeared somewhere else in the settings JSON.
+// A client that exists only in a settings blob is a client the panel cannot
+// see, and answering for it would hide that rather than surface it.
 func (j *CheckClientIpJob) getInboundByEmail(clientEmail string) (*model.Inbound, error) {
 	db := database.GetDB()
 	inbound := &model.Inbound{}
@@ -725,22 +728,6 @@ func (j *CheckClientIpJob) getInboundByEmail(clientEmail string) (*model.Inbound
 		First(inbound).Error
 	if err == nil {
 		return inbound, nil
-	}
-
-	var candidates []model.Inbound
-	if listErr := db.Model(&model.Inbound{}).Where("settings LIKE ?", "%"+clientEmail+"%").Find(&candidates).Error; listErr != nil {
-		return nil, listErr
-	}
-	for i := range candidates {
-		clients, jsonErr := service.ParseInboundSettingsClients(candidates[i].Settings)
-		if jsonErr != nil {
-			continue
-		}
-		for _, client := range clients {
-			if client.Email == clientEmail {
-				return &candidates[i], nil
-			}
-		}
 	}
 
 	return nil, err

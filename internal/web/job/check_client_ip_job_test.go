@@ -194,7 +194,7 @@ func TestPartitionLiveIps_ConcurrentLiveIpsSortedAscending(t *testing.T) {
 	}
 }
 
-func TestGetInboundByEmailFallbackIgnoresProtocolScalarFields(t *testing.T) {
+func TestGetInboundByEmailIgnoresSettingsOnlyClient(t *testing.T) {
 	dbDir := t.TempDir()
 	t.Setenv("XUI_DB_FOLDER", dbDir)
 	if err := database.InitDB(filepath.Join(dbDir, "x-ui.db")); err != nil {
@@ -219,12 +219,14 @@ func TestGetInboundByEmailFallbackIgnoresProtocolScalarFields(t *testing.T) {
 		t.Fatalf("create inbound: %v", err)
 	}
 
-	got, err := (&CheckClientIpJob{}).getInboundByEmail("alice@example.test")
-	if err != nil {
-		t.Fatalf("getInboundByEmail: %v", err)
-	}
-	if got.Id != inbound.Id {
-		t.Fatalf("inbound id = %d, want %d", got.Id, inbound.Id)
+	// This client exists only in the settings blob, never in
+	// clients/client_inbounds. The relation is the authority, so it must not
+	// resolve — the old "settings LIKE %email%" scan resolved it, and that is
+	// precisely how an email that merely appears somewhere in the JSON (a
+	// protocol scalar field, another client's substring) got matched to the
+	// wrong inbound.
+	if got, err := (&CheckClientIpJob{}).getInboundByEmail("alice@example.test"); err == nil {
+		t.Fatalf("a settings-only client resolved to inbound %d; want no match", got.Id)
 	}
 }
 

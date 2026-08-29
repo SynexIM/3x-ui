@@ -243,75 +243,6 @@ func shadowsocksKeyBytes(method string) int {
 	return 0
 }
 
-// normalizeShadowsocksClientKeys rewrites any Shadowsocks-2022 client password
-// whose decoded length no longer matches settings.method, which happens after the
-// inbound method is switched between ciphers of different key sizes (e.g.
-// aes-256↔aes-128). A wrong-length uPSK makes xray reject the user, so the link
-// fails to connect; regenerating restores a valid key (clients must re-fetch).
-// Non-Shadowsocks / legacy-SS settings pass through unchanged.
-func normalizeShadowsocksClientKeys(settings string) (string, bool) {
-	method := shadowsocksMethodFromSettings(settings)
-	if shadowsocksKeyBytes(method) == 0 {
-		return settings, false
-	}
-	var m map[string]any
-	if err := json.Unmarshal([]byte(settings), &m); err != nil {
-		return settings, false
-	}
-	clients, ok := m["clients"].([]any)
-	if !ok {
-		return settings, false
-	}
-	changed := false
-	for i := range clients {
-		c, ok := clients[i].(map[string]any)
-		if !ok {
-			continue
-		}
-		if pw, _ := c["password"].(string); validShadowsocksClientKey(method, pw) {
-			continue
-		}
-		c["password"] = randomShadowsocksClientKey(method)
-		clients[i] = c
-		changed = true
-	}
-	if !changed {
-		return settings, false
-	}
-	m["clients"] = clients
-	bs, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		return settings, false
-	}
-	return string(bs), true
-}
-
-func applyShadowsocksClientMethod(clients []any, settings map[string]any) {
-	method, _ := settings["method"].(string)
-	is2022 := strings.HasPrefix(method, "2022-blake3-")
-	for i := range clients {
-		cm, ok := clients[i].(map[string]any)
-		if !ok {
-			continue
-		}
-		if is2022 {
-			if _, hasKey := cm["method"]; hasKey {
-				delete(cm, "method")
-				clients[i] = cm
-			}
-			continue
-		}
-		if method == "" {
-			continue
-		}
-		if existing, _ := cm["method"].(string); existing != "" {
-			continue
-		}
-		cm["method"] = method
-		clients[i] = cm
-	}
-}
-
 func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model.Client, inboundFilter ...int) (bool, error) {
 	existing, err := s.GetByID(id)
 	if err != nil {
@@ -425,6 +356,13 @@ func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model
 			Settings: string(settingsPayload),
 		}, existing.Email)
 		if upErr != nil {
+			// New writes keep membership and client data in normalized tables;
+			// an older inbound settings blob may therefore have no matching
+			// client entry to rewrite. The direct record save below is the
+			// authority for that shape.
+			if errors.Is(upErr, ErrClientNotInInbound) {
+				continue
+			}
 			return needRestart, upErr
 		}
 		if nr {
@@ -432,87 +370,20 @@ func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model
 		}
 	}
 
-	// UpdateInboundClient renames the record atomically with each inbound's
-	// settings JSON; this direct write only covers records with no inbound left.
-	if updated.Email != existing.Email {
-		if err := database.GetDB().Model(&model.ClientRecord{}).
-			Where("id = ? AND email = ?", id, existing.Email).
-			Update("email", updated.Email).Error; err != nil {
-			return needRestart, err
-		}
-	}
-
-	if len(inboundIds) == 0 {
-		merged := *existing
-		applyClientRecordMerge(&merged, updated.ToRecord())
-		if err := database.GetDB().Model(&model.ClientRecord{}).
-			Where("id = ?", id).
-			Updates(map[string]any{
-				"sub_id":            merged.SubID,
-				"uuid":              merged.UUID,
-				"password":          merged.Password,
-				"auth":              merged.Auth,
-				"secret":            merged.Secret,
-				"flow":              merged.Flow,
-				"security":          merged.Security,
-				"wg_private_key":    merged.PrivateKey,
-				"wg_public_key":     merged.PublicKey,
-				"wg_allowed_ips":    merged.AllowedIPs,
-				"wg_pre_shared_key": merged.PreSharedKey,
-				"wg_keep_alive":     merged.KeepAlive,
-				"limit_ip":          merged.LimitIP,
-				"total_gb":          merged.TotalGB,
-				"expiry_time":       merged.ExpiryTime,
-				"tg_id":             merged.TgID,
-				"comment":           merged.Comment,
-				"reset":             merged.Reset,
-			}).Error; err != nil {
-			return needRestart, err
-		}
-	}
-
-	reverseStr := ""
-	if updated.Reverse != nil && strings.TrimSpace(updated.Reverse.Tag) != "" {
-		if b, mErr := json.Marshal(updated.Reverse); mErr == nil {
-			reverseStr = string(b)
-		}
-	}
-	if err := database.GetDB().Model(&model.ClientRecord{}).
-		Where("id = ?", id).
-		Update("reverse", reverseStr).Error; err != nil {
-		return needRestart, err
-	}
-
-	// Persist the group explicitly. SyncInbound deliberately preserves the
-	// stored group when the inbound settings carry none — so a node snapshot or a
-	// group-less settings rebuild can't wipe it (see SyncInbound + its tests).
-	// That guard also meant clearing the group in the client editor never took
-	// effect. The editor always round-trips the field, so apply it here,
-	// including the empty string that removes the client from its group.
-	if err := database.GetDB().Model(&model.ClientRecord{}).
-		Where("id = ?", id).
-		UpdateColumn("group_name", updated.Group).Error; err != nil {
-		return needRestart, err
-	}
-
-	// Same shape as the group write above: SyncInbound keeps a stored ad-tag
-	// when the incoming settings carry none, so clearing the override must be
-	// applied here, where the editor always round-trips the field.
-	if err := database.GetDB().Model(&model.ClientRecord{}).
-		Where("id = ?", id).
-		UpdateColumn("ad_tag", updated.AdTag).Error; err != nil {
-		return needRestart, err
-	}
-
-	if err := database.GetDB().Model(&model.ClientRecord{}).
-		Where("id = ?", id).
-		UpdateColumn("enable", updated.Enable).Error; err != nil {
-		return needRestart, err
-	}
-
-	if err := database.GetDB().Model(&model.ClientRecord{}).
-		Where("id = ?", id).
-		UpdateColumn("updated_at", time.Now().UnixMilli()).Error; err != nil {
+	// Persist the normalized record for every update, including zero values
+	// that intentionally clear group, ad-tag, reverse, quotas, or limits. This
+	// is also the only persistence write needed for clients created after the
+	// inbound settings array stopped being authoritative.
+	merged := *existing
+	incoming := updated.ToRecord()
+	applyClientRecordMerge(&merged, incoming)
+	merged.Email = updated.Email
+	merged.Group = updated.Group
+	merged.AdTag = updated.AdTag
+	merged.Reverse = incoming.Reverse
+	merged.Enable = updated.Enable
+	merged.UpdatedAt = updated.UpdatedAt
+	if err := database.GetDB().Save(&merged).Error; err != nil {
 		return needRestart, err
 	}
 	return needRestart, nil
@@ -718,47 +589,7 @@ func (s *ClientService) DeleteByEmail(inboundSvc *InboundService, email string, 
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return false, err
 	}
-	inboundIds, idsErr := s.findInboundIdsByClientEmail(email)
-	if idsErr != nil {
-		return false, idsErr
-	}
-	if len(inboundIds) == 0 {
-		return false, common.NewError(fmt.Sprintf("client %q not found in any inbound or client record", email))
-	}
-	needRestart := false
-	var delErrs []error
-	for _, ibId := range inboundIds {
-		nr, delErr := s.DelInboundClientByEmail(inboundSvc, ibId, email, keepTraffic, true)
-		if delErr != nil {
-			if errors.Is(delErr, ErrClientNotInInbound) {
-				continue
-			}
-			delErrs = append(delErrs, fmt.Errorf("inbound %d: %w", ibId, delErr))
-			continue
-		}
-		if nr {
-			needRestart = true
-		}
-	}
-	if len(delErrs) > 0 {
-		return needRestart, errors.Join(delErrs...)
-	}
-	if !keepTraffic {
-		db := database.GetDB()
-		if err := db.Where("email = ?", email).Delete(&xray.ClientTraffic{}).Error; err != nil {
-			return needRestart, err
-		}
-		if err := clearGlobalTraffic(db, email); err != nil {
-			return needRestart, err
-		}
-		if err := db.Where("client_email = ?", email).Delete(&model.InboundClientIps{}).Error; err != nil {
-			return needRestart, err
-		}
-		if err := db.Where("email = ?", email).Delete(&model.NodeClientTraffic{}).Error; err != nil {
-			return needRestart, err
-		}
-	}
-	return needRestart, nil
+	return false, common.NewError(fmt.Sprintf("client %q not found in normalized client records", email))
 }
 
 func (s *ClientService) UpdateByEmail(inboundSvc *InboundService, email string, updated model.Client, inboundFilter ...int) (bool, error) {
@@ -801,6 +632,11 @@ func (s *ClientService) Detach(inboundSvc *InboundService, id int, inboundIds []
 		nr, delErr := s.DelInboundClientByEmail(inboundSvc, ibId, existing.Email, true, false)
 		if delErr != nil {
 			if errors.Is(delErr, ErrClientNotInInbound) {
+				if err := database.GetDB().
+					Where("client_id = ? AND inbound_id = ?", id, ibId).
+					Delete(&model.ClientInbound{}).Error; err != nil {
+					return needRestart, err
+				}
 				continue
 			}
 			return needRestart, delErr

@@ -6,15 +6,12 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
-	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
 
-// TestGetClientTrafficTgBot_SettingsSerializationStyles guards against the
-// prefilter regressing into a formatting-sensitive string match (#5805): the
-// lookup must find clients whether inbounds.settings stores compact JSON
-// ("tgId":N, as written by node sync/import) or indented JSON ("tgId": N, as
-// written by the panel's MarshalIndent).
-func TestGetClientTrafficTgBot_SettingsSerializationStyles(t *testing.T) {
+// TestGetClientTrafficTgBotSettingsSerializationStyles keeps compact and
+// indented legacy settings as protocol fixtures while explicitly seeding
+// normalized client rows. Lookup must rely on those rows, not JSON formatting.
+func TestGetClientTrafficTgBotSettingsSerializationStyles(t *testing.T) {
 	dbDir := t.TempDir()
 	t.Setenv("XUI_DB_FOLDER", dbDir)
 	if err := database.InitDB(filepath.Join(dbDir, "x-ui.db")); err != nil {
@@ -39,9 +36,7 @@ func TestGetClientTrafficTgBot_SettingsSerializationStyles(t *testing.T) {
 		if err := db.Create(inbound).Error; err != nil {
 			t.Fatalf("create %s inbound: %v", c.name, err)
 		}
-		if err := db.Create(&xray.ClientTraffic{InboundId: inbound.Id, Email: c.email, Enable: true, Up: 10, Down: 20}).Error; err != nil {
-			t.Fatalf("create %s client_traffics: %v", c.name, err)
-		}
+		seedNormalizedInbound(t, inbound, []model.Client{{Email: c.email, ID: "u" + c.name, TgID: tgId, Enable: true}})
 	}
 
 	svc := InboundService{}

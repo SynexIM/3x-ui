@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"errors"
 	"strings"
 
@@ -199,39 +198,4 @@ func (s *ClientService) HasPendingNode(inboundSvc *InboundService, email string)
 		return false
 	}
 	return inboundSvc.AnyNodePending(ids)
-}
-
-// findInboundIdsByClientEmail returns every inbound whose settings.clients[]
-// JSON contains an entry with the given email. Driver-portable (no JSON
-// operators) by parsing in Go — fine for the rare fallback path.
-func (s *ClientService) findInboundIdsByClientEmail(email string) ([]int, error) {
-	var inbounds []model.Inbound
-	if err := database.GetDB().
-		Select("id, settings").
-		Where("settings LIKE ?", "%"+email+"%").
-		Find(&inbounds).Error; err != nil {
-		return nil, err
-	}
-	out := make([]int, 0, len(inbounds))
-	for _, ib := range inbounds {
-		var settings map[string]any
-		if err := json.Unmarshal([]byte(ib.Settings), &settings); err != nil {
-			continue
-		}
-		clients, ok := settings["clients"].([]any)
-		if !ok {
-			continue
-		}
-		for _, c := range clients {
-			cm, ok := c.(map[string]any)
-			if !ok {
-				continue
-			}
-			if cEmail, _ := cm["email"].(string); cEmail == email {
-				out = append(out, ib.Id)
-				break
-			}
-		}
-	}
-	return out, nil
 }

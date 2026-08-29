@@ -61,21 +61,19 @@ func TestClientDelete_KeepTrafficPreservesNodeBaselines(t *testing.T) {
 	}
 }
 
-func TestDeleteByEmail_FallbackCleansNodeBaselines(t *testing.T) {
+func TestDeleteByEmailCleansNodeBaselines(t *testing.T) {
 	db := initTrafficTestDB(t)
 
 	const email = "recordless@example.com"
+	draft := model.Client{ID: "5f2eb9d6-3a2f-4a55-9812-6ea1e2f7a001", Email: email, Enable: true}
 	ib := &model.Inbound{
-		UserId:   1,
-		Tag:      "local-fallback",
-		Enable:   true,
-		Port:     41001,
-		Protocol: model.VLESS,
+		UserId: 1, Tag: "local-fallback", Enable: true, Port: 41001, Protocol: model.VLESS,
 		Settings: `{"clients": [{"id": "5f2eb9d6-3a2f-4a55-9812-6ea1e2f7a001", "email": "recordless@example.com", "enable": true}]}`,
 	}
 	if err := db.Create(ib).Error; err != nil {
 		t.Fatalf("seed inbound: %v", err)
 	}
+	seedNormalizedInbound(t, ib, []model.Client{draft})
 	if err := db.Create(&model.NodeClientTraffic{NodeId: 3, Email: email, Up: 5, Down: 6}).Error; err != nil {
 		t.Fatalf("seed node baseline: %v", err)
 	}

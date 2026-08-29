@@ -19,9 +19,7 @@ func TestDeleteContinuesPastFailedInbound(t *testing.T) {
 	ib2 := mkInbound(t, 23002, model.VLESS, clientsSettings(t, source))
 	ib3 := mkInbound(t, 23003, model.VLESS, clientsSettings(t, source))
 	for _, ib := range []*model.Inbound{ib1, ib2, ib3} {
-		if err := svc.SyncInbound(nil, ib.Id, source); err != nil {
-			t.Fatalf("seed linkage for %d: %v", ib.Id, err)
-		}
+		seedNormalizedInbound(t, ib, source)
 	}
 	rec := lookupClientRecord(t, "spread@x")
 
@@ -40,8 +38,10 @@ func TestDeleteContinuesPastFailedInbound(t *testing.T) {
 	}
 
 	for _, ib := range []*model.Inbound{ib1, ib3} {
-		if settingsHoldUUID(t, inboundSvc, ib.Id, "spread@x") {
-			t.Fatalf("inbound %d still holds the client after Delete", ib.Id)
+		inboundSettingsEqual(t, inboundSvc, ib.Id, clientsSettings(t, source))
+		clients, listErr := svc.ListForInbound(nil, ib.Id)
+		if listErr != nil || len(clients) != 0 {
+			t.Fatalf("inbound %d normalized links after Delete = %+v, err=%v", ib.Id, clients, listErr)
 		}
 	}
 	if _, err := svc.GetByID(rec.Id); err != nil {
@@ -58,7 +58,9 @@ func TestDeleteContinuesPastFailedInbound(t *testing.T) {
 	if _, err := svc.GetByID(rec.Id); err == nil {
 		t.Fatalf("record still present after successful retry")
 	}
-	if settingsHoldUUID(t, inboundSvc, ib2.Id, "spread@x") {
-		t.Fatalf("inbound 2 still holds the client after retry")
+	inboundSettingsEqual(t, inboundSvc, ib2.Id, clientsSettings(t, source))
+	clients, listErr := svc.ListForInbound(nil, ib2.Id)
+	if listErr != nil || len(clients) != 0 {
+		t.Fatalf("inbound 2 normalized links after retry = %+v, err=%v", clients, listErr)
 	}
 }

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -175,7 +174,7 @@ func (s *InboundService) disableInvalidClients(tx *gorm.DB) (bool, int64, error)
 	}
 
 	for inboundID, emails := range localByInbound {
-		oldIb, newIb, mErr := s.markClientsDisabledInSettings(tx, inboundID, emails)
+		oldIb, newIb, mErr := s.markClientsDisabled(tx, inboundID, emails)
 		if mErr != nil {
 			logger.Warning("disableInvalidClients: settings.JSON sync failed for inbound", inboundID, ":", mErr)
 			continue
@@ -230,51 +229,23 @@ func (s *InboundService) disableInvalidClients(tx *gorm.DB) (bool, int64, error)
 	return needRestart, count, nil
 }
 
-// markClientsDisabledInSettings flips client.enable=false in the inbound's
-// stored settings JSON for the given emails and returns both the pre and
-// post snapshots so a caller pushing to a remote node has the diff to hand.
-func (s *InboundService) markClientsDisabledInSettings(tx *gorm.DB, inboundID int, emails map[string]struct{}) (oldIb, newIb *model.Inbound, err error) {
+func (s *InboundService) markClientsDisabled(tx *gorm.DB, inboundID int, emails map[string]struct{}) (oldIb, newIb *model.Inbound, err error) {
 	var ib model.Inbound
 	if err := tx.Model(&model.Inbound{}).Where("id = ?", inboundID).First(&ib).Error; err != nil {
 		return nil, nil, err
 	}
 	snapshot := ib
-
-	settings := map[string]any{}
-	if err := json.Unmarshal([]byte(ib.Settings), &settings); err != nil {
-		return nil, nil, err
+	values := make([]string, 0, len(emails))
+	for email := range emails {
+		values = append(values, email)
 	}
-	clients, _ := settings["clients"].([]any)
-	now := time.Now().Unix() * 1000
-	mutated := false
-	for i := range clients {
-		entry, ok := clients[i].(map[string]any)
-		if !ok {
-			continue
-		}
-		email, _ := entry["email"].(string)
-		if _, hit := emails[email]; !hit {
-			continue
-		}
-		if cur, _ := entry["enable"].(bool); !cur {
-			continue
-		}
-		entry["enable"] = false
-		entry["updated_at"] = now
-		clients[i] = entry
-		mutated = true
-	}
-	if !mutated {
+	if len(values) == 0 {
 		return &snapshot, &ib, nil
 	}
-	settings["clients"] = clients
-	bs, marshalErr := json.MarshalIndent(settings, "", "  ")
-	if marshalErr != nil {
-		return nil, nil, marshalErr
+	if err := tx.Model(&model.ClientRecord{}).Where("email IN ?", values).Updates(map[string]any{"enable": false, "updated_at": time.Now().UnixMilli()}).Error; err != nil {
+		return nil, nil, err
 	}
-	ib.Settings = string(bs)
-	if err := tx.Model(&model.Inbound{}).Where("id = ?", inboundID).
-		Update("settings", ib.Settings).Error; err != nil {
+	if err := tx.Model(&xray.ClientTraffic{}).Where("email IN ?", values).Update("enable", false).Error; err != nil {
 		return nil, nil, err
 	}
 	return &snapshot, &ib, nil
@@ -285,7 +256,7 @@ func (s *InboundService) markClientsDisabledInSettings(tx *gorm.DB, inboundID in
 // running Xray. That push is the whole reconcile — restarting the node's Xray
 // afterwards would drop every live connection on the node for nothing (#5740).
 func (s *InboundService) disableRemoteClients(tx *gorm.DB, inboundID int, emails map[string]struct{}) error {
-	oldSnapshot, ib, err := s.markClientsDisabledInSettings(tx, inboundID, emails)
+	oldSnapshot, ib, err := s.markClientsDisabled(tx, inboundID, emails)
 	if err != nil {
 		return err
 	}

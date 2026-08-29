@@ -34,16 +34,18 @@ func createNodeInbound(t *testing.T, db *gorm.DB, nodeID int, tag string, port i
 	}
 }
 
-// createNodeInboundWithClient mirrors createNodeInbound but stores the client
-// in the settings JSON so emailUsedByOtherInbounds can see the attachment.
+// createNodeInboundWithClient creates a normalized client attachment for node
+// traffic tests; settings remains a draft fixture, not a runtime authority.
 func createNodeInboundWithClient(t *testing.T, db *gorm.DB, nodeID int, tag string, port int, email string) {
 	t.Helper()
 	nid := nodeID
+	client := model.Client{Email: email, Enable: true}
 	settings := fmt.Sprintf(`{"clients": [{"email": %q, "enable": true}]}`, email)
 	ib := &model.Inbound{UserId: 1, Tag: tag, Enable: true, Port: port, Protocol: model.VLESS, NodeID: &nid, Settings: settings}
 	if err := db.Create(ib).Error; err != nil {
 		t.Fatalf("create node inbound %q: %v", tag, err)
 	}
+	seedNormalizedInbound(t, ib, []model.Client{client})
 }
 
 func syncNode(t *testing.T, svc *InboundService, nodeID int, tag string, stats ...xray.ClientTraffic) {
@@ -395,7 +397,8 @@ func TestStatsUnderSiblingInbound_KeepsNodeBaseline(t *testing.T) {
 	}
 	// Master-side row created when the client was added on the panel, owned by
 	// n1-b's mirror (e.g. the client form targeted that inbound).
-	if err := db.Create(&xray.ClientTraffic{InboundId: ibB.Id, Email: email, Enable: true}).Error; err != nil {
+	if err := db.Model(&xray.ClientTraffic{}).Where("email = ?", email).
+		Updates(map[string]any{"inbound_id": ibB.Id, "enable": true}).Error; err != nil {
 		t.Fatalf("seed master row: %v", err)
 	}
 

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"sort"
 	"strings"
 
@@ -257,77 +256,6 @@ func (s *ClientService) AddToGroup(emails []string, group string) (int, error) {
 		}
 	}
 
-	var inboundIDs []int
-	inboundIDSeen := make(map[int]struct{})
-	for _, batch := range chunkStrings(affectedEmails, sqlInChunk) {
-		var ids []int
-		if err := tx.Table("client_inbounds").
-			Joins("JOIN clients ON clients.id = client_inbounds.client_id").
-			Where("clients.email IN ?", batch).
-			Distinct("client_inbounds.inbound_id").
-			Pluck("inbound_id", &ids).Error; err != nil {
-			tx.Rollback()
-			return 0, err
-		}
-		for _, id := range ids {
-			if _, ok := inboundIDSeen[id]; !ok {
-				inboundIDSeen[id] = struct{}{}
-				inboundIDs = append(inboundIDs, id)
-			}
-		}
-	}
-
-	emailSet := make(map[string]struct{}, len(affectedEmails))
-	for _, e := range affectedEmails {
-		emailSet[e] = struct{}{}
-	}
-
-	for _, ibID := range inboundIDs {
-		var ib model.Inbound
-		if err := tx.First(&ib, ibID).Error; err != nil {
-			tx.Rollback()
-			return 0, err
-		}
-		var settings map[string]any
-		if err := json.Unmarshal([]byte(ib.Settings), &settings); err != nil {
-			continue
-		}
-		clients, ok := settings["clients"].([]any)
-		if !ok {
-			continue
-		}
-		modified := false
-		for i := range clients {
-			cm, ok := clients[i].(map[string]any)
-			if !ok {
-				continue
-			}
-			email, _ := cm["email"].(string)
-			if _, hit := emailSet[email]; !hit {
-				continue
-			}
-			if group == "" {
-				delete(cm, "group")
-			} else {
-				cm["group"] = group
-			}
-			clients[i] = cm
-			modified = true
-		}
-		if modified {
-			settings["clients"] = clients
-			newSettings, err := json.Marshal(settings)
-			if err != nil {
-				continue
-			}
-			ib.Settings = string(newSettings)
-			if err := tx.Save(&ib).Error; err != nil {
-				tx.Rollback()
-				return 0, err
-			}
-		}
-	}
-
 	if err := tx.Commit().Error; err != nil {
 		return 0, err
 	}
@@ -363,70 +291,6 @@ func (s *ClientService) replaceGroupValue(oldName, newName string) (int, error) 
 		UpdateColumn("group_name", newName).Error; err != nil {
 		tx.Rollback()
 		return 0, err
-	}
-
-	var inboundIDs []int
-	inboundIDSeen := make(map[int]struct{})
-	for _, batch := range chunkStrings(affectedEmails, sqlInChunk) {
-		var ids []int
-		if err := tx.Table("client_inbounds").
-			Joins("JOIN clients ON clients.id = client_inbounds.client_id").
-			Where("clients.email IN ?", batch).
-			Distinct("client_inbounds.inbound_id").
-			Pluck("inbound_id", &ids).Error; err != nil {
-			tx.Rollback()
-			return 0, err
-		}
-		for _, id := range ids {
-			if _, ok := inboundIDSeen[id]; !ok {
-				inboundIDSeen[id] = struct{}{}
-				inboundIDs = append(inboundIDs, id)
-			}
-		}
-	}
-
-	for _, ibID := range inboundIDs {
-		var ib model.Inbound
-		if err := tx.First(&ib, ibID).Error; err != nil {
-			tx.Rollback()
-			return 0, err
-		}
-		var settings map[string]any
-		if err := json.Unmarshal([]byte(ib.Settings), &settings); err != nil {
-			continue
-		}
-		clients, ok := settings["clients"].([]any)
-		if !ok {
-			continue
-		}
-		modified := false
-		for i := range clients {
-			cm, ok := clients[i].(map[string]any)
-			if !ok {
-				continue
-			}
-			if g, ok := cm["group"].(string); ok && g == oldName {
-				if newName == "" {
-					delete(cm, "group")
-				} else {
-					cm["group"] = newName
-				}
-				clients[i] = cm
-				modified = true
-			}
-		}
-		if modified {
-			settings["clients"] = clients
-			newSettings, err := json.Marshal(settings)
-			if err != nil {
-				continue
-			}
-			ib.Settings = string(newSettings)
-			if err := tx.Save(&ib).Error; err != nil {
-				tx.Rollback()
-				return 0, err
-			}
-		}
 	}
 
 	if err := tx.Commit().Error; err != nil {

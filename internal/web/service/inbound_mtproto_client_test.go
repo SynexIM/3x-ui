@@ -28,6 +28,7 @@ func TestClientCrudMtprotoAppliesImmediately(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AddInbound: %v", err)
 	}
+	seedNormalizedInbound(t, created, []model.Client{{Email: "first", Secret: mtprotoTestSecretA, Enable: true}})
 	t.Cleanup(func() { mtproto.GetManager().Remove(created.Id) })
 	waitForSpawns(t, pidFile, 1)
 

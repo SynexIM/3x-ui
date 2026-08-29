@@ -42,12 +42,7 @@ func TestNodePushKeepsDisabledClientsLocalPushStripsThem(t *testing.T) {
 	}
 	ib := mkInbound(t, 30301, model.VLESS, clientsSettings(t, clients))
 
-	for _, c := range clients {
-		row := &xray.ClientTraffic{InboundId: ib.Id, Email: c.Email, Enable: true}
-		if err := db.Create(row).Error; err != nil {
-			t.Fatalf("seed traffic %s: %v", c.Email, err)
-		}
-	}
+	seedNormalizedInbound(t, ib, clients)
 	if err := db.Model(xray.ClientTraffic{}).
 		Where("email = ?", "quota@x").
 		Update("enable", false).Error; err != nil {

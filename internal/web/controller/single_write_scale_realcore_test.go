@@ -52,7 +52,7 @@ func TestRealCoreSingleObjectWriteScale(t *testing.T) {
 			ruleAdds := make([]time.Duration, writes)
 			for i := range writes {
 				body := fmt.Sprintf(
-					`{"client":{"email":"probe-%d-%d@example.com","enable":true,"totalGB":0,"expiryTime":0},"inboundIds":[%d]}`,
+					`{"client":{"email":"probe-%d-%d@example.com","enable":true,"totalGB":0,"expiryTime":0},"inboundIds":[%d],"normalizedOnly":true}`,
 					i, time.Now().UnixNano(), inboundId)
 				start := time.Now()
 				status, payload := f.call(http.MethodPost, "/panel/api/clients/add", body)

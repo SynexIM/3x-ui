@@ -23,9 +23,7 @@ func TestUpdateInboundClientRenameDoesNotDuplicateRecord(t *testing.T) {
 
 	source := []model.Client{{Email: "old@x", ID: "aaaaaaaa-0000-0000-0000-000000000001", SubID: "sub-old", Enable: true}}
 	ib := mkInbound(t, 22001, model.VLESS, clientsSettings(t, source))
-	if err := svc.SyncInbound(nil, ib.Id, source); err != nil {
-		t.Fatalf("seed linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib, source)
 	origId := lookupClientRecord(t, "old@x").Id
 
 	renamed := source
@@ -53,9 +51,7 @@ func TestUpdateInboundClientCaseOnlyRenameDoesNotDuplicateRecord(t *testing.T) {
 
 	source := []model.Client{{Email: "test", ID: "aaaaaaaa-0000-0000-0000-000000000002", SubID: "sub-case", Enable: true}}
 	ib := mkInbound(t, 22002, model.VLESS, clientsSettings(t, source))
-	if err := svc.SyncInbound(nil, ib.Id, source); err != nil {
-		t.Fatalf("seed linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib, source)
 	origId := lookupClientRecord(t, "test").Id
 
 	updated := source[0]
@@ -85,9 +81,7 @@ func TestUpdateInboundClientCaseOnlyRenameSurvivesExistingClientIpsRow(t *testin
 
 	source := []model.Client{{Email: "Sanaei", ID: "aaaaaaaa-0000-0000-0000-000000000009", SubID: "sub-ips", Enable: true}}
 	ib := mkInbound(t, 22011, model.VLESS, clientsSettings(t, source))
-	if err := svc.SyncInbound(nil, ib.Id, source); err != nil {
-		t.Fatalf("seed linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib, source)
 	for _, email := range []string{"Sanaei", "sanaei"} {
 		row := &model.InboundClientIps{ClientEmail: email, Ips: `[{"ip":"1.2.3.4","timestamp":1700000000}]`}
 		if err := database.GetDB().Create(row).Error; err != nil {

@@ -155,13 +155,11 @@ func (s *ClientService) SyncInbound(tx *gorm.DB, inboundId int, clients []model.
 		}
 	}
 
-	if len(toCreate) > 0 {
-		if err := tx.CreateInBatches(toCreate, 200).Error; err != nil {
-			return err
-		}
-		for _, rec := range toCreate {
-			idByEmail[rec.Email] = rec.Id
-		}
+	if err := createClientRecords(tx, toCreate); err != nil {
+		return err
+	}
+	for _, rec := range toCreate {
+		idByEmail[rec.Email] = rec.Id
 	}
 
 	links := make([]model.ClientInbound, 0, len(clients))
@@ -191,6 +189,42 @@ func (s *ClientService) SyncInbound(tx *gorm.DB, inboundId int, clients []model.
 		}
 	}
 	return nil
+}
+
+// createClientRecords inserts the new client rows and re-asserts enable=false
+// for the ones the caller asked to create disabled.
+//
+// The re-assert is not belt-and-braces. `Enable` carries `gorm:"default:true"`,
+// so GORM leaves the Go zero value out of the INSERT to let the column default
+// apply — and then loads that applied default back into the struct. By the time
+// Save returns, every rec.Enable reads true, the ones created disabled
+// included. So who was disabled has to be remembered **before** the write:
+// reading it back afterwards is reading GORM's answer, not the caller's.
+func createClientRecords(tx *gorm.DB, toCreate []*model.ClientRecord) error {
+	if len(toCreate) == 0 {
+		return nil
+	}
+	disabled := make([]*model.ClientRecord, 0)
+	for _, rec := range toCreate {
+		if !rec.Enable {
+			disabled = append(disabled, rec)
+		}
+	}
+	if err := tx.Session(&gorm.Session{CreateBatchSize: 200}).Save(&toCreate).Error; err != nil {
+		return err
+	}
+	if len(disabled) == 0 {
+		return nil
+	}
+	ids := make([]int, 0, len(disabled))
+	for _, rec := range disabled {
+		// Put the caller's value back on the struct too: callers read these
+		// rows after the call, and a silently flipped field is exactly the
+		// bug this function exists to stop.
+		rec.Enable = false
+		ids = append(ids, rec.Id)
+	}
+	return tx.Model(&model.ClientRecord{}).Where("id IN ?", ids).UpdateColumn("enable", false).Error
 }
 
 // SyncInboundAdd links a handful of clients to an inbound **without touching the
@@ -283,13 +317,11 @@ func (s *ClientService) SyncInboundAdd(tx *gorm.DB, inboundId int, clients []mod
 		}
 	}
 
-	if len(toCreate) > 0 {
-		if err := tx.CreateInBatches(toCreate, 200).Error; err != nil {
-			return err
-		}
-		for _, rec := range toCreate {
-			idByEmail[rec.Email] = rec.Id
-		}
+	if err := createClientRecords(tx, toCreate); err != nil {
+		return err
+	}
+	for _, rec := range toCreate {
+		idByEmail[rec.Email] = rec.Id
 	}
 
 	// Which of these are already linked. Scoped to the ids being added, so the

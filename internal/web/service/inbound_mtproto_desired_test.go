@@ -20,14 +20,27 @@ func TestDesiredMtprotoInstancesFiltersDepleted(t *testing.T) {
 			`{"email":"bob","secret":"`+mtprotoTestSecretB+`","enable":true},`+
 			`{"email":"carol","secret":"`+mtprotoTestSecretC+`","enable":false}]}`)
 	served := loadInboundByTag(t, "mt-desired")
+	seedNormalizedInbound(t, served, []model.Client{
+		{Email: "alice", Secret: mtprotoTestSecretA, Enable: true},
+		{Email: "bob", Secret: mtprotoTestSecretB, Enable: true},
+		{Email: "carol", Secret: mtprotoTestSecretC, Enable: false},
+	})
 	seedClientTraffic(t, served.Id, "alice", true)
 	seedClientTraffic(t, served.Id, "bob", false)
 	seedClientTraffic(t, served.Id, "carol", true)
+	var disabledRecord model.ClientRecord
+	if err := database.GetDB().Where("email = ?", "carol").First(&disabledRecord).Error; err != nil {
+		t.Fatalf("read disabled client: %v", err)
+	}
+	if disabledRecord.Enable {
+		t.Fatal("normalized client record must preserve enable=false")
+	}
 
 	seedInboundConflict(t, "mt-all-depleted", "", 46002, model.MTProto,
 		"",
 		`{"clients":[{"email":"dave","secret":"`+mtprotoTestSecretA+`","enable":true}]}`)
 	depleted := loadInboundByTag(t, "mt-all-depleted")
+	seedNormalizedInbound(t, depleted, []model.Client{{Email: "dave", Secret: mtprotoTestSecretA, Enable: true}})
 	seedClientTraffic(t, depleted.Id, "dave", false)
 
 	nodeID := 5
@@ -35,6 +48,8 @@ func TestDesiredMtprotoInstancesFiltersDepleted(t *testing.T) {
 		"",
 		`{"clients":[{"email":"erin","secret":"`+mtprotoTestSecretB+`","enable":true}]}`,
 		&nodeID)
+	nodeOwned := loadInboundByTag(t, "mt-node-owned")
+	seedNormalizedInbound(t, nodeOwned, []model.Client{{Email: "erin", Secret: mtprotoTestSecretB, Enable: true}})
 
 	instances, err := svc.DesiredMtprotoInstances()
 	if err != nil {

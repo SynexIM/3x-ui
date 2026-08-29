@@ -1,19 +1,20 @@
 package service
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 )
 
-func settingsHoldUUID(t *testing.T, inboundSvc *InboundService, inboundId int, uuid string) bool {
+func inboundSettingsEqual(t *testing.T, inboundSvc *InboundService, inboundId int, want string) {
 	t.Helper()
 	ib, err := inboundSvc.GetInbound(inboundId)
 	if err != nil {
 		t.Fatalf("GetInbound %d: %v", inboundId, err)
 	}
-	return strings.Contains(ib.Settings, uuid)
+	if ib.Settings != want {
+		t.Fatalf("inbound %d settings changed: got %q, want %q", inboundId, ib.Settings, want)
+	}
 }
 
 func TestCreateRepeatKeepsExistingUUID(t *testing.T) {
@@ -21,8 +22,9 @@ func TestCreateRepeatKeepsExistingUUID(t *testing.T) {
 	svc := &ClientService{}
 	inboundSvc := &InboundService{}
 
-	ibA := mkInbound(t, 21001, model.VLESS, `{"clients":[]}`)
-	ibB := mkInbound(t, 21002, model.VLESS, `{"clients":[]}`)
+	const settings = `{"clients":[]}`
+	ibA := mkInbound(t, 21001, model.VLESS, settings)
+	ibB := mkInbound(t, 21002, model.VLESS, settings)
 
 	const originalUUID = "aaaaaaaa-1111-2222-3333-444444444444"
 	if _, err := svc.Create(inboundSvc, &ClientCreatePayload{
@@ -45,10 +47,15 @@ func TestCreateRepeatKeepsExistingUUID(t *testing.T) {
 	if rec := lookupClientRecord(t, "repeat@x"); rec.UUID != originalUUID {
 		t.Fatalf("record UUID after repeat Create = %q, want %q", rec.UUID, originalUUID)
 	}
-	if !settingsHoldUUID(t, inboundSvc, ibA.Id, originalUUID) {
-		t.Fatalf("inbound A settings lost the original UUID")
-	}
-	if !settingsHoldUUID(t, inboundSvc, ibB.Id, originalUUID) {
-		t.Fatalf("inbound B settings did not reuse the original UUID")
+	inboundSettingsEqual(t, inboundSvc, ibA.Id, settings)
+	inboundSettingsEqual(t, inboundSvc, ibB.Id, settings)
+	for _, ib := range []*model.Inbound{ibA, ibB} {
+		clients, err := svc.ListForInbound(nil, ib.Id)
+		if err != nil {
+			t.Fatalf("ListForInbound(%d): %v", ib.Id, err)
+		}
+		if len(clients) != 1 || clients[0].ID != originalUUID {
+			t.Fatalf("inbound %d normalized client = %+v, want UUID %q", ib.Id, clients, originalUUID)
+		}
 	}
 }

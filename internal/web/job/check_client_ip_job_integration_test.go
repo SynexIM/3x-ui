@@ -57,13 +57,19 @@ func setupIntegrationDB(t *testing.T) {
 	})
 }
 
-// seed an inbound whose settings json has a single client with the
-// given email and ip limit.
+// seed a client the way the panel really holds one: settings json **and** the
+// clients/client_inbounds relation. The relation is the authority every lookup
+// now goes through, so a helper that seeded only the json would produce a
+// client the panel cannot see — a fixture that tests nothing real.
 func seedInboundWithClient(t *testing.T, tag, email string, limitIp int) {
 	t.Helper()
-	seedInboundOnlyWithClient(t, tag, email, limitIp)
+	seedLinkedInboundWithClient(t, tag, email, limitIp)
 }
 
+// seedInboundOnlyWithClient deliberately leaves the client **out** of the
+// relation. It exists for the negative cases: a client that lives only in
+// settings json must not resolve, which is exactly what the removed
+// "settings LIKE %email%" scan used to get wrong.
 func seedInboundOnlyWithClient(t *testing.T, tag, email string, limitIp int) *model.Inbound {
 	t.Helper()
 	settings := map[string]any{
@@ -365,9 +371,8 @@ func contains(haystack, needle string) bool {
 	return false
 }
 
-// the exact clients/client_inbounds relation must win over the substring scan,
-// so a client is resolved to its own inbound even when another inbound holds a
-// superstring email.
+// a client resolves to its own inbound even when another inbound holds a
+// superstring email — the relation keys on the exact address.
 func TestGetInboundByEmailUsesClientInboundLink(t *testing.T) {
 	setupIntegrationDB(t)
 
@@ -383,8 +388,9 @@ func TestGetInboundByEmailUsesClientInboundLink(t *testing.T) {
 	}
 }
 
-// the substring fallback must still verify the exact email inside settings, so
-// "ann@example.com" does not match an inbound holding "joann@example.com".
+// "ann@example.com" must not resolve to an inbound holding "joann@example.com".
+// The join keys on an exact email, so this holds by construction — the test is
+// what keeps a substring scan from ever coming back.
 func TestGetInboundByEmailRejectsSubstringFallbackMatch(t *testing.T) {
 	setupIntegrationDB(t)
 

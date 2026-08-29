@@ -15,9 +15,7 @@ func TestUpdate_PersistsRecordEnable_True(t *testing.T) {
 	email := "u-true@x"
 	c := model.Client{Email: email, ID: "11111111-1111-1111-1111-111111111111", SubID: email, Enable: false}
 	ib := mkInbound(t, 53001, model.VLESS, clientsSettings(t, []model.Client{c}))
-	if err := svc.SyncInbound(nil, ib.Id, []model.Client{c}); err != nil {
-		t.Fatalf("seed linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib, []model.Client{c})
 	mkTraffic(t, ib.Id, email, 0, 0, 0, 0, false)
 
 	rec, err := svc.GetRecordByEmail(nil, email)
@@ -36,8 +34,8 @@ func TestUpdate_PersistsRecordEnable_True(t *testing.T) {
 	if got := trafficOf(t, email).Enable; !got {
 		t.Fatalf("%s: client_traffics.enable = false, want true", email)
 	}
-	if got := jsonClientEnable(t, inboundSvc, ib.Id, email); !got {
-		t.Fatalf("%s: inbound JSON enable = false, want true", email)
+	if got := jsonClientEnable(t, svc, ib.Id, email); !got {
+		t.Fatalf("%s: normalized inbound enable = false, want true", email)
 	}
 }
 
@@ -49,9 +47,7 @@ func TestUpdate_PersistsRecordEnable_False(t *testing.T) {
 	email := "u-false@x"
 	c := model.Client{Email: email, ID: "11111111-1111-1111-1111-111111111111", SubID: email, Enable: true}
 	ib := mkInbound(t, 53002, model.VLESS, clientsSettings(t, []model.Client{c}))
-	if err := svc.SyncInbound(nil, ib.Id, []model.Client{c}); err != nil {
-		t.Fatalf("seed linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib, []model.Client{c})
 	mkTraffic(t, ib.Id, email, 0, 0, 0, 0, true)
 
 	rec, err := svc.GetRecordByEmail(nil, email)
@@ -105,9 +101,7 @@ func TestResetTrafficByEmail_LeavesRecordEnableTrue(t *testing.T) {
 	email := "r-attached@x"
 	c := model.Client{Email: email, ID: "11111111-1111-1111-1111-111111111111", SubID: email, Enable: false}
 	ib := mkInbound(t, 53003, model.VLESS, clientsSettings(t, []model.Client{c}))
-	if err := svc.SyncInbound(nil, ib.Id, []model.Client{c}); err != nil {
-		t.Fatalf("seed linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib, []model.Client{c})
 	mkTraffic(t, ib.Id, email, 10, 20, 0, 0, false)
 
 	if _, err := svc.ResetTrafficByEmail(inboundSvc, email); err != nil {

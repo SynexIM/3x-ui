@@ -31,22 +31,18 @@ func forceRecordDisabled(t *testing.T, svc *ClientService, email string) {
 	}
 }
 
-func jsonClientEnable(t *testing.T, inboundSvc *InboundService, inboundId int, email string) bool {
+func jsonClientEnable(t *testing.T, svc *ClientService, inboundId int, email string) bool {
 	t.Helper()
-	ib, err := inboundSvc.GetInbound(inboundId)
+	clients, err := svc.ListForInbound(nil, inboundId)
 	if err != nil {
-		t.Fatalf("GetInbound(%d): %v", inboundId, err)
-	}
-	clients, err := inboundSvc.GetClients(ib)
-	if err != nil {
-		t.Fatalf("GetClients(%d): %v", inboundId, err)
+		t.Fatalf("ListForInbound(%d): %v", inboundId, err)
 	}
 	for _, c := range clients {
 		if c.Email == email {
 			return c.Enable
 		}
 	}
-	t.Fatalf("client %q not found in inbound %d settings JSON", email, inboundId)
+	t.Fatalf("client %q not found in normalized inbound %d", email, inboundId)
 	return false
 }
 
@@ -58,8 +54,8 @@ func assertEnableEverywhere(t *testing.T, svc *ClientService, inboundSvc *Inboun
 	if got := recordEnableOf(t, svc, email); got != want {
 		t.Fatalf("%s: client_records.enable = %v, want %v", email, got, want)
 	}
-	if got := jsonClientEnable(t, inboundSvc, inboundId, email); got != want {
-		t.Fatalf("%s: inbound JSON enable = %v, want %v", email, got, want)
+	if got := jsonClientEnable(t, svc, inboundId, email); got != want {
+		t.Fatalf("%s: normalized inbound client enable = %v, want %v", email, got, want)
 	}
 }
 
@@ -79,9 +75,7 @@ func seedLocalDisabledClient(t *testing.T, svc *ClientService, port int, stream,
 	} else {
 		ib = mkInboundStream(t, port, model.VLESS, clientsSettings(t, []model.Client{c}), stream)
 	}
-	if err := svc.SyncInbound(nil, ib.Id, []model.Client{c}); err != nil {
-		t.Fatalf("seed linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib, []model.Client{c})
 	mkTraffic(t, ib.Id, email, up, down, total, expiry, false)
 	forceRecordDisabled(t, svc, email)
 	return ib
@@ -172,9 +166,7 @@ func TestBulkAdjust_QuotaReductionBelowZeroSkipsInsteadOfUnlimited(t *testing.T)
 	email := "qr@x"
 	c := model.Client{Email: email, ID: "11111111-1111-1111-1111-111111111111", SubID: email, Enable: true, TotalGB: 10}
 	ib := mkInbound(t, 52020, model.VLESS, clientsSettings(t, []model.Client{c}))
-	if err := svc.SyncInbound(nil, ib.Id, []model.Client{c}); err != nil {
-		t.Fatalf("seed linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib, []model.Client{c})
 	mkTraffic(t, ib.Id, email, 0, 0, 10, 0, true)
 
 	res, _, err := svc.BulkAdjust(inboundSvc, []string{email}, 0, -20, "")
@@ -197,9 +189,7 @@ func TestBulkAdjust_AppliedFieldReachesTrafficRowDespiteOtherFieldSkip(t *testin
 	email := "mix2@x"
 	c := model.Client{Email: email, ID: "11111111-1111-1111-1111-111111111111", SubID: email, Enable: true, TotalGB: 100, ExpiryTime: 0}
 	ib := mkInbound(t, 52021, model.VLESS, clientsSettings(t, []model.Client{c}))
-	if err := svc.SyncInbound(nil, ib.Id, []model.Client{c}); err != nil {
-		t.Fatalf("seed linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib, []model.Client{c})
 	mkTraffic(t, ib.Id, email, 0, 0, 100, 0, true)
 
 	if _, _, err := svc.BulkAdjust(inboundSvc, []string{email}, 30, 50, ""); err != nil {
@@ -234,9 +224,7 @@ func TestBulkAdjust_NegativeReduction_DoesNotFlipEnable(t *testing.T) {
 	email := "neg@x"
 	c := model.Client{Email: email, ID: "11111111-1111-1111-1111-111111111111", SubID: email, Enable: true, ExpiryTime: now + 5*reenableDay}
 	ib := mkInbound(t, 52006, model.VLESS, clientsSettings(t, []model.Client{c}))
-	if err := svc.SyncInbound(nil, ib.Id, []model.Client{c}); err != nil {
-		t.Fatalf("seed linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib, []model.Client{c})
 	mkTraffic(t, ib.Id, email, 0, 0, 0, now+5*reenableDay, true)
 
 	if _, _, err := svc.BulkAdjust(inboundSvc, []string{email}, -10, 0, ""); err != nil {
@@ -308,9 +296,7 @@ func TestBulkAdjust_NodeInbound_ReenablesDBLocations(t *testing.T) {
 	if err := database.GetDB().Create(ib).Error; err != nil {
 		t.Fatalf("create node inbound: %v", err)
 	}
-	if err := svc.SyncInbound(nil, ib.Id, []model.Client{c}); err != nil {
-		t.Fatalf("seed linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib, []model.Client{c})
 	mkTraffic(t, ib.Id, email, 0, 0, 0, now-reenableDay, false)
 	forceRecordDisabled(t, svc, email)
 
@@ -327,7 +313,7 @@ func TestBulkAdjust_NodeInbound_ReenablesDBLocations(t *testing.T) {
 	if got := recordEnableOf(t, svc, email); !got {
 		t.Fatalf("%s: client_records.enable = false, want true", email)
 	}
-	if got := jsonClientEnable(t, inboundSvc, ib.Id, email); !got {
-		t.Fatalf("%s: inbound JSON enable = false, want true", email)
+	if got := jsonClientEnable(t, svc, ib.Id, email); !got {
+		t.Fatalf("%s: normalized inbound enable = false, want true", email)
 	}
 }

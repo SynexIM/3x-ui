@@ -65,6 +65,18 @@ func TestSyncInbound_PreservesCredentialsAcrossProtocols(t *testing.T) {
 	if row.Password != wantPassword {
 		t.Errorf("Mixed password not persisted: got %q, want %q", row.Password, wantPassword)
 	}
+	mixedHotUser, err := (&XrayService{}).hotUserMap(
+		db,
+		hotInbound{Id: mixedInbound.Id, Tag: mixedInbound.Tag, Protocol: model.Mixed, Enable: true},
+		&row,
+		"",
+	)
+	if err != nil {
+		t.Fatalf("build Mixed runtime user: %v", err)
+	}
+	if mixedHotUser["user"] != sharedEmail || mixedHotUser["pass"] != wantPassword {
+		t.Fatalf("Mixed runtime user = %#v, want user=%q pass=%q", mixedHotUser, sharedEmail, wantPassword)
+	}
 
 	vlessList, err := svc.ListForInbound(nil, vlessInbound.Id)
 	if err != nil {

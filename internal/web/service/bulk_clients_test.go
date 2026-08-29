@@ -8,6 +8,7 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
+	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
 
 func setupBulkDB(t *testing.T) {
@@ -66,6 +67,41 @@ func mkInbound(t *testing.T, port int, proto model.Protocol, settings string) *m
 	return ib
 }
 
+// seedNormalizedInbound makes a persisted inbound's draft clients authoritative
+// for a test. It deliberately mirrors the production cutover boundary: fixture
+// JSON is only the draft source, while SyncInbound writes clients/client_inbounds
+// and this helper creates the enforcement row. It is opt-in so migration tests
+// can continue to exercise JSON-only backfill explicitly.
+func seedNormalizedInbound(t *testing.T, inbound *model.Inbound, clients []model.Client) {
+	t.Helper()
+	if err := (&ClientService{}).SyncInbound(nil, inbound.Id, clients); err != nil {
+		t.Fatalf("SyncInbound(%d): %v", inbound.Id, err)
+	}
+	for _, client := range clients {
+		if client.Email == "" {
+			continue
+		}
+		var count int64
+		if err := database.GetDB().Model(&xray.ClientTraffic{}).Where("email = ?", client.Email).Count(&count).Error; err != nil {
+			t.Fatalf("count traffic %q: %v", client.Email, err)
+		}
+		if count != 0 {
+			continue
+		}
+		traffic := &xray.ClientTraffic{
+			InboundId:  inbound.Id,
+			Email:      client.Email,
+			Enable:     client.Enable,
+			ExpiryTime: client.ExpiryTime,
+			Total:      client.TotalGB,
+			Reset:      client.Reset,
+		}
+		if err := database.GetDB().Create(traffic).Error; err != nil {
+			t.Fatalf("seed traffic %q: %v", client.Email, err)
+		}
+	}
+}
+
 // TestBulkAttachDetach_VLESS exercises the batched attach/detach round-trip on
 // VLESS inbounds: linkage, settings JSON, idempotency, skip, and record survival.
 func TestBulkAttachDetach_VLESS(t *testing.T) {
@@ -83,9 +119,7 @@ func TestBulkAttachDetach_VLESS(t *testing.T) {
 	ib2 := mkInbound(t, 20002, model.VLESS, `{"clients":[]}`)
 	ib3 := mkInbound(t, 20003, model.VLESS, `{"clients":[]}`)
 
-	if err := svc.SyncInbound(nil, ib1.Id, source); err != nil {
-		t.Fatalf("seed source linkage: %v", err)
-	}
+	seedNormalizedInbound(t, ib1, source)
 
 	emails := emailsOf(source)
 
@@ -111,17 +145,7 @@ func TestBulkAttachDetach_VLESS(t *testing.T) {
 		if got := sortedEmails(list); len(got) != 3 {
 			t.Fatalf("inbound %d: expected 3 linked clients, got %v", ib.Id, got)
 		}
-		reloaded, err := inboundSvc.GetInbound(ib.Id)
-		if err != nil {
-			t.Fatalf("GetInbound(%d): %v", ib.Id, err)
-		}
-		jsonClients, err := inboundSvc.GetClients(reloaded)
-		if err != nil {
-			t.Fatalf("GetClients(%d): %v", ib.Id, err)
-		}
-		if len(jsonClients) != 3 {
-			t.Fatalf("inbound %d settings JSON: expected 3 clients, got %d", ib.Id, len(jsonClients))
-		}
+		inboundSettingsEqual(t, inboundSvc, ib.Id, `{"clients":[]}`)
 	}
 
 	res2, _, err := svc.BulkAttach(inboundSvc, emails, []int{ib2.Id, ib3.Id})
@@ -154,11 +178,7 @@ func TestBulkAttachDetach_VLESS(t *testing.T) {
 		if len(list) != 0 {
 			t.Fatalf("inbound %d should have no clients after detach, got %v", ib.Id, sortedEmails(list))
 		}
-		reloaded, _ := inboundSvc.GetInbound(ib.Id)
-		jsonClients, _ := inboundSvc.GetClients(reloaded)
-		if len(jsonClients) != 0 {
-			t.Fatalf("inbound %d settings JSON should be empty after detach, got %d", ib.Id, len(jsonClients))
-		}
+		inboundSettingsEqual(t, inboundSvc, ib.Id, `{"clients":[]}`)
 	}
 
 	for _, e := range emails {
@@ -188,9 +208,7 @@ func TestBulkDetach_SkipsUnattached(t *testing.T) {
 	}
 	ib1 := mkInbound(t, 21001, model.VLESS, clientsSettings(t, source))
 	ib2 := mkInbound(t, 21002, model.VLESS, `{"clients":[]}`)
-	if err := svc.SyncInbound(nil, ib1.Id, source); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
+	seedNormalizedInbound(t, ib1, source)
 
 	dres, restart, err := svc.BulkDetach(inboundSvc, []string{"only-on-1@x"}, []int{ib2.Id})
 	if err != nil {
@@ -223,9 +241,7 @@ func TestBulkAttachDetach_Trojan(t *testing.T) {
 	}
 	ib1 := mkInbound(t, 22001, model.Trojan, clientsSettings(t, source))
 	ib2 := mkInbound(t, 22002, model.Trojan, `{"clients":[]}`)
-	if err := svc.SyncInbound(nil, ib1.Id, source); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
+	seedNormalizedInbound(t, ib1, source)
 
 	emails := emailsOf(source)
 	if res, _, err := svc.BulkAttach(inboundSvc, emails, []int{ib2.Id}); err != nil {

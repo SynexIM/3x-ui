@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/mtproto"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
+	"gorm.io/gorm"
 )
 
 const (
@@ -23,8 +25,19 @@ const (
 
 func seedClientTraffic(t *testing.T, inboundId int, email string, enable bool) {
 	t.Helper()
-	row := xray.ClientTraffic{InboundId: inboundId, Email: email, Enable: enable}
-	if err := database.GetDB().Create(&row).Error; err != nil {
+	db := database.GetDB()
+	var row xray.ClientTraffic
+	err := db.Where("email = ?", email).First(&row).Error
+	if err == nil {
+		if err := db.Model(&row).Updates(map[string]any{"inbound_id": inboundId, "enable": enable}).Error; err != nil {
+			t.Fatalf("update traffic %s: %v", email, err)
+		}
+		return
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("lookup traffic %s: %v", email, err)
+	}
+	if err := db.Create(&xray.ClientTraffic{InboundId: inboundId, Email: email, Enable: enable}).Error; err != nil {
 		t.Fatalf("seed traffic %s: %v", email, err)
 	}
 }

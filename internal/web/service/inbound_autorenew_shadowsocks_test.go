@@ -68,12 +68,9 @@ func TestAutoRenewShadowsocksKeepsSettingsClean(t *testing.T) {
 		t.Fatal(err)
 	}
 	ib := mkInbound(t, 30011, model.Shadowsocks, string(raw))
-	if err := svc.clientService.SyncInbound(nil, ib.Id, clients); err != nil {
-		t.Fatalf("SyncInbound: %v", err)
-	}
-	if err := db.Create(&[]xray.ClientTraffic{
-		{InboundId: ib.Id, Email: "ss@x", Enable: false, Up: 10, Down: 20, Reset: 30, ExpiryTime: past},
-	}).Error; err != nil {
+	before := ib.Settings
+	seedNormalizedInbound(t, ib, clients)
+	if err := db.Model(&xray.ClientTraffic{}).Where("email = ?", "ss@x").Updates(map[string]any{"up": 10, "down": 20, "enable": false}).Error; err != nil {
 		t.Fatalf("seed client_traffics: %v", err)
 	}
 
@@ -87,22 +84,15 @@ func TestAutoRenewShadowsocksKeepsSettingsClean(t *testing.T) {
 	if err := db.Where("id = ?", ib.Id).First(&stored).Error; err != nil {
 		t.Fatalf("read inbound: %v", err)
 	}
-	var parsed map[string]any
-	if err := json.Unmarshal([]byte(stored.Settings), &parsed); err != nil {
-		t.Fatalf("unmarshal stored settings: %v", err)
+	if stored.Settings != before {
+		t.Fatalf("auto-renew rewrote protocol settings: got %q, want %q", stored.Settings, before)
 	}
-	storedClients, _ := parsed["clients"].([]any)
-	if len(storedClients) != 1 {
-		t.Fatalf("stored clients = %d, want 1", len(storedClients))
+	clientsAfter, err := svc.clientService.ListForInbound(nil, ib.Id)
+	if err != nil || len(clientsAfter) != 1 {
+		t.Fatalf("normalized renewed client = %+v, err=%v", clientsAfter, err)
 	}
-	client, _ := storedClients[0].(map[string]any)
-	if _, polluted := client["cipher"]; polluted {
-		t.Fatalf("the renewed client was persisted with an API-only cipher key: %+v", client)
-	}
-	if client["method"] != "aes-256-gcm" {
-		t.Fatalf("the client's method was lost: %+v", client)
-	}
-	if enabled, _ := client["enable"].(bool); !enabled {
-		t.Fatalf("the renewed client was not re-enabled: %+v", client)
+	client := clientsAfter[0]
+	if client.Password != "pw" || !client.Enable {
+		t.Fatalf("renewed normalized client = %+v, want password preserved and enabled", client)
 	}
 }

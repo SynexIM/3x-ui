@@ -133,9 +133,38 @@ func (s *SubService) primeLinkClients(inboundId int, clients []model.Client, com
 	}
 }
 
+// linkClients resolves the clients a link is generated for.
+//
+// The normalized clients/client_inbounds relation is the authority and is asked
+// first. Only when it holds **nothing at all** for this inbound does the settings
+// JSON get parsed — that is a legacy row the history-gated seeder has not
+// backfilled yet (an upgraded install, a restored old database), and answering
+// "this inbound has no clients" for it would silently blank out every link its
+// owner already handed out.
+//
+// This is a read-side fallback, not a second authority: it never runs once the
+// relation holds a single row, so a client deleted through the normalized path
+// cannot come back through the stale blob. Writes still go through the relation
+// only — ParseInboundDraftClients stays reserved for request drafts.
+func (s *SubService) linkClients(inbound *model.Inbound) ([]model.Client, error) {
+	clients, err := s.inboundService.GetAttachedClients(inbound.Id)
+	if err == nil && len(clients) > 0 {
+		return clients, nil
+	}
+	legacy, parseErr := service.ParseInboundDraftClients(inbound.Settings)
+	if parseErr != nil || len(legacy) == 0 {
+		if err != nil {
+			return nil, err
+		}
+		return clients, nil
+	}
+	return legacy, nil
+}
+
 // clientForLink resolves one client of an inbound by email for link
-// generation: from the per-request cache when primed, otherwise by parsing
-// the settings JSON once and caching every client from it.
+// generation: from the per-request cache when primed, otherwise from the
+// normalized clients/client_inbounds authority. Control-plane writes do not
+// project clients back into the legacy settings JSON.
 func (s *SubService) clientForLink(inbound *model.Inbound, email string) (model.Client, bool) {
 	if m, ok := s.clientsByInbound[inbound.Id]; ok {
 		if c, hit := m[email]; hit {
@@ -145,7 +174,7 @@ func (s *SubService) clientForLink(inbound *model.Inbound, email string) (model.
 			return model.Client{}, false
 		}
 	}
-	clients, err := s.inboundService.GetClients(inbound)
+	clients, err := s.linkClients(inbound)
 	if err != nil {
 		return model.Client{}, false
 	}
@@ -350,7 +379,7 @@ func (s *SubService) getSubs(subId string) ([]string, []string, int64, xray.Clie
 // single subId. Dedups duplicate client JSON entries by email (#5134). Backs the
 // panel's "Export all inbound links" so it matches the client/QR pages.
 func (s *SubService) inboundLinks(inbound *model.Inbound) []string {
-	clients, err := s.inboundService.GetClients(inbound)
+	clients, err := s.linkClients(inbound)
 	if err != nil {
 		return nil
 	}

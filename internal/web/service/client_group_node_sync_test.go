@@ -2,7 +2,6 @@ package service
 
 import (
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
@@ -40,15 +39,9 @@ func TestSetRemoteTraffic_PreservesPanelLocalGroupAndComment(t *testing.T) {
 		t.Fatalf("create node inbound: %v", err)
 	}
 
-	if err := db.Create(&model.ClientRecord{
-		Email:   email,
-		UUID:    uid,
-		Enable:  true,
-		Group:   wantGroup,
-		Comment: wantComment,
-	}).Error; err != nil {
-		t.Fatalf("create client record: %v", err)
-	}
+	seedNormalizedInbound(t, central, []model.Client{{
+		Email: email, ID: uid, Enable: true, Group: wantGroup, Comment: wantComment,
+	}})
 
 	snap := &runtime.TrafficSnapshot{
 		Inbounds: []*model.Inbound{
@@ -151,14 +144,7 @@ func TestClientUpdate_ClearsGroup(t *testing.T) {
 	svc := ClientService{}
 	inboundSvc := &InboundService{}
 
-	// Seed the client record + inbound link from the settings.
-	seedClients, err := inboundSvc.GetClients(ib)
-	if err != nil {
-		t.Fatalf("GetClients: %v", err)
-	}
-	if err := svc.SyncInbound(nil, ib.Id, seedClients); err != nil {
-		t.Fatalf("seed SyncInbound: %v", err)
-	}
+	seedNormalizedInbound(t, ib, []model.Client{{Email: email, ID: uid, Enable: true, Group: wantGroup}})
 
 	var rec model.ClientRecord
 	if err := db.Where("email = ?", email).First(&rec).Error; err != nil {
@@ -187,7 +173,11 @@ func TestClientUpdate_ClearsGroup(t *testing.T) {
 	if err := db.First(&ibAfter, ib.Id).Error; err != nil {
 		t.Fatalf("lookup inbound after update: %v", err)
 	}
-	if strings.Contains(ibAfter.Settings, `"group"`) {
-		t.Errorf("inbound settings still carry a group key after removal: %s", ibAfter.Settings)
+	if ibAfter.Settings != ib.Settings {
+		t.Errorf("normalized group edit rewrote inbound settings: %s", ibAfter.Settings)
+	}
+	linked, err := svc.ListForInbound(nil, ib.Id)
+	if err != nil || len(linked) != 1 || linked[0].Group != "" {
+		t.Errorf("normalized group was not cleared: clients=%+v err=%v", linked, err)
 	}
 }

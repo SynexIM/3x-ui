@@ -2,28 +2,16 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
-
-	"gorm.io/gorm"
 )
 
 func (s *InboundService) MigrationRemoveOrphanedTraffics() {
-	db := database.GetDB()
-	query := fmt.Sprintf(
-		"DELETE FROM client_traffics WHERE email NOT IN (SELECT email FROM clients) AND email NOT IN (SELECT %s %s)",
-		database.JSONFieldText("client.value", "email"),
-		database.JSONClientsFromInbound(),
-	)
-	result := db.Exec(query)
+	result := database.GetDB().Exec("DELETE FROM client_traffics WHERE email NOT IN (SELECT email FROM clients)")
 	if result.Error != nil {
 		logger.Warning("MigrationRemoveOrphanedTraffics failed:", result.Error)
 		return
@@ -98,99 +86,9 @@ func (s *InboundService) MigrationRequirements() {
 		normalizeBool("outbound_subscriptions", "enabled")
 	}
 
-	// Fix inbounds based problems
-	var inbounds []*model.Inbound
-	err = tx.Model(model.Inbound{}).Where("protocol IN (?)", []string{"vmess", "vless", "trojan", "shadowsocks", "hysteria", "mixed", "http"}).Find(&inbounds).Error
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return
-	}
-	for inbound_index := range inbounds {
-		settings := map[string]any{}
-		_ = json.Unmarshal([]byte(inbounds[inbound_index].Settings), &settings)
-		if raw, exists := settings["clients"]; exists && raw == nil {
-			settings["clients"] = []any{}
-		}
-		clients, ok := settings["clients"].([]any)
-		if ok {
-			// Fix Client configuration problems
-			newClients := make([]any, 0, len(clients))
-			hasVisionFlow := false
-			for client_index := range clients {
-				c := clients[client_index].(map[string]any)
-
-				// Add email='' if it is not exists
-				if _, ok := c["email"]; !ok {
-					c["email"] = ""
-				}
-
-				// Convert string tgId to int64
-				if _, ok := c["tgId"]; ok {
-					tgId := c["tgId"]
-					if tgIdStr, ok2 := tgId.(string); ok2 {
-						tgIdInt64, err := strconv.ParseInt(strings.ReplaceAll(tgIdStr, " ", ""), 10, 64)
-						if err == nil {
-							c["tgId"] = tgIdInt64
-						}
-					}
-				}
-
-				// Remove "flow": "xtls-rprx-direct"
-				if _, ok := c["flow"]; ok {
-					if c["flow"] == "xtls-rprx-direct" {
-						c["flow"] = ""
-					}
-				}
-				if flow, _ := c["flow"].(string); flow == "xtls-rprx-vision" {
-					hasVisionFlow = true
-				}
-				// Backfill created_at and updated_at
-				if _, ok := c["created_at"]; !ok {
-					c["created_at"] = time.Now().Unix() * 1000
-				}
-				c["updated_at"] = time.Now().Unix() * 1000
-				newClients = append(newClients, any(c))
-			}
-			settings["clients"] = newClients
-
-			// Drop orphaned testseed: VLESS-only field, only meaningful when at least
-			// one client uses the exact xtls-rprx-vision flow. Older versions saved it
-			// for any non-empty flow (including the UDP variant) or kept it after the
-			// flow was cleared from the client modal — clean those up here.
-			if inbounds[inbound_index].Protocol == model.VLESS && !hasVisionFlow {
-				delete(settings, "testseed")
-			}
-
-			modifiedSettings, err := json.MarshalIndent(settings, "", "  ")
-			if err != nil {
-				return
-			}
-
-			inbounds[inbound_index].Settings = string(modifiedSettings)
-		}
-
-		// Add client traffic row for all clients which has email
-		modelClients, err := s.GetClients(inbounds[inbound_index])
-		if err != nil {
-			return
-		}
-		for _, modelClient := range modelClients {
-			if len(modelClient.Email) > 0 {
-				var count int64
-				tx.Model(xray.ClientTraffic{}).Where("email = ?", modelClient.Email).Count(&count)
-				if count == 0 {
-					_ = s.AddClientStat(tx, inbounds[inbound_index].Id, &modelClient)
-				}
-			}
-		}
-
-		// Heal clients table for installs where the one-shot seeder
-		// skipped clients due to a tgId-string unmarshal error.
-		if syncErr := s.clientService.SyncInbound(tx, inbounds[inbound_index].Id, modelClients); syncErr != nil {
-			logger.Warning("MigrationRequirements sync clients failed:", syncErr)
-		}
-	}
-	tx.Save(inbounds)
-
+	// Client membership was moved to clients/client_inbounds by the one-shot
+	// database seeder (ClientsTable). Do not rescan and rewrite every inbound
+	// settings blob at startup: once seeded, blobs are protocol settings only.
 	// Remove orphaned traffics
 	tx.Where("inbound_id = 0").Delete(xray.ClientTraffic{})
 
@@ -264,42 +162,29 @@ func (s *InboundService) MigrateDB() {
 	s.MigrationRestoreVisionFlow()
 }
 
-// MigrationRestoreVisionFlow repairs VLESS inbounds whose clients lost their
-// XTLS Vision flow because the inbound was not flow-eligible when the client was
-// written (e.g. an XHTTP inbound whose vlessenc encryption was enabled only
-// later). For each now-eligible inbound it restores flow=xtls-rprx-vision on
-// clients whose intended flow (their flow_override on a sibling inbound) is
-// Vision. Idempotent: once a client carries the flow it is skipped, so this is a
-// no-op on healthy installs and on subsequent boots.
+// MigrationRestoreVisionFlow repairs attachment-level flow overrides without
+// revisiting the retired settings.clients authority.
 func (s *InboundService) MigrationRestoreVisionFlow() {
 	db := database.GetDB()
-	var inbounds []*model.Inbound
-	if err := db.Model(&model.Inbound{}).
-		Where("protocol = ?", model.VLESS).
-		Find(&inbounds).Error; err != nil {
+	var inbounds []model.Inbound
+	if err := db.Where("protocol = ?", model.VLESS).Find(&inbounds).Error; err != nil {
 		logger.Warning("MigrationRestoreVisionFlow: load inbounds failed:", err)
 		return
 	}
-	for _, ib := range inbounds {
-		restored, changed := s.restoreVisionFlowForEligibleInbound(nil, ib.Settings, ib.StreamSettings, ib.Protocol)
-		if !changed {
+	for _, inbound := range inbounds {
+		if !inboundCanEnableTlsFlow(string(inbound.Protocol), inbound.StreamSettings, inbound.Settings) {
 			continue
 		}
-		clients, err := s.GetClients(&model.Inbound{Settings: restored})
-		if err != nil {
-			logger.Warning("MigrationRestoreVisionFlow: parse clients for inbound", ib.Id, "failed:", err)
+		visionLinks := db.Table("client_inbounds intended").Select("intended.client_id").Where("intended.flow_override IN ?", []string{"xtls-rprx-vision", "xtls-rprx-vision-udp443"})
+		result := db.Model(&model.ClientInbound{}).
+			Where("inbound_id = ? AND flow_override = '' AND client_id IN (?)", inbound.Id, visionLinks).
+			Update("flow_override", "xtls-rprx-vision")
+		if result.Error != nil {
+			logger.Warning("MigrationRestoreVisionFlow: update inbound", inbound.Id, "failed:", result.Error)
 			continue
 		}
-		err = db.Transaction(func(tx *gorm.DB) error {
-			if e := tx.Model(&model.Inbound{}).Where("id = ?", ib.Id).Update("settings", restored).Error; e != nil {
-				return e
-			}
-			return s.clientService.SyncInbound(tx, ib.Id, clients)
-		})
-		if err != nil {
-			logger.Warning("MigrationRestoreVisionFlow: update inbound", ib.Id, "failed:", err)
-			continue
+		if result.RowsAffected > 0 {
+			logger.Info("MigrationRestoreVisionFlow: restored XTLS Vision flow on inbound", inbound.Id)
 		}
-		logger.Info("MigrationRestoreVisionFlow: restored XTLS Vision flow on inbound", ib.Id)
 	}
 }

@@ -1,26 +1,33 @@
 package service
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
+	"gorm.io/gorm"
 )
 
 func mkTraffic(t *testing.T, inboundId int, email string, up, down, total, expiry int64, enable bool) {
 	t.Helper()
-	row := xray.ClientTraffic{
-		InboundId:  inboundId,
-		Email:      email,
-		Up:         up,
-		Down:       down,
-		Total:      total,
-		ExpiryTime: expiry,
-		Enable:     enable,
+	db := database.GetDB()
+	updates := map[string]any{"inbound_id": inboundId, "up": up, "down": down, "total": total, "expiry_time": expiry, "enable": enable}
+	var row xray.ClientTraffic
+	err := db.Where("email = ?", email).First(&row).Error
+	if err == nil {
+		if err := db.Model(&row).Updates(updates).Error; err != nil {
+			t.Fatalf("update traffic %s: %v", email, err)
+		}
+		return
 	}
-	if err := database.GetDB().Create(&row).Error; err != nil {
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("lookup traffic %s: %v", email, err)
+	}
+	row = xray.ClientTraffic{InboundId: inboundId, Email: email, Up: up, Down: down, Total: total, ExpiryTime: expiry, Enable: enable}
+	if err := db.Create(&row).Error; err != nil {
 		t.Fatalf("create traffic %s: %v", email, err)
 	}
 }

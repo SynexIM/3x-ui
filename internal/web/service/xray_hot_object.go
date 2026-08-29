@@ -320,6 +320,12 @@ func (s *XrayService) hotUserMap(db *gorm.DB, ib hotInbound, record *model.Clien
 			return nil, err
 		}
 		user["cipher"] = method
+	case model.Mixed:
+		// Xray's mixed inbound uses the SOCKS account type at runtime. The
+		// route/traffic identity is still email, while authentication needs the
+		// same username plus the panel's unified client password.
+		user["user"] = record.Email
+		user["pass"] = client.Password
 	default:
 		return nil, errNeedsFullReconcile
 	}

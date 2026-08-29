@@ -33,8 +33,13 @@ func TestCreateAcrossManyInboundsUsesOneEmailSnapshot(t *testing.T) {
 		t.Fatalf("record = {uuid:%q sub:%q}, want {%q sub-fan}", rec.UUID, rec.SubID, uuid)
 	}
 	for _, id := range ids {
-		if !settingsHoldUUID(t, inboundSvc, id, uuid) {
-			t.Fatalf("inbound %d settings missing the client", id)
+		inboundSettingsEqual(t, inboundSvc, id, `{"clients":[]}`)
+		clients, err := svc.ListForInbound(nil, id)
+		if err != nil {
+			t.Fatalf("ListForInbound(%d): %v", id, err)
+		}
+		if len(clients) != 1 || clients[0].ID != uuid {
+			t.Fatalf("inbound %d normalized client = %+v, want UUID %q", id, clients, uuid)
 		}
 	}
 

@@ -7,12 +7,11 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
-	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
 
-// TestResetClientExpiryTimeByEmail_MultiInbound reproduces #5039: a client
-// attached to several inbounds had its expiry patched only on the first
-// inbound's JSON, so the stale siblings reverted the change on the next sync.
+// TestResetClientExpiryTimeByEmail_MultiInbound reproduces #5039: an expiry
+// update for a shared client must reach its centralized record and every
+// normalized attachment without rewriting either inbound's protocol settings.
 func TestResetClientExpiryTimeByEmail_MultiInbound(t *testing.T) {
 	dbDir := t.TempDir()
 	t.Setenv("XUI_DB_FOLDER", dbDir)
@@ -52,13 +51,7 @@ func TestResetClientExpiryTimeByEmail_MultiInbound(t *testing.T) {
 	clientSvc := ClientService{}
 	inboundSvc := InboundService{}
 	for _, ib := range []*model.Inbound{first, second} {
-		clients, err := inboundSvc.GetClients(ib)
-		if err != nil {
-			t.Fatalf("GetClients(%s): %v", ib.Tag, err)
-		}
-		if err := clientSvc.SyncInbound(nil, ib.Id, clients); err != nil {
-			t.Fatalf("SyncInbound(%s): %v", ib.Tag, err)
-		}
+		seedNormalizedInbound(t, ib, []model.Client{{Email: email, ID: uid, Enable: true, ExpiryTime: oldExpiry, SubID: "sub-multi-1"}})
 	}
 
 	if _, err := clientSvc.ResetClientExpiryTimeByEmail(&inboundSvc, email, newExpiry); err != nil {
@@ -70,12 +63,15 @@ func TestResetClientExpiryTimeByEmail_MultiInbound(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetInbound(%s): %v", ib.Tag, err)
 		}
-		clients, err := inboundSvc.GetClients(fresh)
+		if fresh.Settings != clientJSON(oldExpiry) {
+			t.Errorf("inbound %s settings changed during normalized expiry update", ib.Tag)
+		}
+		clients, err := clientSvc.ListForInbound(nil, ib.Id)
 		if err != nil {
-			t.Fatalf("GetClients(%s): %v", ib.Tag, err)
+			t.Fatalf("ListForInbound(%s): %v", ib.Tag, err)
 		}
 		if len(clients) != 1 || clients[0].ExpiryTime != newExpiry {
-			t.Errorf("inbound %s settings expiry = %d, want %d (#5039)", ib.Tag, clients[0].ExpiryTime, newExpiry)
+			t.Errorf("inbound %s normalized expiry = %+v, want %d", ib.Tag, clients, newExpiry)
 		}
 	}
 
@@ -119,16 +115,7 @@ func TestSetClientEnableByEmail_MultiInbound(t *testing.T) {
 	clientSvc := ClientService{}
 	inboundSvc := InboundService{}
 	for _, ib := range []*model.Inbound{first, second} {
-		clients, err := inboundSvc.GetClients(ib)
-		if err != nil {
-			t.Fatalf("GetClients(%s): %v", ib.Tag, err)
-		}
-		if err := clientSvc.SyncInbound(nil, ib.Id, clients); err != nil {
-			t.Fatalf("SyncInbound(%s): %v", ib.Tag, err)
-		}
-	}
-	if err := db.Create(&xray.ClientTraffic{InboundId: first.Id, Email: email, Enable: true}).Error; err != nil {
-		t.Fatalf("seed traffic: %v", err)
+		seedNormalizedInbound(t, ib, []model.Client{{Email: email, ID: uid, Enable: true, SubID: "sub-en-1"}})
 	}
 
 	if _, _, err := clientSvc.SetClientEnableByEmail(&inboundSvc, email, false); err != nil {
@@ -140,12 +127,15 @@ func TestSetClientEnableByEmail_MultiInbound(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetInbound(%s): %v", ib.Tag, err)
 		}
-		clients, err := inboundSvc.GetClients(fresh)
+		if fresh.Settings != clientJSON {
+			t.Errorf("inbound %s settings changed during normalized enable update", ib.Tag)
+		}
+		clients, err := clientSvc.ListForInbound(nil, ib.Id)
 		if err != nil {
-			t.Fatalf("GetClients(%s): %v", ib.Tag, err)
+			t.Fatalf("ListForInbound(%s): %v", ib.Tag, err)
 		}
 		if len(clients) != 1 || clients[0].Enable {
-			t.Errorf("inbound %s: client still enabled after disable-by-email; a sibling inbound kept access", ib.Tag)
+			t.Errorf("inbound %s normalized client still enabled after disable-by-email", ib.Tag)
 		}
 	}
 }

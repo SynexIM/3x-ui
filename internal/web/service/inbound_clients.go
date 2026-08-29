@@ -121,52 +121,28 @@ func (s *InboundService) backfillClientStats(db *gorm.DB, inbounds []*model.Inbo
 	return clientsByInbound
 }
 
-// emailUsedByOtherInbounds reports whether email lives in any inbound other
-// than exceptInboundId. Empty email returns false.
+// emailUsedByOtherInbounds reports whether a normalized client link exists on
+// another inbound.
 func (s *InboundService) emailUsedByOtherInbounds(email string, exceptInboundId int) (bool, error) {
-	if email == "" {
-		return false, nil
-	}
-	db := database.GetDB()
-	var count int64
-	query := fmt.Sprintf(
-		"SELECT COUNT(*) %s WHERE inbounds.id != ? AND LOWER(%s) = LOWER(?)",
-		database.JSONClientsFromInbound(),
-		database.JSONFieldText("client.value", "email"),
-	)
-	if err := db.Raw(query, exceptInboundId, email).Scan(&count).Error; err != nil {
-		return false, err
-	}
-	return count > 0, nil
+	shared, err := s.emailsUsedByOtherInbounds([]string{email}, exceptInboundId)
+	return shared[strings.ToLower(strings.TrimSpace(email))], err
 }
 
 func (s *InboundService) emailsUsedByOtherInbounds(emails []string, exceptInboundId int) (map[string]bool, error) {
 	shared := make(map[string]bool, len(emails))
-	want := make(map[string]struct{}, len(emails))
-	for _, e := range emails {
-		e = strings.ToLower(strings.TrimSpace(e))
-		if e != "" {
-			want[e] = struct{}{}
-		}
-	}
-	if len(want) == 0 {
+	if len(emails) == 0 {
 		return shared, nil
 	}
-	db := database.GetDB()
 	var rows []string
-	query := fmt.Sprintf(
-		"SELECT DISTINCT LOWER(%s) %s WHERE inbounds.id != ?",
-		database.JSONFieldText("client.value", "email"),
-		database.JSONClientsFromInbound(),
-	)
-	if err := db.Raw(query, exceptInboundId).Scan(&rows).Error; err != nil {
+	if err := database.GetDB().Table("client_inbounds").
+		Select("clients.email").
+		Joins("JOIN clients ON clients.id = client_inbounds.client_id").
+		Where("client_inbounds.inbound_id <> ? AND clients.email IN ?", exceptInboundId, emails).
+		Distinct().Pluck("clients.email", &rows).Error; err != nil {
 		return nil, err
 	}
-	for _, e := range rows {
-		e = strings.ToLower(strings.TrimSpace(e))
-		if _, ok := want[e]; ok {
-			shared[e] = true
-		}
+	for _, email := range rows {
+		shared[strings.ToLower(strings.TrimSpace(email))] = true
 	}
 	return shared, nil
 }

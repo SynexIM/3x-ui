@@ -58,9 +58,7 @@ func TestBulkAdjust_FlowSetAndClear(t *testing.T) {
 		{Email: "f2@x", ID: "22222222-2222-2222-2222-222222222222", SubID: "f2", Enable: true},
 	}
 	ib := mkInboundStream(t, 30001, model.VLESS, clientsSettings(t, clients), realityStream)
-	if err := svc.SyncInbound(nil, ib.Id, clients); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
+	seedNormalizedInbound(t, ib, clients)
 	emails := emailsOf(clients)
 
 	// Set vision flow.
@@ -117,9 +115,7 @@ func TestBulkAdjust_FlowIneligibleSkipped(t *testing.T) {
 		{Email: "ws1@x", ID: "33333333-3333-3333-3333-333333333333", SubID: "ws1", Enable: true},
 	}
 	ib := mkInboundStream(t, 30101, model.VLESS, clientsSettings(t, clients), wsStream)
-	if err := svc.SyncInbound(nil, ib.Id, clients); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
+	seedNormalizedInbound(t, ib, clients)
 
 	res, restart, err := svc.BulkAdjust(inboundSvc, []string{"ws1@x"}, 0, 0, "xtls-rprx-vision")
 	if err != nil {
@@ -174,13 +170,7 @@ func TestBulkAdjust_DaysApplyDespiteIneligibleFlow(t *testing.T) {
 		{Email: "mix@x", ID: "44444444-4444-4444-4444-444444444444", SubID: "mix", Enable: true, ExpiryTime: baseExpiry, TotalGB: baseTotal},
 	}
 	ib := mkInboundStream(t, 30201, model.VLESS, clientsSettings(t, clients), wsStream)
-	if err := svc.SyncInbound(nil, ib.Id, clients); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-	// ClientTraffic is the store the enforcement job reads; seed it to match.
-	if err := database.GetDB().Create(&xray.ClientTraffic{Email: "mix@x", Enable: true, ExpiryTime: baseExpiry, Total: baseTotal}).Error; err != nil {
-		t.Fatalf("seed traffic: %v", err)
-	}
+	seedNormalizedInbound(t, ib, clients)
 
 	res, _, err := svc.BulkAdjust(inboundSvc, []string{"mix@x"}, 7, gb, "xtls-rprx-vision")
 	if err != nil {

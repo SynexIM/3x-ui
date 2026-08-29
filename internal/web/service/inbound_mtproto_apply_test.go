@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/mtproto"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/runtime"
@@ -38,13 +39,21 @@ func TestUpdateInboundMtprotoUnchangedDoesNotRestart(t *testing.T) {
 			`{"email":"mtga","secret":"`+mtprotoTestSecretA+`","enable":true},`+
 			`{"email":"mtgb","secret":"`+mtprotoTestSecretB+`","enable":true}]}`)
 	seeded := loadInboundByTag(t, "mt-apply")
+	seedNormalizedInbound(t, seeded, []model.Client{
+		{Email: "mtga", Secret: mtprotoTestSecretA, Enable: true},
+		{Email: "mtgb", Secret: mtprotoTestSecretB, Enable: true},
+	})
 	seedClientTraffic(t, seeded.Id, "mtga", true)
 	seedClientTraffic(t, seeded.Id, "mtgb", true)
 
 	svc := &InboundService{}
-	primed, ok := mtproto.InstanceFromInbound(seeded)
+	runtimeInbound, err := svc.buildInboundForLocalRuntime(database.GetDB(), seeded)
+	if err != nil {
+		t.Fatalf("build normalized mtproto runtime inbound: %v", err)
+	}
+	primed, ok := mtproto.InstanceFromInbound(runtimeInbound)
 	if !ok {
-		t.Fatal("seed inbound must produce an mtg instance")
+		t.Fatal("normalized runtime inbound must produce an mtg instance")
 	}
 	if err := mtproto.GetManager().Ensure(primed); err != nil {
 		t.Fatalf("prime mtg: %v", err)
@@ -80,10 +89,9 @@ func TestUpdateInboundMtprotoUnchangedDoesNotRestart(t *testing.T) {
 
 	t.Run("rekeyedSecretRestartsProcess", func(t *testing.T) {
 		update := *loadInboundByTag(t, "mt-apply")
-		update.Settings = strings.Replace(update.Settings, mtprotoTestSecretA, mtprotoTestSecretD, 1)
-		if !strings.Contains(update.Settings, mtprotoTestSecretD) {
-			t.Fatal("fixture must contain the re-keyed secret")
-		}
+		update.Settings = `{"clients":[` +
+			`{"email":"mtga","secret":"` + mtprotoTestSecretD + `","enable":true},` +
+			`{"email":"mtgb","secret":"` + mtprotoTestSecretB + `","enable":true}]}`
 		_, needRestart, err := svc.UpdateInbound(&update)
 		if err != nil {
 			t.Fatalf("UpdateInbound: %v", err)
