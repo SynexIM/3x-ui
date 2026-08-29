@@ -174,7 +174,17 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	xrayConfig.LogConfig = resolveXrayLogPaths(xrayConfig.LogConfig)
 	xrayConfig.API = ensureAPIServices(xrayConfig.API)
 	xrayConfig.Policy = ensureStatsPolicy(xrayConfig.Policy)
+	managedRouterConfig, err := withManagedRoutingRules(json.RawMessage(xrayConfig.RouterConfig))
+	if err != nil {
+		return nil, err
+	}
+	xrayConfig.RouterConfig = json_util.RawMessage(managedRouterConfig)
 	xrayConfig.RouterConfig = stripDisabledRules(xrayConfig.RouterConfig)
+	managedOutbounds, err := withManagedOutbounds(json.RawMessage(xrayConfig.OutboundConfigs))
+	if err != nil {
+		return nil, err
+	}
+	xrayConfig.OutboundConfigs = json_util.RawMessage(managedOutbounds)
 	// Template outbounds authored before the xray-core #6258 XHTTP rename may
 	// still carry sessionPlacement/sessionKey; lift them too (same reason as
 	// the per-inbound lift below).
@@ -255,12 +265,16 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 					entry["flow"] = flow
 				}
 			case model.Mixed:
+				delete(entry, "email")
+				entry["user"] = c.Email
 				if c.Password != "" {
-					entry["password"] = c.Password
+					entry["pass"] = c.Password
 				}
 			case model.HTTP:
+				delete(entry, "email")
+				entry["user"] = c.Email
 				if c.Password != "" {
-					entry["password"] = c.Password
+					entry["pass"] = c.Password
 				}
 			case model.Shadowsocks:
 				if c.Password != "" {
@@ -285,6 +299,14 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			}
 			settings["peers"] = wgPeers
 			mutated = true
+		} else if inbound.Protocol == model.Mixed || inbound.Protocol == model.HTTP {
+			_, hadClients := settings["clients"]
+			_, hadAccounts := settings["accounts"]
+			delete(settings, "clients")
+			mutated = hadClients || hadAccounts || len(finalClients) > 0
+			if mutated {
+				settings["accounts"] = finalClients
+			}
 		} else {
 			_, hadClients := settings["clients"]
 			mutated = hadClients || len(finalClients) > 0

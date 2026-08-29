@@ -68,6 +68,8 @@ func allModels() []any {
 		&model.Inbound{},
 		&model.OutboundTraffics{},
 		&model.Setting{},
+		&model.XrayRoutingRule{},
+		&model.XrayOutbound{},
 		&model.InboundClientIps{},
 		&xray.ClientTraffic{},
 		&model.HistoryOfSeeders{},

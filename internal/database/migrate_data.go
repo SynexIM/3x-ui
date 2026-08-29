@@ -39,6 +39,8 @@ func migrationModels() []any {
 	return []any{
 		&model.User{},
 		&model.Setting{},
+		&model.XrayRoutingRule{},
+		&model.XrayOutbound{},
 		&model.HistoryOfSeeders{},
 		&model.Node{},
 		&model.ApiToken{},

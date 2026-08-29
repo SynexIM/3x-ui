@@ -868,6 +868,35 @@ type Setting struct {
 	Value string `json:"value" form:"value"`
 }
 
+// XrayRoutingRule is a managed, addressable routing rule.
+//
+// Base template rules without ruleTag remain in xrayTemplateConfig because
+// they are part of the node skeleton. Rules created through the single-object
+// API always have a ruleTag and live here, so appending or deleting one row
+// never rewrites the JSON for every other customer on the machine.
+type XrayRoutingRule struct {
+	Tag       string `json:"tag" gorm:"primaryKey;column:tag"`
+	Body      string `json:"body" gorm:"column:body;not null"`
+	Position  int64  `json:"position" gorm:"column:position;not null;index:idx_xray_routing_rules_position"`
+	CreatedAt int64  `json:"createdAt" gorm:"column:created_at;autoCreateTime:milli"`
+	UpdatedAt int64  `json:"updatedAt" gorm:"column:updated_at;autoUpdateTime:milli"`
+}
+
+func (XrayRoutingRule) TableName() string { return "xray_routing_rules" }
+
+// XrayOutbound is an outbound created through the single-object API. The
+// template keeps node-skeleton outbounds such as direct/api; managed egresses
+// live one row per tag and are appended when the runnable config is built.
+type XrayOutbound struct {
+	Tag       string `json:"tag" gorm:"primaryKey;column:tag"`
+	Body      string `json:"body" gorm:"column:body;not null"`
+	Position  int64  `json:"position" gorm:"column:position;not null;index:idx_xray_outbounds_position"`
+	CreatedAt int64  `json:"createdAt" gorm:"column:created_at;autoCreateTime:milli"`
+	UpdatedAt int64  `json:"updatedAt" gorm:"column:updated_at;autoUpdateTime:milli"`
+}
+
+func (XrayOutbound) TableName() string { return "xray_outbounds" }
+
 // Node represents a remote 3x-ui panel registered with the central panel.
 // The central panel polls each node's existing /panel/api/server/status
 // endpoint over HTTP using the per-node ApiToken to populate the runtime

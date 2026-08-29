@@ -7,21 +7,20 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/database"
+	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
+	"gorm.io/gorm"
 )
 
 // Outbounds and routing rules as first-class objects.
 //
-// AUTHORITY. The stored template (setting `xrayTemplateConfig`) is the single
-// source of truth for both. Every write here persists to the template first and
-// only then reconciles the running core over the xray gRPC API, because a core
-// start rebuilds itself from the template: anything applied to the runtime but
-// not persisted disappears at the next restart, silently. When the runtime step
-// fails the template write is rolled back, so the two never disagree except in
-// the one case the caller is told about — a change the core has no reload API
-// for, which is persisted, reported as requiresRestart and picked up whenever
-// the panel next restarts the core.
+// AUTHORITY. Outbounds authored through this surface remain in the stored
+// template. Managed routing rules live in xray_routing_rules and are assembled
+// into the generated core config at read time. Both shapes persist first and
+// then reconcile the running core over gRPC; a failed hot apply rolls the
+// persistence write back.
 //
 // Contrast with the whole-template save (POST /panel/api/xray/update): that one
 // still works and is still the way to rewrite the config wholesale. These
@@ -84,7 +83,11 @@ func (s *XrayObjectService) ListOutbounds() (*OutboundListView, error) {
 	if err != nil {
 		return nil, err
 	}
-	stored, err := decodeArray(cfg["outbounds"])
+	base, err := decodeArray(cfg["outbounds"])
+	if err != nil {
+		return nil, err
+	}
+	stored, err := combinedOutbounds(nil, base)
 	if err != nil {
 		return nil, err
 	}
@@ -97,9 +100,9 @@ func (s *XrayObjectService) ListOutbounds() (*OutboundListView, error) {
 	return view, nil
 }
 
-// AddOutbound appends one outbound to the template and adds it to the running
-// core. Appending, never inserting: the core's first outbound is fixed at
-// process start, so a new one at the front would force a restart.
+// AddOutbound appends one managed outbound after the template skeleton and
+// adds it to the running core. Appending, never inserting: the core's first
+// outbound is fixed at process start.
 func (s *XrayObjectService) AddOutbound(raw json.RawMessage) (*ObjectApplyResult, error) {
 	tag, err := objectTag(raw, "outbound")
 	if err != nil {
@@ -108,18 +111,39 @@ func (s *XrayObjectService) AddOutbound(raw json.RawMessage) (*ObjectApplyResult
 	if err := xray.ValidateOutboundConfig(raw); err != nil {
 		return nil, common.NewError("xray core rejects outbound \""+tag+"\":", err)
 	}
-	return s.mutate(tag, 1, func(cfg map[string]json.RawMessage) error {
-		outbounds, err := decodeArray(cfg["outbounds"])
-		if err != nil {
-			return err
-		}
-		if indexByTag(outbounds, tag) >= 0 {
-			return common.NewErrorf("an outbound tagged %q already exists", tag)
-		}
-		return encodeArray(cfg, "outbounds", append(outbounds, raw))
-	}, func() error {
-		return s.xrayService.ApplyOutboundHotOnly(tag, raw)
-	})
+	xrayTemplateWriteLock.Lock()
+	defer xrayTemplateWriteLock.Unlock()
+
+	_, cfg, err := s.loadTemplate()
+	if err != nil {
+		return nil, err
+	}
+	base, err := decodeArray(cfg["outbounds"])
+	if err != nil {
+		return nil, err
+	}
+	if indexByTag(base, tag) >= 0 {
+		return nil, common.NewErrorf("an outbound tagged %q already exists", tag)
+	}
+	db := database.GetDB()
+	var existing int64
+	if err := db.Model(&model.XrayOutbound{}).Where("tag = ?", tag).Count(&existing).Error; err != nil {
+		return nil, err
+	}
+	if existing > 0 {
+		return nil, common.NewErrorf("an outbound tagged %q already exists", tag)
+	}
+	var maxPosition int64
+	if err := db.Model(&model.XrayOutbound{}).
+		Select("COALESCE(MAX(position), 0)").
+		Scan(&maxPosition).Error; err != nil {
+		return nil, err
+	}
+	row := model.XrayOutbound{Tag: tag, Body: string(bytes.TrimSpace(raw)), Position: maxPosition + 1}
+	if err := db.Create(&row).Error; err != nil {
+		return nil, err
+	}
+	return s.finishManagedOutbound(row, nil, raw)
 }
 
 // UpdateOutbound replaces the outbound carrying tag. The tag is the identity,
@@ -136,39 +160,70 @@ func (s *XrayObjectService) UpdateOutbound(tag string, raw json.RawMessage) (*Ob
 	if err := xray.ValidateOutboundConfig(raw); err != nil {
 		return nil, common.NewError("xray core rejects outbound \""+tag+"\":", err)
 	}
-	return s.mutate(tag, 1, func(cfg map[string]json.RawMessage) error {
-		outbounds, err := decodeArray(cfg["outbounds"])
-		if err != nil {
-			return err
+	xrayTemplateWriteLock.Lock()
+	defer xrayTemplateWriteLock.Unlock()
+
+	db := database.GetDB()
+	var row model.XrayOutbound
+	if err := db.Where("tag = ?", tag).First(&row).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
 		}
-		idx := indexByTag(outbounds, tag)
-		if idx < 0 {
-			return ErrXrayObjectNotFound
-		}
-		outbounds[idx] = raw
-		return encodeArray(cfg, "outbounds", outbounds)
-	}, func() error {
-		return s.xrayService.ApplyOutboundHotOnly(tag, raw)
-	})
+		// Compatibility fallback for an outbound authored by an older build.
+		return s.mutateLocked(tag, 1, func(cfg map[string]json.RawMessage) error {
+			outbounds, err := decodeArray(cfg["outbounds"])
+			if err != nil {
+				return err
+			}
+			idx := indexByTag(outbounds, tag)
+			if idx < 0 {
+				return ErrXrayObjectNotFound
+			}
+			outbounds[idx] = raw
+			return encodeArray(cfg, "outbounds", outbounds)
+		}, func() error {
+			return s.xrayService.ApplyOutboundHotOnly(tag, raw)
+		})
+	}
+	before := row
+	row.Body = string(bytes.TrimSpace(raw))
+	if err := db.Save(&row).Error; err != nil {
+		return nil, err
+	}
+	return s.finishManagedOutbound(row, &before, raw)
 }
 
 func (s *XrayObjectService) DeleteOutbound(tag string) (*ObjectApplyResult, error) {
 	if strings.TrimSpace(tag) == "" {
 		return nil, common.NewError("an outbound tag is required")
 	}
-	return s.mutate(tag, 1, func(cfg map[string]json.RawMessage) error {
-		outbounds, err := decodeArray(cfg["outbounds"])
-		if err != nil {
-			return err
+	xrayTemplateWriteLock.Lock()
+	defer xrayTemplateWriteLock.Unlock()
+
+	db := database.GetDB()
+	var row model.XrayOutbound
+	if err := db.Where("tag = ?", tag).First(&row).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
 		}
-		idx := indexByTag(outbounds, tag)
-		if idx < 0 {
-			return ErrXrayObjectNotFound
-		}
-		return encodeArray(cfg, "outbounds", append(outbounds[:idx:idx], outbounds[idx+1:]...))
-	}, func() error {
-		return s.xrayService.ApplyOutboundHotOnly(tag, nil)
-	})
+		return s.mutateLocked(tag, 1, func(cfg map[string]json.RawMessage) error {
+			outbounds, err := decodeArray(cfg["outbounds"])
+			if err != nil {
+				return err
+			}
+			idx := indexByTag(outbounds, tag)
+			if idx < 0 {
+				return ErrXrayObjectNotFound
+			}
+			return encodeArray(cfg, "outbounds", append(outbounds[:idx:idx], outbounds[idx+1:]...))
+		}, func() error {
+			return s.xrayService.ApplyOutboundHotOnly(tag, nil)
+		})
+	}
+	if err := db.Delete(&model.XrayOutbound{}, "tag = ?", tag).Error; err != nil {
+		return nil, err
+	}
+	return s.finishManagedOutbound(row, &row, nil)
 }
 
 // ------------------------------------------------------------------ routing
@@ -178,7 +233,11 @@ func (s *XrayObjectService) ListRoutingRules() (*RoutingRuleListView, error) {
 	if err != nil {
 		return nil, err
 	}
-	rules, err := templateRules(cfg)
+	base, err := templateRules(cfg)
+	if err != nil {
+		return nil, err
+	}
+	rules, err := combinedRoutingRules(nil, base)
 	if err != nil {
 		return nil, err
 	}
@@ -216,60 +275,295 @@ func (s *XrayObjectService) AddRoutingRules(rules []json.RawMessage) (*ObjectApp
 	}
 
 	firstTag, _ := ruleTag(rules[0])
-	incomingTags := make([]string, 0, len(seen))
+	incomingTags := make([]string, 0, len(rules))
 	for tag := range seen {
 		incomingTags = append(incomingTags, tag)
 	}
-	return s.mutate(firstTag, len(rules), func(cfg map[string]json.RawMessage) error {
-		// Fast path: splice without decoding the rules already there. Declines
-		// (and falls through) whenever it cannot be sure — see appendTemplateRules.
-		switch done, err := appendTemplateRules(cfg, rules, incomingTags); {
-		case err != nil:
-			return err
-		case done:
-			return nil
+
+	xrayTemplateWriteLock.Lock()
+	defer xrayTemplateWriteLock.Unlock()
+
+	// Legacy tagged rules may still live in the template. They remain readable,
+	// but a new managed row may not shadow one silently.
+	_, cfg, err := s.loadTemplate()
+	if err != nil {
+		return nil, err
+	}
+	legacy, err := templateRules(cfg)
+	if err != nil {
+		return nil, err
+	}
+	for _, rule := range legacy {
+		if tag := ruleTagOf(rule); tag != "" && seen[tag] {
+			return nil, common.NewErrorf("a routing rule tagged %q already exists", tag)
 		}
-		existing, err := templateRules(cfg)
-		if err != nil {
+	}
+
+	db := database.GetDB()
+	var existing int64
+	if err := db.Model(&model.XrayRoutingRule{}).Where("tag IN ?", incomingTags).Count(&existing).Error; err != nil {
+		return nil, err
+	}
+	if existing > 0 {
+		return nil, common.NewError("one or more routing rule tags already exist")
+	}
+
+	rows := make([]model.XrayRoutingRule, 0, len(rules))
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		var maxPosition int64
+		if err := tx.Model(&model.XrayRoutingRule{}).
+			Select("COALESCE(MAX(position), 0)").
+			Scan(&maxPosition).Error; err != nil {
 			return err
 		}
-		for _, rule := range existing {
+		for i, rule := range rules {
 			tag, _ := ruleTag(rule)
-			if tag != "" && seen[tag] {
-				return common.NewErrorf("a routing rule tagged %q already exists", tag)
-			}
+			rows = append(rows, model.XrayRoutingRule{
+				Tag:      tag,
+				Body:     string(bytes.TrimSpace(rule)),
+				Position: maxPosition + int64(i) + 1,
+			})
 		}
-		return writeTemplateRules(cfg, append(existing, rules...))
-	}, func() error {
-		return s.xrayService.AppendRoutingRulesHotOnly(rules)
-	})
+		return tx.Create(&rows).Error
+	}); err != nil {
+		return nil, err
+	}
+
+	result := &ObjectApplyResult{
+		Tag:         firstTag,
+		Count:       len(rules),
+		XrayRunning: s.xrayService.IsXrayRunning(),
+	}
+	if !result.XrayRunning {
+		return result, nil
+	}
+	switch applyErr := s.xrayService.AppendRoutingRulesHotOnly(rules); {
+	case applyErr == nil:
+		result.HotApplied = true
+		return result, nil
+	case errors.Is(applyErr, ErrXrayHotApplyImpossible):
+		result.RequiresRestart = true
+		s.xrayService.SetToNeedRestart()
+		return result, nil
+	default:
+		if restoreErr := db.Where("tag IN ?", incomingTags).Delete(&model.XrayRoutingRule{}).Error; restoreErr != nil {
+			return nil, common.NewError("the core refused the routing rules ("+applyErr.Error()+") and their rows could not be rolled back:", restoreErr)
+		}
+		return nil, common.NewError("the core refused the routing rules, nothing was saved:", applyErr)
+	}
 }
 
 func (s *XrayObjectService) DeleteRoutingRule(tag string) (*ObjectApplyResult, error) {
 	if strings.TrimSpace(tag) == "" {
 		return nil, common.NewError("a routing rule tag is required")
 	}
-	return s.mutate(tag, 1, func(cfg map[string]json.RawMessage) error {
-		rules, err := templateRules(cfg)
-		if err != nil {
-			return err
+
+	xrayTemplateWriteLock.Lock()
+	defer xrayTemplateWriteLock.Unlock()
+
+	db := database.GetDB()
+	var row model.XrayRoutingRule
+	if err := db.Where("tag = ?", tag).First(&row).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
 		}
-		kept := make([]json.RawMessage, 0, len(rules))
-		found := false
-		for _, rule := range rules {
-			if ruleTagOf(rule) == tag {
-				found = true
-				continue
+		// Compatibility fallback for a tagged rule stored by an older build.
+		return s.mutateLocked(tag, 1, func(cfg map[string]json.RawMessage) error {
+			rules, err := templateRules(cfg)
+			if err != nil {
+				return err
 			}
-			kept = append(kept, rule)
+			kept := make([]json.RawMessage, 0, len(rules))
+			found := false
+			for _, rule := range rules {
+				if ruleTagOf(rule) == tag {
+					found = true
+					continue
+				}
+				kept = append(kept, rule)
+			}
+			if !found {
+				return ErrXrayObjectNotFound
+			}
+			return writeTemplateRules(cfg, kept)
+		}, func() error {
+			return s.xrayService.RemoveRoutingRuleHotOnly(tag)
+		})
+	}
+
+	if err := db.Delete(&model.XrayRoutingRule{}, "tag = ?", tag).Error; err != nil {
+		return nil, err
+	}
+	result := &ObjectApplyResult{Tag: tag, Count: 1, XrayRunning: s.xrayService.IsXrayRunning()}
+	if !result.XrayRunning {
+		return result, nil
+	}
+	switch applyErr := s.xrayService.RemoveRoutingRuleHotOnly(tag); {
+	case applyErr == nil:
+		result.HotApplied = true
+		return result, nil
+	case errors.Is(applyErr, ErrXrayHotApplyImpossible):
+		result.RequiresRestart = true
+		s.xrayService.SetToNeedRestart()
+		return result, nil
+	default:
+		if restoreErr := db.Create(&row).Error; restoreErr != nil {
+			return nil, common.NewError("the core refused the routing deletion ("+applyErr.Error()+") and its row could not be restored:", restoreErr)
 		}
-		if !found {
-			return ErrXrayObjectNotFound
+		return nil, common.NewError("the core refused the routing deletion, nothing was saved:", applyErr)
+	}
+}
+
+// mutateLocked is the compatibility form of mutate for callers already holding
+// xrayTemplateWriteLock.
+func (s *XrayObjectService) mutateLocked(tag string, count int, edit func(cfg map[string]json.RawMessage) error, apply func() error) (*ObjectApplyResult, error) {
+	before, cfg, err := s.loadTemplate()
+	if err != nil {
+		return nil, err
+	}
+	if err := edit(cfg); err != nil {
+		return nil, err
+	}
+	encoded, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	if err := s.settingService.saveSetting("xrayTemplateConfig", string(encoded)); err != nil {
+		return nil, err
+	}
+	result := &ObjectApplyResult{Tag: tag, Count: count, XrayRunning: s.xrayService.IsXrayRunning()}
+	if !result.XrayRunning {
+		return result, nil
+	}
+	switch err := apply(); {
+	case err == nil:
+		result.HotApplied = true
+	case errors.Is(err, ErrXrayHotApplyImpossible):
+		result.RequiresRestart = true
+		s.xrayService.SetToNeedRestart()
+	default:
+		if restoreErr := s.settingService.saveSetting("xrayTemplateConfig", before); restoreErr != nil {
+			return nil, common.NewError("the core refused the change ("+err.Error()+") and the template could not be rolled back:", restoreErr)
 		}
-		return writeTemplateRules(cfg, kept)
-	}, func() error {
-		return s.xrayService.RemoveRoutingRuleHotOnly(tag)
-	})
+		return nil, common.NewError("the core refused the change, nothing was saved:", err)
+	}
+	return result, nil
+}
+
+func (s *XrayObjectService) finishManagedOutbound(row model.XrayOutbound, restore *model.XrayOutbound, raw json.RawMessage) (*ObjectApplyResult, error) {
+	result := &ObjectApplyResult{Tag: row.Tag, Count: 1, XrayRunning: s.xrayService.IsXrayRunning()}
+	if !result.XrayRunning {
+		return result, nil
+	}
+	switch applyErr := s.xrayService.ApplyOutboundHotOnly(row.Tag, raw); {
+	case applyErr == nil:
+		result.HotApplied = true
+		return result, nil
+	case errors.Is(applyErr, ErrXrayHotApplyImpossible):
+		result.RequiresRestart = true
+		s.xrayService.SetToNeedRestart()
+		return result, nil
+	default:
+		db := database.GetDB()
+		var rollbackErr error
+		switch {
+		case raw == nil:
+			rollbackErr = db.Create(restore).Error
+		case restore == nil:
+			rollbackErr = db.Delete(&model.XrayOutbound{}, "tag = ?", row.Tag).Error
+		default:
+			rollbackErr = db.Save(restore).Error
+		}
+		if rollbackErr != nil {
+			return nil, common.NewError("the core refused the outbound change ("+applyErr.Error()+") and persistence could not be rolled back:", rollbackErr)
+		}
+		return nil, common.NewError("the core refused the outbound change, nothing was saved:", applyErr)
+	}
+}
+
+func combinedOutbounds(tx *gorm.DB, base []json.RawMessage) ([]json.RawMessage, error) {
+	if tx == nil {
+		tx = database.GetDB()
+	}
+	var rows []model.XrayOutbound
+	if err := tx.Order("position ASC").Order("tag ASC").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	managed := make(map[string]struct{}, len(rows))
+	for i := range rows {
+		managed[rows[i].Tag] = struct{}{}
+	}
+	out := make([]json.RawMessage, 0, len(base)+len(rows))
+	for _, outbound := range base {
+		if _, shadowed := managed[tagOf(outbound)]; shadowed {
+			continue
+		}
+		out = append(out, outbound)
+	}
+	for i := range rows {
+		out = append(out, json.RawMessage(rows[i].Body))
+	}
+	return out, nil
+}
+
+func withManagedOutbounds(raw json.RawMessage) (json.RawMessage, error) {
+	base, err := decodeArray(raw)
+	if err != nil {
+		return nil, err
+	}
+	outbounds, err := combinedOutbounds(nil, base)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(outbounds)
+}
+
+func combinedRoutingRules(tx *gorm.DB, base []json.RawMessage) ([]json.RawMessage, error) {
+	if tx == nil {
+		tx = database.GetDB()
+	}
+	var rows []model.XrayRoutingRule
+	if err := tx.Order("position ASC").Order("tag ASC").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	managed := make(map[string]struct{}, len(rows))
+	for i := range rows {
+		managed[rows[i].Tag] = struct{}{}
+	}
+	out := make([]json.RawMessage, 0, len(base)+len(rows))
+	for _, rule := range base {
+		if _, shadowed := managed[ruleTagOf(rule)]; shadowed {
+			continue
+		}
+		out = append(out, rule)
+	}
+	for i := range rows {
+		out = append(out, json.RawMessage(rows[i].Body))
+	}
+	return out, nil
+}
+
+func withManagedRoutingRules(raw json.RawMessage) (json.RawMessage, error) {
+	routing := map[string]json.RawMessage{}
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &routing); err != nil {
+			return nil, err
+		}
+	}
+	base, err := decodeArray(routing["rules"])
+	if err != nil {
+		return nil, err
+	}
+	rules, err := combinedRoutingRules(nil, base)
+	if err != nil {
+		return nil, err
+	}
+	encoded, err := json.Marshal(rules)
+	if err != nil {
+		return nil, err
+	}
+	routing["rules"] = encoded
+	return json.Marshal(routing)
 }
 
 // ------------------------------------------------------------------ plumbing

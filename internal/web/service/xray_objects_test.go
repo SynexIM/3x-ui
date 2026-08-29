@@ -53,10 +53,12 @@ func storedRuleTags(t *testing.T, service *XrayObjectService) []string {
 	return tags
 }
 
-// The template is the authority, so a write has to be there afterwards — with
-// a stopped core there is nowhere else the object could have gone.
-func TestOutboundWritesLandInTheStoredTemplate(t *testing.T) {
+func TestManagedOutboundLifecycleLeavesTemplateUnchanged(t *testing.T) {
 	service := initObjectDB(t)
+	before, err := (&SettingService{}).GetXrayConfigTemplate()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	result, err := service.AddOutbound(json.RawMessage(`{"tag":"proxy-jp","protocol":"freedom","settings":{}}`))
 	if err != nil {
@@ -67,6 +69,24 @@ func TestOutboundWritesLandInTheStoredTemplate(t *testing.T) {
 	}
 	if got := storedOutboundTags(t, service); len(got) != 2 || got[1] != "proxy-jp" {
 		t.Fatalf("outbounds are %v, want the new one appended after direct", got)
+	}
+	after, err := (&SettingService{}).GetXrayConfigTemplate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after != before {
+		t.Fatal("adding one managed outbound rewrote the whole xray template")
+	}
+	config, err := (&XrayService{}).GetXrayConfig()
+	if err != nil {
+		t.Fatalf("build xray config: %v", err)
+	}
+	generated, err := decodeArray(json.RawMessage(config.OutboundConfigs))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if indexByTag(generated, "proxy-jp") < 0 {
+		t.Fatalf("generated core config omitted the managed outbound: %s", config.OutboundConfigs)
 	}
 
 	if _, err := service.UpdateOutbound("proxy-jp", json.RawMessage(`{"tag":"proxy-jp","protocol":"blackhole","settings":{}}`)); err != nil {
@@ -88,9 +108,7 @@ func TestOutboundWritesLandInTheStoredTemplate(t *testing.T) {
 	}
 }
 
-// Appending, never inserting: xray matches routes first-hit, so an override
-// silently placed before an existing rule would change what the earlier rule
-// does without anyone editing it.
+// Managed rules keep insertion order after the template's legacy base rules.
 func TestRoutingRulesAreAppendedInOrder(t *testing.T) {
 	service := initObjectDB(t)
 
@@ -116,6 +134,32 @@ func TestRoutingRulesAreAppendedInOrder(t *testing.T) {
 	}
 	if got := storedRuleTags(t, service); len(got) != 3 || got[1] != "first" || got[2] != "third" {
 		t.Fatalf("rules after delete are %v", got)
+	}
+}
+
+func TestManagedRoutingWriteLeavesTemplateUnchangedAndBuildsCoreConfig(t *testing.T) {
+	service := initObjectDB(t)
+	before, err := (&SettingService{}).GetXrayConfigTemplate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rule := json.RawMessage(`{"type":"field","ruleTag":"managed-one","user":["managed@example.com"],"outboundTag":"direct"}`)
+	if _, err := service.AddRoutingRules([]json.RawMessage{rule}); err != nil {
+		t.Fatalf("add managed rule: %v", err)
+	}
+	after, err := (&SettingService{}).GetXrayConfigTemplate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after != before {
+		t.Fatal("adding one managed rule rewrote the whole xray template")
+	}
+	config, err := (&XrayService{}).GetXrayConfig()
+	if err != nil {
+		t.Fatalf("build xray config: %v", err)
+	}
+	if !strings.Contains(string(config.RouterConfig), `"ruleTag":"managed-one"`) {
+		t.Fatalf("generated core config omitted the managed rule: %s", config.RouterConfig)
 	}
 }
 
