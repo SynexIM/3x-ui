@@ -263,6 +263,13 @@ func TestXrayAPI_E2E_Users(t *testing.T) {
 			},
 		},
 		map[string]any{
+			"listen": "127.0.0.1", "port": freePort(t), "protocol": "shadowsocks", "tag": "ss2022-empty-in",
+			"settings": map[string]any{
+				"method": "2022-blake3-aes-256-gcm", "password": ssKey(32, 2), "network": "tcp,udp",
+				"clients": []any{},
+			},
+		},
+		map[string]any{
 			"listen": "127.0.0.1", "port": freePort(t), "protocol": "hysteria", "tag": "hysteria-in",
 			"settings": map[string]any{
 				"version": 2,
@@ -318,6 +325,12 @@ func TestXrayAPI_E2E_Users(t *testing.T) {
 		{
 			name: "shadowsocks 2022", protocol: "shadowsocks", tag: "ss2022-in",
 			user:                  panelUser("e2e-ss2022", map[string]any{"password": ssKey(32, 40), "cipher": "2022-blake3-aes-256-gcm"}),
+			rejectsDuplicateEmail: true,
+			reportsMissingUser:    true,
+		},
+		{
+			name: "shadowsocks 2022 first customer", protocol: "shadowsocks", tag: "ss2022-empty-in",
+			user:                  panelUser("e2e-ss2022-first", map[string]any{"password": ssKey(32, 41), "cipher": "2022-blake3-aes-256-gcm"}),
 			rejectsDuplicateEmail: true,
 			reportsMissingUser:    true,
 		},

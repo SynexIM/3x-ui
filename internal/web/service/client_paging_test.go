@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"slices"
 	"strconv"
 	"testing"
@@ -620,5 +622,16 @@ func TestListPagedEmptyPanel(t *testing.T) {
 	}
 	if resp.Groups == nil {
 		t.Fatal("groups = nil, want an empty list so the filter drawer renders")
+	}
+}
+
+func TestListPagedContextStopsCanceledDatabaseWork(t *testing.T) {
+	svc, inboundSvc, settingSvc := setupPagingServices(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := svc.ListPagedContext(ctx, inboundSvc, settingSvc, ClientPageParams{PageSize: 25})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("ListPagedContext error = %v, want context.Canceled", err)
 	}
 }

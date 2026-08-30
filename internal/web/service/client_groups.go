@@ -242,8 +242,8 @@ func (s *ClientService) AddToGroup(emails []string, group string) (int, error) {
 		return 0, nil
 	}
 	affectedEmails := make([]string, 0, len(records))
-	for _, r := range records {
-		affectedEmails = append(affectedEmails, r.Email)
+	for _, record := range records {
+		affectedEmails = append(affectedEmails, record.Email)
 	}
 
 	tx := db.Begin()
@@ -279,10 +279,6 @@ func (s *ClientService) replaceGroupValue(oldName, newName string) (int, error) 
 	}
 	if len(records) == 0 {
 		return 0, nil
-	}
-	affectedEmails := make([]string, 0, len(records))
-	for _, r := range records {
-		affectedEmails = append(affectedEmails, r.Email)
 	}
 
 	tx := db.Begin()

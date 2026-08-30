@@ -295,24 +295,27 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		}
 
 		var mutated bool
-		if inbound.Protocol == model.WireGuard {
+		switch inbound.Protocol {
+		case model.WireGuard:
 			delete(settings, "clients")
 			if wgPeers == nil {
 				wgPeers = []any{}
 			}
 			settings["peers"] = wgPeers
 			mutated = true
-		} else if inbound.Protocol == model.Mixed || inbound.Protocol == model.HTTP {
+		case model.Mixed, model.HTTP:
 			_, hadClients := settings["clients"]
 			_, hadAccounts := settings["accounts"]
 			delete(settings, "clients")
-			mutated = hadClients || hadAccounts || len(finalClients) > 0
+			mutated = clientCarryingProtocols[inbound.Protocol] || hadClients || hadAccounts
 			if mutated {
 				settings["accounts"] = finalClients
 			}
-		} else {
+		default:
 			_, hadClients := settings["clients"]
-			mutated = hadClients || len(finalClients) > 0
+			// User-carrying protocols always emit []; SS2022 needs field presence
+			// to install its multi-user handler before the first customer.
+			mutated = clientCarryingProtocols[inbound.Protocol] || hadClients
 			if mutated {
 				settings["clients"] = finalClients
 			}

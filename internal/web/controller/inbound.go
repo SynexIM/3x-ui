@@ -84,7 +84,7 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 // getInbounds retrieves the list of inbounds for the logged-in user.
 func (a *InboundController) getInbounds(c *gin.Context) {
 	user := session.GetLoginUser(c)
-	inbounds, err := a.inboundService.GetInbounds(user.Id)
+	inbounds, err := a.inboundService.GetInboundsContext(c.Request.Context(), user.Id)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
 		return
@@ -96,7 +96,7 @@ func (a *InboundController) getInbounds(c *gin.Context) {
 // payloads from settings.clients[]. Detail-view flows still use /get/:id.
 func (a *InboundController) getInboundsSlim(c *gin.Context) {
 	user := session.GetLoginUser(c)
-	inbounds, err := a.inboundService.GetInboundsSlim(user.Id)
+	inbounds, err := a.inboundService.GetInboundsSlimContext(c.Request.Context(), user.Id)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
 		return

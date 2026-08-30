@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -21,19 +22,22 @@ import (
 // so the list payload stays compact even when the panel manages thousands
 // of clients. Modals that need the full record still call /get/:email.
 type ClientSlim struct {
-	Email      string              `json:"email"`
-	SubID      string              `json:"subId"`
-	Enable     bool                `json:"enable"`
-	TotalGB    int64               `json:"totalGB"`
-	ExpiryTime int64               `json:"expiryTime"`
-	LimitIP    int                 `json:"limitIp"`
-	Reset      int                 `json:"reset"`
-	Group      string              `json:"group,omitempty"`
-	Comment    string              `json:"comment,omitempty"`
-	InboundIds []int               `json:"inboundIds"`
-	Traffic    *xray.ClientTraffic `json:"traffic,omitempty"`
-	CreatedAt  int64               `json:"createdAt"`
-	UpdatedAt  int64               `json:"updatedAt"`
+	Email        string              `json:"email"`
+	SubID        string              `json:"subId"`
+	Enable       bool                `json:"enable"`
+	TotalGB      int64               `json:"totalGB"`
+	ExpiryTime   int64               `json:"expiryTime"`
+	LimitIP      int                 `json:"limitIp"`
+	Reset        int                 `json:"reset"`
+	Group        string              `json:"group,omitempty"`
+	Comment      string              `json:"comment,omitempty"`
+	BandwidthBps uint64              `json:"bandwidth_bps"`
+	ConnLimit    uint32              `json:"conn_limit"`
+	EgressTag    string              `json:"egress_tag"`
+	InboundIds   []int               `json:"inboundIds"`
+	Traffic      *xray.ClientTraffic `json:"traffic,omitempty"`
+	CreatedAt    int64               `json:"createdAt"`
+	UpdatedAt    int64               `json:"updatedAt"`
 }
 
 // ClientPageParams are the query params accepted by /panel/api/clients/list/paged.
@@ -337,7 +341,12 @@ func (q clientQuery) applyOrder(tx *gorm.DB, sortKey, order string) *gorm.DB {
 // page header needs. Every predicate runs in SQL, so the cost tracks the page
 // size rather than the number of clients on the panel.
 func (s *ClientService) ListPaged(inboundSvc *InboundService, settingSvc *SettingService, params ClientPageParams) (*ClientPageResponse, error) {
-	db := database.GetDB()
+	return s.ListPagedContext(context.Background(), inboundSvc, settingSvc, params)
+}
+
+// ListPagedContext lets an HTTP cancellation stop the SQL work for large panels.
+func (s *ClientService) ListPagedContext(ctx context.Context, inboundSvc *InboundService, settingSvc *SettingService, params ClientPageParams) (*ClientPageResponse, error) {
+	db := database.GetDB().WithContext(ctx)
 
 	pageSize := params.PageSize
 	if pageSize <= 0 {
@@ -480,19 +489,22 @@ func (q clientQuery) pageRows(params ClientPageParams, onlines []string, offset,
 			continue
 		}
 		items = append(items, ClientSlim{
-			Email:      rec.Email,
-			SubID:      rec.SubID,
-			Enable:     rec.Enable,
-			TotalGB:    rec.TotalGB,
-			ExpiryTime: rec.ExpiryTime,
-			LimitIP:    rec.LimitIP,
-			Reset:      rec.Reset,
-			Group:      rec.Group,
-			Comment:    rec.Comment,
-			InboundIds: attachments[rec.Id],
-			Traffic:    trafficByEmail[rec.Email],
-			CreatedAt:  rec.CreatedAt,
-			UpdatedAt:  rec.UpdatedAt,
+			Email:        rec.Email,
+			SubID:        rec.SubID,
+			Enable:       rec.Enable,
+			TotalGB:      rec.TotalGB,
+			ExpiryTime:   rec.ExpiryTime,
+			LimitIP:      rec.LimitIP,
+			Reset:        rec.Reset,
+			Group:        rec.Group,
+			Comment:      rec.Comment,
+			BandwidthBps: rec.BandwidthBps,
+			ConnLimit:    rec.ConnLimit,
+			EgressTag:    rec.EgressTag,
+			InboundIds:   attachments[rec.Id],
+			Traffic:      trafficByEmail[rec.Email],
+			CreatedAt:    rec.CreatedAt,
+			UpdatedAt:    rec.UpdatedAt,
 		})
 	}
 	return items, nil

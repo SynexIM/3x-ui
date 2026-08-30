@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -314,7 +315,11 @@ func (s *SettingService) ResetSettings() error {
 }
 
 func (s *SettingService) getSetting(key string) (*model.Setting, error) {
-	db := database.GetDB()
+	return s.getSettingContext(context.Background(), key)
+}
+
+func (s *SettingService) getSettingContext(ctx context.Context, key string) (*model.Setting, error) {
+	db := database.GetDB().WithContext(ctx)
 	setting := &model.Setting{}
 	err := db.Model(model.Setting{}).Where("key = ?", key).First(setting).Error
 	if err != nil {
@@ -340,7 +345,11 @@ func (s *SettingService) saveSetting(key string, value string) error {
 }
 
 func (s *SettingService) getString(key string) (string, error) {
-	setting, err := s.getSetting(key)
+	return s.getStringContext(context.Background(), key)
+}
+
+func (s *SettingService) getStringContext(ctx context.Context, key string) (string, error) {
+	setting, err := s.getSettingContext(ctx, key)
 	if database.IsNotFound(err) {
 		value, ok := defaultValueMap[key]
 		if !ok {
@@ -414,6 +423,10 @@ func (s *SettingService) SetWarpUpdateInterval(val int) error {
 
 func (s *SettingService) GetXrayConfigTemplate() (string, error) {
 	return s.getString("xrayTemplateConfig")
+}
+
+func (s *SettingService) GetXrayConfigTemplateContext(ctx context.Context) (string, error) {
+	return s.getStringContext(ctx, "xrayTemplateConfig")
 }
 
 func (s *SettingService) GetXrayOutboundTestUrl() (string, error) {

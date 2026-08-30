@@ -547,9 +547,9 @@ func MixedClientsToAccounts(settings string) (string, bool) {
 	}
 	delete(parsed, "clients")
 	parsed["accounts"] = accounts
-	if len(accounts) > 0 {
-		parsed["auth"] = "password"
-	}
+	// Managed mixed inbounds must start in password mode even while empty.
+	// Runtime-added users cannot change the SOCKS handler's boot-time auth mode.
+	parsed["auth"] = "password"
 	out, err := json.MarshalIndent(parsed, "", "  ")
 	if err != nil {
 		return settings, false

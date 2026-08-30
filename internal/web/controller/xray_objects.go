@@ -48,7 +48,7 @@ func (a *XrayObjectController) initRouter(g *gin.RouterGroup) {
 }
 
 func (a *XrayObjectController) listOutbounds(c *gin.Context) {
-	view, err := a.objectService.ListOutbounds()
+	view, err := a.objectService.ListOutboundsContext(c.Request.Context())
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.getSettings"), err)
 		return
@@ -82,7 +82,7 @@ func (a *XrayObjectController) deleteOutbound(c *gin.Context) {
 }
 
 func (a *XrayObjectController) runtimeSnapshot(c *gin.Context) {
-	view, err := a.objectService.RuntimeSnapshot()
+	view, err := a.objectService.RuntimeSnapshotContext(c.Request.Context())
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.getSettings"), err)
 		return
@@ -91,7 +91,7 @@ func (a *XrayObjectController) runtimeSnapshot(c *gin.Context) {
 }
 
 func (a *XrayObjectController) listRoutingRules(c *gin.Context) {
-	view, err := a.objectService.ListRoutingRules()
+	view, err := a.objectService.ListRoutingRulesContext(c.Request.Context())
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.getSettings"), err)
 		return

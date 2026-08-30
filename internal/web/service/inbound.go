@@ -162,7 +162,11 @@ func normalizeInboundShareAddressColumns(tx *gorm.DB) error {
 
 // GetInbounds retrieves all inbounds for a specific user with client stats.
 func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
-	db := database.GetDB()
+	return s.GetInboundsContext(context.Background(), userId)
+}
+
+func (s *InboundService) GetInboundsContext(ctx context.Context, userId int) ([]*model.Inbound, error) {
+	db := database.GetDB().WithContext(ctx)
 	var inbounds []*model.Inbound
 	err := db.Model(model.Inbound{}).Preload("ClientStats").Where("user_id = ?", userId).Order("id ASC").Find(&inbounds).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -197,7 +201,11 @@ func (s *InboundService) annotateLocalOriginGuid(inbounds []*model.Inbound) {
 // GetInboundsSlim returns the list-view projection. Client membership stays in
 // the normalized tables, so settings is already free of per-client payloads.
 func (s *InboundService) GetInboundsSlim(userId int) ([]*model.Inbound, error) {
-	db := database.GetDB()
+	return s.GetInboundsSlimContext(context.Background(), userId)
+}
+
+func (s *InboundService) GetInboundsSlimContext(ctx context.Context, userId int) ([]*model.Inbound, error) {
+	db := database.GetDB().WithContext(ctx)
 	var inbounds []*model.Inbound
 	err := db.Model(model.Inbound{}).Preload("ClientStats").Where("user_id = ?", userId).Order("id ASC").Find(&inbounds).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -372,7 +380,11 @@ func inboundMtprotoDomain(protocol string, settings string) string {
 
 // GetAllInbounds retrieves all inbounds with client stats.
 func (s *InboundService) GetAllInbounds() ([]*model.Inbound, error) {
-	db := database.GetDB()
+	return s.GetAllInboundsContext(context.Background())
+}
+
+func (s *InboundService) GetAllInboundsContext(ctx context.Context) ([]*model.Inbound, error) {
+	db := database.GetDB().WithContext(ctx)
 	var inbounds []*model.Inbound
 	err := db.Model(model.Inbound{}).Preload("ClientStats").Find(&inbounds).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {

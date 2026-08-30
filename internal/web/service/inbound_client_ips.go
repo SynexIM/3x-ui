@@ -166,17 +166,6 @@ func (s *InboundService) DelClientIPs(tx *gorm.DB, email string) error {
 	return tx.Where("client_email = ?", email).Delete(model.InboundClientIps{}).Error
 }
 
-func (s *InboundService) delClientIPsByEmails(tx *gorm.DB, emails []string) error {
-	const chunk = 400
-	for start := 0; start < len(emails); start += chunk {
-		end := min(start+chunk, len(emails))
-		if err := tx.Where("client_email IN ?", emails[start:end]).Delete(model.InboundClientIps{}).Error; err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (s *InboundService) GetInboundClientIps(clientEmail string) (string, error) {
 	db := database.GetDB()
 	InboundClientIps := &model.InboundClientIps{}

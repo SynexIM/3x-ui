@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"path/filepath"
@@ -9,6 +10,36 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 )
+
+func TestControlPlaneReadContextsStopCanceledDatabaseWork(t *testing.T) {
+	service := initObjectDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	checks := map[string]func() error{
+		"outbounds": func() error {
+			_, err := service.ListOutboundsContext(ctx)
+			return err
+		},
+		"routing rules": func() error {
+			_, err := service.ListRoutingRulesContext(ctx)
+			return err
+		},
+		"runtime snapshot": func() error {
+			_, err := service.RuntimeSnapshotContext(ctx)
+			return err
+		},
+		"slim inbounds": func() error {
+			_, err := (&InboundService{}).GetInboundsSlimContext(ctx, 1)
+			return err
+		},
+	}
+	for name, check := range checks {
+		if err := check(); !errors.Is(err, context.Canceled) {
+			t.Errorf("%s error = %v, want context.Canceled", name, err)
+		}
+	}
+}
 
 func initObjectDB(t *testing.T) *XrayObjectService {
 	t.Helper()

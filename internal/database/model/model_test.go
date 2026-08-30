@@ -308,6 +308,24 @@ func TestMixedClientsToAccounts_CompilesEnabledClientsOnly(t *testing.T) {
 	}
 }
 
+func TestMixedClientsToAccounts_EmptyManagedInboundRequiresPassword(t *testing.T) {
+	out, changed := MixedClientsToAccounts(`{"clients":[],"udp":true}`)
+	if !changed {
+		t.Fatal("expected empty managed clients to compile")
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatal(err)
+	}
+	if parsed["auth"] != "password" {
+		t.Fatalf("empty managed mixed inbound auth = %#v, want password", parsed["auth"])
+	}
+	accounts, ok := parsed["accounts"].([]any)
+	if !ok || len(accounts) != 0 {
+		t.Fatalf("empty managed mixed inbound accounts = %#v, want []", parsed["accounts"])
+	}
+}
+
 func TestMixedClientsToAccounts_PreservesLegacyAccounts(t *testing.T) {
 	settings := `{"auth":"password","accounts":[{"user":"legacy","pass":"secret"}],"udp":false}`
 	out, changed := MixedClientsToAccounts(settings)

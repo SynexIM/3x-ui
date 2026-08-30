@@ -111,7 +111,7 @@ func (a *ClientController) listPaged(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
 		return
 	}
-	resp, err := a.clientService.ListPaged(&a.inboundService, &a.settingService, params)
+	resp, err := a.clientService.ListPagedContext(c.Request.Context(), &a.inboundService, &a.settingService, params)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
 		return
@@ -218,7 +218,12 @@ func (a *ClientController) update(c *gin.Context) {
 	if !requireClientMutationHotApply(c, &a.xrayService, email, updated.Email) {
 		return
 	}
-	jsonMsgObj(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), pendingNodeObj(a.clientService.HasPendingNode(&a.inboundService, email)), nil)
+	pending := a.clientService.HasPendingNode(&a.inboundService, email)
+	jsonMsgObj(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), gin.H{
+		"hotApplied":      true,
+		"requiresRestart": false,
+		"nodePending":     pending,
+	}, nil)
 	notifyClientsChanged()
 }
 

@@ -27,6 +27,7 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
@@ -97,7 +98,9 @@ func (s *XrayService) AppendRoutingRulesHotOnly(rules []json.RawMessage) error {
 			for i := 0; i < failed && i < len(rules); i++ {
 				_ = api.RemoveRule(ruleTagOf(rules[i]))
 			}
-			restoreHotDefaultRule(api, catchAll)
+			if restoreErr := restoreHotDefaultRule(api, catchAll); restoreErr != nil {
+				return fmt.Errorf("%w; restore default rule: %w", addErr, restoreErr)
+			}
 			return addErr
 		}
 		return restoreHotDefaultRule(api, catchAll)
@@ -141,9 +144,15 @@ func (s *XrayService) ApplyClientMutationHotOnly(emails ...string) error {
 	if len(emails) == 0 {
 		return s.ApplyDesiredConfigHotOnly()
 	}
-	// Same housekeeping GetXrayConfig runs, so an expired client is disabled
-	// before its runtime state is decided rather than after.
-	_, _, _ = s.inboundService.AddTraffic(nil, nil)
+	emails = normalizedClientEmails(emails)
+	if len(emails) == 0 {
+		return nil
+	}
+	// Preserve the traffic poll's expiry/quota semantics for the identities
+	// being changed without making one admin write scan every client/inbound.
+	if err := s.inboundService.reconcileClientValidity(emails); err != nil {
+		return err
+	}
 
 	ops, err := s.planClientUserOps(emails)
 	if errors.Is(err, errNeedsFullReconcile) {
@@ -159,6 +168,23 @@ func (s *XrayService) ApplyClientMutationHotOnly(emails ...string) error {
 		return err
 	}
 	return nil
+}
+
+func normalizedClientEmails(emails []string) []string {
+	normalized := make([]string, 0, len(emails))
+	seen := make(map[string]struct{}, len(emails))
+	for _, email := range emails {
+		email = strings.TrimSpace(email)
+		if email == "" {
+			continue
+		}
+		if _, ok := seen[email]; ok {
+			continue
+		}
+		seen[email] = struct{}{}
+		normalized = append(normalized, email)
+	}
+	return normalized
 }
 
 // clientUserOp is one AddUser or RemoveUser the core must acknowledge. User is
@@ -369,7 +395,10 @@ func (s *XrayService) runClientUserOps(ops []clientUserOp) error {
 			op := &ops[i]
 			if op.user == nil {
 				if err := api.RemoveUser(op.tag, op.email); err != nil && !xray.IsMissingHandlerErr(err) {
-					return err
+					return fmt.Errorf(
+						"remove client %q from inbound %q (%s): %w",
+						op.email, op.tag, op.protocol, err,
+					)
 				}
 				continue
 			}
@@ -379,7 +408,10 @@ func (s *XrayService) runClientUserOps(ops []clientUserOp) error {
 				if xray.IsMissingHandlerErr(err) {
 					return errNeedsFullReconcile
 				}
-				return err
+				return fmt.Errorf(
+					"apply client %q to inbound %q (%s): %w",
+					op.email, op.tag, op.protocol, err,
+				)
 			}
 		}
 		return nil

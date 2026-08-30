@@ -231,7 +231,6 @@ func (s *InboundService) adjustTraffics(tx *gorm.DB, dbClientTraffics []*xray.Cl
 		}
 	}
 	return dbClientTraffics, newExpiryByEmail, nil
-
 }
 
 // apiUserFromClient prepares an isolated runtime payload. Shadowsocks clients
@@ -247,13 +246,27 @@ func apiUserFromClient(client map[string]any, cipher string) map[string]any {
 	return user
 }
 
-func (s *InboundService) autoRenewClients(tx *gorm.DB) (bool, int64, error) {
+func (s *InboundService) autoRenewClients(tx *gorm.DB, scopedEmails ...string) (bool, int64, error) {
 	now := time.Now().UnixMilli()
 	var traffics []*xray.ClientTraffic
-	if err := tx.Model(xray.ClientTraffic{}).
+	localClientEmails := tx.Table("client_inbounds ci").
+		Select("c.email").
+		Joins("JOIN clients c ON c.id = ci.client_id").
+		Joins("JOIN inbounds i ON i.id = ci.inbound_id").
+		Where("i.node_id IS NULL")
+	// Push the identity predicate into the subquery as well as the outer query.
+	// SQLite otherwise materializes every local client's email before applying
+	// the outer unique-email lookup, which makes one hot mutation grow with N.
+	if len(scopedEmails) > 0 {
+		localClientEmails = localClientEmails.Where("c.email IN ?", scopedEmails)
+	}
+	query := tx.Model(xray.ClientTraffic{}).
 		Where("reset > 0 AND expiry_time > 0 AND expiry_time <= ?", now).
-		Where("email IN (?)", tx.Table("client_inbounds ci").Select("c.email").Joins("JOIN clients c ON c.id = ci.client_id").Joins("JOIN inbounds i ON i.id = ci.inbound_id").Where("i.node_id IS NULL")).
-		Find(&traffics).Error; err != nil {
+		Where("email IN (?)", localClientEmails)
+	if len(scopedEmails) > 0 {
+		query = query.Where("email IN ?", scopedEmails)
+	}
+	if err := query.Find(&traffics).Error; err != nil {
 		return false, 0, err
 	}
 	if len(traffics) == 0 {
@@ -342,6 +355,28 @@ func (s *InboundService) autoRenewClients(tx *gorm.DB) (bool, int64, error) {
 	return needRestart, int64(len(traffics)), nil
 }
 
+// reconcileClientValidity applies the same quota/expiry state transition as a
+// traffic poll, but only for the identities an administrator just mutated.
+// A single-client hot write must not scan every unrelated client on the panel.
+//
+// The caller already normalizes and deduplicates emails. The serial writer
+// keeps this transaction ordered with traffic polling and client CRUD, while
+// every email remains a bound query parameter.
+func (s *InboundService) reconcileClientValidity(emails []string) error {
+	if len(emails) == 0 {
+		return nil
+	}
+	return runSerializedTx(func(tx *gorm.DB) error {
+		if _, _, err := s.autoRenewClients(tx, emails...); err != nil {
+			return fmt.Errorf("renew mutated clients: %w", err)
+		}
+		if _, _, err := s.disableInvalidClients(tx, emails...); err != nil {
+			return fmt.Errorf("disable invalid mutated clients: %w", err)
+		}
+		return nil
+	})
+}
+
 // AddClientStat inserts a per-client accounting row, or refreshes the
 // config-derived columns on an email conflict. Xray reports traffic per
 // email, so the surviving row also acts as the shared accumulator for
@@ -404,27 +439,6 @@ func (s *InboundService) DelClientStat(tx *gorm.DB, email string) error {
 		return err
 	}
 	return tx.Where("email = ?", email).Delete(&model.NodeClientTraffic{}).Error
-}
-
-func (s *InboundService) delClientStatsByEmails(tx *gorm.DB, emails []string) error {
-	if err := adjustGroupBaselinesForRemovedTraffic(tx, emails); err != nil {
-		return err
-	}
-	const chunk = 400
-	for start := 0; start < len(emails); start += chunk {
-		end := min(start+chunk, len(emails))
-		batch := emails[start:end]
-		if err := tx.Where("email IN ?", batch).Delete(xray.ClientTraffic{}).Error; err != nil {
-			return err
-		}
-		if err := tx.Where("email IN ?", batch).Delete(&model.ClientGlobalTraffic{}).Error; err != nil {
-			return err
-		}
-		if err := tx.Where("email IN ?", batch).Delete(&model.NodeClientTraffic{}).Error; err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (s *InboundService) ResetClientTrafficByEmail(clientEmail string) error {
@@ -677,6 +691,7 @@ func (s *InboundService) DelDepletedClients(id int) error {
 	}
 	return nil
 }
+
 func (s *InboundService) GetClientTrafficTgBot(tgId int64) ([]*xray.ClientTraffic, error) {
 	db := database.GetDB()
 	var emails []string

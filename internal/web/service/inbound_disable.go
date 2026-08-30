@@ -93,14 +93,17 @@ func depletedCond(tx *gorm.DB) (string, []any) {
 	return depletedClientsCondLocal, []any{now}
 }
 
-func (s *InboundService) disableInvalidClients(tx *gorm.DB) (bool, int64, error) {
+func (s *InboundService) disableInvalidClients(tx *gorm.DB, scopedEmails ...string) (bool, int64, error) {
 	needRestart := false
 	cond, condArgs := depletedCond(tx)
 
 	var depletedRows []xray.ClientTraffic
-	err := tx.Model(xray.ClientTraffic{}).
-		Where(cond+" AND enable = ?", append(condArgs, true)...).
-		Find(&depletedRows).Error
+	query := tx.Model(xray.ClientTraffic{}).
+		Where(cond+" AND enable = ?", append(condArgs, true)...)
+	if len(scopedEmails) > 0 {
+		query = query.Where("email IN ?", scopedEmails)
+	}
+	err := query.Find(&depletedRows).Error
 	if err != nil {
 		return false, 0, err
 	}

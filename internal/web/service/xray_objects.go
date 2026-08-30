@@ -2,16 +2,18 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
 
+	"gorm.io/gorm"
+
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
-	"gorm.io/gorm"
 )
 
 // Outbounds and routing rules as first-class objects.
@@ -79,7 +81,11 @@ type RoutingRuleListView struct {
 // ---------------------------------------------------------------- outbounds
 
 func (s *XrayObjectService) ListOutbounds() (*OutboundListView, error) {
-	_, cfg, err := s.loadTemplate()
+	return s.ListOutboundsContext(context.Background())
+}
+
+func (s *XrayObjectService) ListOutboundsContext(ctx context.Context) (*OutboundListView, error) {
+	_, cfg, err := s.loadTemplateContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +93,7 @@ func (s *XrayObjectService) ListOutbounds() (*OutboundListView, error) {
 	if err != nil {
 		return nil, err
 	}
-	stored, err := combinedOutbounds(nil, base)
+	stored, err := combinedOutbounds(database.GetDB().WithContext(ctx), base)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +102,9 @@ func (s *XrayObjectService) ListOutbounds() (*OutboundListView, error) {
 		view.RuntimeError = listErr.Error()
 	} else if runtime != nil {
 		view.Runtime = runtime
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 	return view, nil
 }
@@ -229,7 +238,11 @@ func (s *XrayObjectService) DeleteOutbound(tag string) (*ObjectApplyResult, erro
 // ------------------------------------------------------------------ routing
 
 func (s *XrayObjectService) ListRoutingRules() (*RoutingRuleListView, error) {
-	_, cfg, err := s.loadTemplate()
+	return s.ListRoutingRulesContext(context.Background())
+}
+
+func (s *XrayObjectService) ListRoutingRulesContext(ctx context.Context) (*RoutingRuleListView, error) {
+	_, cfg, err := s.loadTemplateContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +250,7 @@ func (s *XrayObjectService) ListRoutingRules() (*RoutingRuleListView, error) {
 	if err != nil {
 		return nil, err
 	}
-	rules, err := combinedRoutingRules(nil, base)
+	rules, err := combinedRoutingRules(database.GetDB().WithContext(ctx), base)
 	if err != nil {
 		return nil, err
 	}
@@ -246,6 +259,9 @@ func (s *XrayObjectService) ListRoutingRules() (*RoutingRuleListView, error) {
 		view.RuntimeError = listErr.Error()
 	} else if runtime != nil {
 		view.Runtime = runtime
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 	return view, nil
 }
@@ -568,55 +584,12 @@ func withManagedRoutingRules(raw json.RawMessage) (json.RawMessage, error) {
 
 // ------------------------------------------------------------------ plumbing
 
-// mutate runs one read-modify-write cycle over the template and then makes the
-// running core match it, rolling the template back if the core refuses.
-//
-// apply drives the core's primitive for this one object rather than rebuilding
-// and diffing the whole runtime config. The legacy template JSON still has to
-// be rewritten here; the scale acceptance reports that persistence cost
-// separately instead of hiding it inside the runtime result.
-func (s *XrayObjectService) mutate(tag string, count int, edit func(cfg map[string]json.RawMessage) error, apply func() error) (*ObjectApplyResult, error) {
-	xrayTemplateWriteLock.Lock()
-	defer xrayTemplateWriteLock.Unlock()
-
-	before, cfg, err := s.loadTemplate()
-	if err != nil {
-		return nil, err
-	}
-	if err := edit(cfg); err != nil {
-		return nil, err
-	}
-	encoded, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	if err := s.settingService.saveSetting("xrayTemplateConfig", string(encoded)); err != nil {
-		return nil, err
-	}
-
-	result := &ObjectApplyResult{Tag: tag, Count: count, XrayRunning: s.xrayService.IsXrayRunning()}
-	if !result.XrayRunning {
-		return result, nil
-	}
-	switch err := apply(); {
-	case err == nil:
-		result.HotApplied = true
-	case errors.Is(err, ErrXrayHotApplyImpossible):
-		// Persisted and honest about it: the core keeps running the previous
-		// shape until someone restarts it.
-		result.RequiresRestart = true
-		s.xrayService.SetToNeedRestart()
-	default:
-		if restoreErr := s.settingService.saveSetting("xrayTemplateConfig", before); restoreErr != nil {
-			return nil, common.NewError("the core refused the change ("+err.Error()+") and the template could not be rolled back:", restoreErr)
-		}
-		return nil, common.NewError("the core refused the change, nothing was saved:", err)
-	}
-	return result, nil
+func (s *XrayObjectService) loadTemplate() (string, map[string]json.RawMessage, error) {
+	return s.loadTemplateContext(context.Background())
 }
 
-func (s *XrayObjectService) loadTemplate() (string, map[string]json.RawMessage, error) {
-	raw, err := s.settingService.GetXrayConfigTemplate()
+func (s *XrayObjectService) loadTemplateContext(ctx context.Context) (string, map[string]json.RawMessage, error) {
+	raw, err := s.settingService.GetXrayConfigTemplateContext(ctx)
 	if err != nil {
 		return "", nil, err
 	}
@@ -869,6 +842,10 @@ type XrayRuntimeView struct {
 // records. Nothing here writes: it is the page an operator opens to find out
 // whether what the panel shows is what the node is doing.
 func (s *XrayObjectService) RuntimeSnapshot() (*XrayRuntimeView, error) {
+	return s.RuntimeSnapshotContext(context.Background())
+}
+
+func (s *XrayObjectService) RuntimeSnapshotContext(ctx context.Context) (*XrayRuntimeView, error) {
 	view := &XrayRuntimeView{
 		Running:   s.xrayService.IsXrayRunning(),
 		PID:       s.xrayService.GetXrayPID(),
@@ -881,13 +858,16 @@ func (s *XrayObjectService) RuntimeSnapshot() (*XrayRuntimeView, error) {
 		view.UptimeSeconds = process.GetUptime()
 	}
 
-	inbounds, err := (&InboundService{}).GetAllInbounds()
+	inbounds, err := (&InboundService{}).GetAllInboundsContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	loaded := map[string]bool{}
 	if view.Running {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		if err := s.xrayService.withRunningAPI(func(api *xray.XrayAPI) error {
 			tags, err := api.ListInboundTags()
 			if err != nil {
@@ -906,6 +886,9 @@ func (s *XrayObjectService) RuntimeSnapshot() (*XrayRuntimeView, error) {
 		}
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	for _, inbound := range inbounds {
 		// Node inbounds belong to a remote panel's core, not this one.
 		if inbound.NodeID != nil {

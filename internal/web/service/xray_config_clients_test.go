@@ -81,6 +81,31 @@ func TestGetXrayConfig_EmptyClientListIsArrayNotNull(t *testing.T) {
 	}
 }
 
+func TestGetXrayConfig_ShadowSocks2022FirstCustomerKeepsMultiUserShape(t *testing.T) {
+	setupSettingTestDB(t)
+	in := &model.Inbound{
+		Tag:      "ss2022-empty",
+		Enable:   true,
+		Port:     43103,
+		Protocol: model.Shadowsocks,
+		// This is the actual normalized row shape: membership is absent from
+		// SQL and materialized only while building the runtime config.
+		Settings: `{"method":"2022-blake3-aes-256-gcm","password":"CwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCws=","network":"tcp,udp"}`,
+	}
+	if err := database.GetDB().Create(in).Error; err != nil {
+		t.Fatalf("create shadowsocks inbound: %v", err)
+	}
+
+	value, present := emittedClients(t, in.Tag)
+	if !present {
+		t.Fatal("SS2022 must emit clients:[] so the first runtime AddUser has a UserManager")
+	}
+	list, ok := value.([]any)
+	if !ok || len(list) != 0 {
+		t.Fatalf("SS2022 empty membership = %#v, want []", value)
+	}
+}
+
 func TestGetXrayConfig_EnabledClientsStillEmitted(t *testing.T) {
 	seedVlessInbound(t, "vless-mixed", 43102, []model.Client{
 		{Email: "live@x", ID: "22222222-2222-2222-2222-222222222222", Enable: true},
