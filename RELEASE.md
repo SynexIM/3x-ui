@@ -10,13 +10,26 @@ This fork has two release channels:
 
 ## Required order
 
-1. Release the matching SynexIM `xray-core` build first.
-2. Set the Xray release tag in the 3x-ui release workflow.
-3. Run the local verification gate and the real-node smoke journey.
-4. Push the release tag from the release branch.
-5. Confirm the GitHub Release contains every platform archive, a SHA256 file,
-   and the generated build provenance/SBOM metadata.
-6. Verify a clean install and an in-place update from the previous release.
+1. Release the matching SynexIM `xray-core` build first, and confirm that
+   Release actually carries its `Xray-*.zip` assets.
+2. Write that tag into `.xray-version`. It is the single source of truth: both
+   the Linux and the Windows build job read the file, and nothing else sets it.
+3. Run `make check-xray-pin`. It fails unless the `.xray-version` tag resolves
+   to exactly the commit `go.mod` replaces `github.com/xtls/xray-core` with, and
+   unless that Release carries all eight archives the build downloads. CI runs
+   the same script in the `verify-xray-pin` job, which gates every build job.
+4. Run the local verification gate and the real-node smoke journey.
+5. Push the release tag from the release branch.
+6. Confirm the GitHub Release contains every platform archive and its
+   `.sha256` companion.
+7. Verify a clean install and an in-place update from the previous release.
+
+## Why step 3 exists
+
+The panel is *compiled* against the xray-core commit in `go.mod` and *ships*
+the binary from the `.xray-version` Release tag. When those drift, the build is
+green, the install succeeds, and the panel only fails later over gRPC against a
+core that lacks the symbols it calls. Nothing else in the pipeline notices.
 
 The panel updater must resolve this repository's Release API and raw files. A
 release is not complete when only a Git tag exists: the tag, Release assets,

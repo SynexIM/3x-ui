@@ -943,6 +943,32 @@ setup_fail2ban() {
 # it on the next daemon-reload/start. Same pattern already used for
 # /usr/bin/x-ui elsewhere in this script. source_is_url picks cp (from a
 # file already extracted from the release tarball) vs curl (GitHub fallback).
+# The release publishes a .sha256 next to every archive. Verify it whenever it is
+# there; a release that predates the checksum only warns, so updates still work.
+verify_release_checksum() {
+    local archive="$1" asset="$2" tag="$3"
+    local sums expected actual
+    if ! command -v sha256sum > /dev/null 2>&1; then
+        echo -e "${yellow}sha256sum is not available, skipping checksum verification${plain}"
+        return 0
+    fi
+    sums=$(${curl_bin} -fsSL --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 60 \
+        "https://github.com/${XUI_REPO}/releases/download/${tag}/${asset}.sha256" 2> /dev/null)
+    expected=$(echo "${sums}" | awk 'NR==1{print $1}')
+    if [[ ! ${expected} =~ ^[0-9a-fA-F]{64}$ ]]; then
+        echo -e "${yellow}No published SHA256 for ${asset}, skipping checksum verification${plain}"
+        return 0
+    fi
+    actual=$(sha256sum "${archive}" | awk '{print $1}')
+    expected=$(echo "${expected}" | tr 'A-F' 'a-f')
+    actual=$(echo "${actual}" | tr 'A-F' 'a-f')
+    if [[ "${actual}" != "${expected}" ]]; then
+        rm -f "${archive}"
+        _fail "ERROR: Checksum mismatch for ${asset}: the download does not match the published SHA256"
+    fi
+    echo -e "${green}Checksum verified for ${asset}${plain}"
+}
+
 _install_xui_service_unit() {
     local source="$1"
     local source_is_url="$2"
@@ -1005,6 +1031,7 @@ update_x-ui() {
         rm ${xui_folder}-linux-$(arch).tar.gz -f > /dev/null 2>&1
         _fail "ERROR: Downloaded x-ui release archive is empty, please be sure that your server can access GitHub"
     fi
+    verify_release_checksum "${xui_folder}-linux-$(arch).tar.gz" "x-ui-linux-$(arch).tar.gz" "${tag_version}"
 
     if [[ -e ${xui_folder}/ ]]; then
         echo -e "${green}Stopping x-ui...${plain}"

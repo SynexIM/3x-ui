@@ -77,3 +77,8 @@ build-storybook: ## Build the static Storybook (compile-checks all stories)
 .PHONY: verify
 verify: gen-check lint typecheck test build build-storybook ## Full local gate (mirrors CI)
 	@echo "verify: OK"
+
+# Release-only gate; hits the GitHub API, so it is deliberately outside `verify`.
+.PHONY: check-xray-pin
+check-xray-pin: ## Assert .xray-version and the go.mod xray-core pin are the same commit
+	./.github/scripts/check-xray-pin.sh

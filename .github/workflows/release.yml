@@ -16,6 +16,7 @@ on:
       - "x-ui.service.debian"
       - "x-ui.service.arch"
       - "x-ui.service.rhel"
+      - ".xray-version"
       - ".github/workflows/release.yml"
   pull_request:
     paths:
@@ -27,10 +28,27 @@ on:
       - "x-ui.service.debian"
       - "x-ui.service.arch"
       - "x-ui.service.rhel"
+      - ".xray-version"
       - ".github/workflows/release.yml"
 
 jobs:
+  # The Xray binary we package and the xray-core we compile against are two
+  # separate pins. When they drift the panel still builds and installs, and only
+  # fails later over gRPC on a customer node -- so nothing ships until they match.
+  verify-xray-pin:
+    name: Verify Xray pin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Check .xray-version against the go.mod replace
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: .github/scripts/check-xray-pin.sh
+
   build:
+    needs: verify-xray-pin
     permissions:
       contents: write
     strategy:
@@ -45,7 +63,7 @@ jobs:
           - 386
           - armv5
           - s390x
-    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -124,7 +142,7 @@ jobs:
           cd x-ui/bin
 
           # Download dependencies
-          XRAY_VERSION="${XRAY_VERSION:-v26.7.28-synexim.1}"
+          XRAY_VERSION="$(tr -d '[:space:]' < "$GITHUB_WORKSPACE/.xray-version")"
           Xray_URL="https://github.com/SynexIM/xray-core/releases/download/${XRAY_VERSION}/"
           if [ "${{ matrix.platform }}" == "amd64" ]; then
             fetch ${Xray_URL}Xray-linux-64.zip
@@ -213,6 +231,7 @@ jobs:
   # =================================
   build-windows:
     name: Build for Windows
+    needs: verify-xray-pin
     permissions:
       contents: write
     strategy:
@@ -288,7 +307,7 @@ jobs:
           cd x-ui\bin
 
           # Download Xray for Windows
-          $xrayVersion = if ($env:XRAY_VERSION) { $env:XRAY_VERSION } else { "v26.7.28-synexim.1" }
+          $xrayVersion = (Get-Content "$env:GITHUB_WORKSPACE\.xray-version" -Raw).Trim()
           $Xray_URL = "https://github.com/SynexIM/xray-core/releases/download/$xrayVersion/"
           Invoke-WebRequest @retry -Uri "${Xray_URL}Xray-windows-64.zip" -OutFile "Xray-windows-64.zip"
           Expand-Archive -Path "Xray-windows-64.zip" -DestinationPath .
@@ -355,7 +374,7 @@ jobs:
     name: Publish rolling dev release
     needs: [build, build-windows]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     # Serialize racing pushes; never cancel an in-flight upload, or the dev
