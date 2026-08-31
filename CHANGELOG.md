@@ -2,7 +2,7 @@
 
 All notable changes to the SynexIM fork are recorded here.
 
-## v3.7.0 — 2026-09-01
+## v3.7.1 — 2026-09-01
 
 First stable release published from this fork's own channel.
 
@@ -27,6 +27,13 @@ First stable release published from this fork's own channel.
 - Xray pinned to SynexIM/xray-core `v26.7.28-synexim.2`.
 - Updater, repository links, Release assets, and container namespace are the
   fork's own and are not mixed with the upstream 3x-ui release channel.
+
+### Fixed
+- `internal/config/version` was still `3.6.0` while the release was tagged
+  `v3.7.0`, so the panel reported the old version and the updater saw
+  `releases/latest` as permanently newer. `v3.7.0` is superseded by this tag;
+  the `Release policy` workflow now fails any tag whose embedded version
+  disagrees with it.
 
 ### Notes
 - The tag carries no `-suffix` on purpose: `release.yml` marks any hyphenated

@@ -35,3 +35,20 @@ jobs:
             echo "tag $tag points to $target, not $GITHUB_SHA" >&2
             exit 1
           fi
+
+      - name: Validate the embedded panel version matches the tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          # internal/config/version is embedded with //go:embed and is what the
+          # panel reports in the UI and to the updater. The updater compares it
+          # against releases/latest, so a stale file means "update available"
+          # forever and an update that never appears to take.
+          tag="${GITHUB_REF_NAME#v}"
+          embedded="$(tr -d '[:space:]' < internal/config/version)"
+          if [[ "$embedded" != "$tag" ]]; then
+            echo "MISMATCH: tag is $GITHUB_REF_NAME but internal/config/version says $embedded" >&2
+            echo "  The panel would report $embedded while the release is $GITHUB_REF_NAME." >&2
+            exit 1
+          fi
+          echo "OK: internal/config/version == $embedded == $GITHUB_REF_NAME"

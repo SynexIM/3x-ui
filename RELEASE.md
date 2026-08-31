@@ -18,11 +18,17 @@ This fork has two release channels:
    to exactly the commit `go.mod` replaces `github.com/xtls/xray-core` with, and
    unless that Release carries all eight archives the build downloads. CI runs
    the same script in the `verify-xray-pin` job, which gates every build job.
-4. Run the local verification gate and the real-node smoke journey.
-5. Push the release tag from the release branch.
-6. Confirm the GitHub Release contains every platform archive and its
+4. Bump `internal/config/version` to the release version **without** the `v`
+   prefix. It is embedded with `//go:embed` and is what the panel reports in
+   its UI and to the updater; a stale file means the panel advertises an old
+   version, the updater sees `releases/latest` as permanently newer, and an
+   update never appears to take. The `Release policy` workflow fails the tag
+   when this file and the tag disagree.
+5. Run the local verification gate and the real-node smoke journey.
+6. Push the release tag from the release branch.
+7. Confirm the GitHub Release contains every platform archive and its
    `.sha256` companion.
-7. Verify a clean install and an in-place update from the previous release.
+8. Verify a clean install and an in-place update from the previous release.
 
 ## Why step 3 exists
 
