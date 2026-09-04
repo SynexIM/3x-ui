@@ -499,8 +499,8 @@ func validateDeclarativeRequest(request *DeclarativeApplyRequest) error {
 			return fmt.Errorf("unsupported inbound protocol %q", inbound.Protocol)
 		}
 		for _, client := range inbound.Clients {
-			if client.Email == "" || client.UUID == "" || client.PirBps == 0 {
-				return errors.New("each client requires email, uuid and pirBps")
+			if client.Email == "" || client.UUID == "" {
+				return errors.New("each client requires email and uuid")
 			}
 			if client.CirBps > client.PirBps {
 				return errors.New("client cirBps must not exceed pirBps")

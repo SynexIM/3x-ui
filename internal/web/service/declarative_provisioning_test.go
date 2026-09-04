@@ -100,32 +100,25 @@ func TestDeclarativeRequestRejectsDanglingRouteAndRevisionConflictInputs(t *test
 	}
 }
 
-func TestDeclarativeRequestRejectsMisspelledRateLimitField(t *testing.T) {
-	raw := `{
-		"revision": 1,
-		"config": {
-			"nodeBandwidthBps": 1000000000,
-			"inbounds": [{
-				"tag": "entry",
-				"protocol": "vless",
-				"listenPort": 443,
-				"shareAddr": {"strategy": "custom", "host": "edge.example.com", "port": 443},
-				"settings": {},
-				"streamSettings": {},
-				"clients": [{
-					"email": "line@example.invalid",
-					"uuid": "11111111-1111-1111-1111-111111111111",
-					"pir_bps": 100000000
-				}]
-			}]
-		}
-	}`
-	request := &DeclarativeApplyRequest{}
-	if err := json.Unmarshal([]byte(raw), request); err != nil {
-		t.Fatal(err)
+func TestDeclarativeRequestAllowsUnlimitedRateTemplate(t *testing.T) {
+	request := &DeclarativeApplyRequest{Revision: 1}
+	request.Config.Inbounds = []DeclarativeInbound{{
+		Tag:        "entry",
+		Protocol:   "vless",
+		ListenPort: 443,
+		ShareAddr:  DeclarativeShareAddress{Strategy: "custom", Host: "edge.example.com", Port: 443},
+		Clients: []DeclarativeClient{{
+			Email: "line@example.invalid",
+			UUID:  "11111111-1111-1111-1111-111111111111",
+		}},
+	}}
+	if err := validateDeclarativeRequest(request); err != nil {
+		t.Fatalf("zero PIR/CIR/CBS must mean unlimited: %v", err)
 	}
+
+	request.Config.Inbounds[0].Clients[0].CirBps = 1
 	if err := validateDeclarativeRequest(request); err == nil {
-		t.Fatal("misspelled pirBps was silently accepted")
+		t.Fatal("CIR without PIR must be rejected")
 	}
 }
 
