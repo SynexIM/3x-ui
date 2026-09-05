@@ -4,6 +4,8 @@ github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/SynexIM/xray-core v0.0.0-20260831193609-3e89ac04dac5 h1:n7ZgmQ39denVf49laKeqzS9kpNhJnGXCop/ADd2dzr8=
 github.com/SynexIM/xray-core v0.0.0-20260831193609-3e89ac04dac5/go.mod h1:70+y+QBV23aUpqPhrD+NI4No8UURxYuFajDrme9lqHY=
+github.com/SynexIM/xray-core v0.0.0-20260901043321-ee52112658ce h1:0YBUA1LwdjkzL4cl3y8upH8DVL0KSFWS2vZjo9CLFcs=
+github.com/SynexIM/xray-core v0.0.0-20260901043321-ee52112658ce/go.mod h1:70+y+QBV23aUpqPhrD+NI4No8UURxYuFajDrme9lqHY=
 github.com/alexbrainman/sspi v0.0.0-20250919150558-7d374ff0d59e h1:4dAU9FXIyQktpoUAgOJK3OTFc/xug0PCXYCqU0FgDKI=
 github.com/alexbrainman/sspi v0.0.0-20250919150558-7d374ff0d59e/go.mod h1:cEWa1LVoE5KvSD9ONXsZrj0z6KqySlCCNKHlLzbqAt4=
 github.com/andybalholm/brotli v1.2.2 h1:HzTuoo2ErYQqf5qvcJInB8uvqSVxRttzkFexPWtnceM=
