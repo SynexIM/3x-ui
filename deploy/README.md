@@ -29,3 +29,15 @@ secure random / default):
 `XUI_DB_TYPE` (`sqlite`|`postgres`), `XUI_DB_DSN`.
 
 The resulting credentials are written to `/etc/x-ui/install-result.env` (mode 600).
+
+## Omni Proxy 固定版本一键安装
+
+在 Ubuntu 服务器上以 root 执行：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/SynexIM/3x-ui/v3.7.2/deploy/install-omni-node.sh)
+```
+
+该入口固定安装 `v3.7.2`，默认使用 HTTP、面板端口 `2053`，并为管理账号、
+密码、Web 路径和 API token 生成独立随机值。安装后执行
+`sudo cat /etc/x-ui/install-result.env` 查看需要录入控制面的信息。
