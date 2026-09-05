@@ -69,7 +69,7 @@ func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/nord/:action", a.nord)
 	g.POST("/update", a.updateSetting)
 	g.GET("/status", a.declarativeStatus)
-	g.GET("/delivery/:email", a.declarativeDelivery)
+	g.GET("/delivery/:email", a.resourceDelivery)
 	g.POST("/resetOutboundsTraffic", a.resetOutboundsTraffic)
 	g.POST("/testOutbound", a.testOutbound)
 	g.POST("/testOutbounds", a.testOutbounds)
@@ -314,9 +314,9 @@ func (a *XraySettingController) declarativeStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, status)
 }
 
-func (a *XraySettingController) declarativeDelivery(c *gin.Context) {
+func (a *XraySettingController) resourceDelivery(c *gin.Context) {
 	email := c.Param("email")
-	inbounds, err := a.ProvisioningService.DeliveryInbounds(email)
+	links, err := a.InboundService.GetAllClientLinks(resolveHost(c), email)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"reason": err.Error()})
 		return
@@ -325,32 +325,61 @@ func (a *XraySettingController) declarativeDelivery(c *gin.Context) {
 		AccountEmail: email,
 		Connections:  []service.DeclarativeConnection{},
 	}
-	for _, inbound := range inbounds {
-		links := strings.Split(strings.TrimSpace(a.SubService.GetLink(inbound, email)), "\n")
-		for index, link := range links {
-			link = strings.TrimSpace(link)
-			if link == "" {
-				continue
-			}
-			png, err := qrcode.Encode(link, qrcode.Medium, 256)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
-				return
-			}
-			dataURL := "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
-			label := inbound.Tag
-			if index > 0 {
-				label = fmt.Sprintf("%s-%d", inbound.Tag, index+1)
-			}
-			delivery.Connections = append(delivery.Connections, service.DeclarativeConnection{
-				Protocol: string(inbound.Protocol),
-				Label:    label,
-				URI:      link,
-				QRData:   &dataURL,
-			})
+	for index, link := range links {
+		link = strings.TrimSpace(link)
+		protocol := deliveryProtocolForLink(link)
+		if protocol == "" {
+			continue
+		}
+		if err := appendDeliveryConnection(
+			delivery,
+			protocol,
+			fmt.Sprintf("%s-%d", protocol, index+1),
+			link,
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"reason": err.Error()})
+			return
 		}
 	}
+	if len(delivery.Connections) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"reason": "account has no deliverable resource links"})
+		return
+	}
 	c.JSON(http.StatusOK, delivery)
+}
+
+func deliveryProtocolForLink(link string) string {
+	scheme, _, ok := strings.Cut(strings.TrimSpace(link), ":")
+	if !ok {
+		return ""
+	}
+	switch strings.ToLower(scheme) {
+	case "vless":
+		return "vless"
+	case "vmess":
+		return "vmess"
+	case "ss":
+		return "shadowsocks"
+	case "socks5", "http", "https", "tg":
+		return "mixed"
+	default:
+		return ""
+	}
+}
+
+func appendDeliveryConnection(delivery *service.DeclarativeDelivery, protocol, label, link string) error {
+	png, err := qrcode.Encode(link, qrcode.Medium, 256)
+	if err != nil {
+		return err
+	}
+	dataURL := "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+	delivery.Connections = append(delivery.Connections, service.DeclarativeConnection{
+		Protocol: protocol,
+		Label:    label,
+		URI:      link,
+		QRData:   &dataURL,
+	})
+	return nil
 }
 
 // getDefaultXrayConfig retrieves the default Xray configuration.
