@@ -1048,6 +1048,18 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "type": "integer"
       },
+      "download_bandwidth_bps": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "download_burst_bytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "download_peak_bps": {
+        "format": "int64",
+        "type": "integer"
+      },
       "egress_tag": {
         "type": "string"
       },
@@ -1139,6 +1151,18 @@ export const SCHEMAS: Record<string, unknown> = {
         "description": "Last update timestamp",
         "format": "int64",
         "type": "integer"
+      },
+      "upload_bandwidth_bps": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "upload_burst_bytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "upload_peak_bps": {
+        "format": "int64",
+        "type": "integer"
       }
     },
     "required": [
@@ -1216,6 +1240,18 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "type": "integer"
       },
+      "download_bandwidth_bps": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "download_burst_bytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "download_peak_bps": {
+        "format": "int64",
+        "type": "integer"
+      },
       "egress_tag": {
         "type": "string"
       },
@@ -1284,6 +1320,18 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "type": "integer"
       },
+      "upload_bandwidth_bps": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "upload_burst_bytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "upload_peak_bps": {
+        "format": "int64",
+        "type": "integer"
+      },
       "uuid": {
         "type": "string"
       }
@@ -1299,6 +1347,9 @@ export const SCHEMAS: Record<string, unknown> = {
       "committed_burst_bytes",
       "conn_limit",
       "createdAt",
+      "download_bandwidth_bps",
+      "download_burst_bytes",
+      "download_peak_bps",
       "egress_tag",
       "email",
       "enable",
@@ -1321,6 +1372,9 @@ export const SCHEMAS: Record<string, unknown> = {
       "tgId",
       "totalGB",
       "updatedAt",
+      "upload_bandwidth_bps",
+      "upload_burst_bytes",
+      "upload_peak_bps",
       "uuid"
     ],
     "type": "object"
@@ -1333,6 +1387,87 @@ export const SCHEMAS: Record<string, unknown> = {
     },
     "required": [
       "tag"
+    ],
+    "type": "object"
+  },
+  "ClientRuntimePatch": {
+    "description": "Omitted fields stay unchanged; explicit zero clears only that runtime limit.",
+    "properties": {
+      "bandwidth_bps": {
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
+      },
+      "committed_bps": {
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
+      },
+      "committed_burst_bytes": {
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
+      },
+      "conn_limit": {
+        "nullable": true,
+        "type": "integer"
+      },
+      "download_bandwidth_bps": {
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
+      },
+      "download_burst_bytes": {
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
+      },
+      "download_peak_bps": {
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
+      },
+      "egress_tag": {
+        "nullable": true,
+        "type": "string"
+      },
+      "upload_bandwidth_bps": {
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
+      },
+      "upload_burst_bytes": {
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
+      },
+      "upload_peak_bps": {
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  },
+  "ClientRuntimeReceipt": {
+    "properties": {
+      "hotApplied": {
+        "example": true,
+        "type": "boolean"
+      },
+      "nodePending": {
+        "example": false,
+        "type": "boolean"
+      },
+      "requiresRestart": {
+        "example": false,
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "hotApplied",
+      "nodePending",
+      "requiresRestart"
     ],
     "type": "object"
   },

@@ -24,12 +24,13 @@ func TestProvisioningEndpointsRequireHotOnlyReconciliation(t *testing.T) {
 	}
 
 	required := map[string]bool{
-		"create":     false,
-		"update":     false,
-		"attach":     false,
-		"detach":     false,
-		"delete":     false,
-		"bulkCreate": false,
+		"create":        false,
+		"update":        false,
+		"updateRuntime": false,
+		"attach":        false,
+		"detach":        false,
+		"delete":        false,
+		"bulkCreate":    false,
 	}
 	for _, decl := range parsed.Decls {
 		fn, ok := decl.(*ast.FuncDecl)

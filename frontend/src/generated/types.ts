@@ -254,6 +254,9 @@ export interface Client {
   committed_burst_bytes?: number;
   conn_limit?: number;
   created_at?: number;
+  download_bandwidth_bps?: number;
+  download_burst_bytes?: number;
+  download_peak_bps?: number;
   egress_tag?: string;
   email: string;
   enable: boolean;
@@ -276,6 +279,9 @@ export interface Client {
   tgId: number;
   totalGB: number;
   updated_at?: number;
+  upload_bandwidth_bps?: number;
+  upload_burst_bytes?: number;
+  upload_peak_bps?: number;
 }
 
 export interface ClientInbound {
@@ -296,6 +302,9 @@ export interface ClientRecord {
   committed_burst_bytes: number;
   conn_limit: number;
   createdAt: number;
+  download_bandwidth_bps: number;
+  download_burst_bytes: number;
+  download_peak_bps: number;
   egress_tag: string;
   email: string;
   enable: boolean;
@@ -318,11 +327,34 @@ export interface ClientRecord {
   tgId: number;
   totalGB: number;
   updatedAt: number;
+  upload_bandwidth_bps: number;
+  upload_burst_bytes: number;
+  upload_peak_bps: number;
   uuid: string;
 }
 
 export interface ClientReverse {
   tag: string;
+}
+
+export interface ClientRuntimePatch {
+  bandwidth_bps?: number | null;
+  committed_bps?: number | null;
+  committed_burst_bytes?: number | null;
+  conn_limit?: number | null;
+  download_bandwidth_bps?: number | null;
+  download_burst_bytes?: number | null;
+  download_peak_bps?: number | null;
+  egress_tag?: string | null;
+  upload_bandwidth_bps?: number | null;
+  upload_burst_bytes?: number | null;
+  upload_peak_bps?: number | null;
+}
+
+export interface ClientRuntimeReceipt {
+  hotApplied: boolean;
+  nodePending: boolean;
+  requiresRestart: boolean;
 }
 
 export interface ClientTraffic {

@@ -330,7 +330,7 @@ func migrateSyncOrphanColumns() error {
 // migrateClientRateLimitColumns backfills the PIR/CIR/CBS columns AutoMigrate
 // adds: SQLite leaves pre-existing rows NULL, and NULL is not "unlimited".
 func migrateClientRateLimitColumns() error {
-	cols := []string{"bandwidth_bps", "committed_bps", "committed_burst_bytes", "conn_limit"}
+	cols := model.ClientRateLimitKeys
 	for _, col := range cols {
 		if !db.Migrator().HasColumn(&model.ClientRecord{}, col) {
 			continue

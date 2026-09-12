@@ -22,22 +22,28 @@ import (
 // so the list payload stays compact even when the panel manages thousands
 // of clients. Modals that need the full record still call /get/:email.
 type ClientSlim struct {
-	Email        string              `json:"email"`
-	SubID        string              `json:"subId"`
-	Enable       bool                `json:"enable"`
-	TotalGB      int64               `json:"totalGB"`
-	ExpiryTime   int64               `json:"expiryTime"`
-	LimitIP      int                 `json:"limitIp"`
-	Reset        int                 `json:"reset"`
-	Group        string              `json:"group,omitempty"`
-	Comment      string              `json:"comment,omitempty"`
-	BandwidthBps uint64              `json:"bandwidth_bps"`
-	ConnLimit    uint32              `json:"conn_limit"`
-	EgressTag    string              `json:"egress_tag"`
-	InboundIds   []int               `json:"inboundIds"`
-	Traffic      *xray.ClientTraffic `json:"traffic,omitempty"`
-	CreatedAt    int64               `json:"createdAt"`
-	UpdatedAt    int64               `json:"updatedAt"`
+	Email                string              `json:"email"`
+	SubID                string              `json:"subId"`
+	Enable               bool                `json:"enable"`
+	TotalGB              int64               `json:"totalGB"`
+	ExpiryTime           int64               `json:"expiryTime"`
+	LimitIP              int                 `json:"limitIp"`
+	Reset                int                 `json:"reset"`
+	Group                string              `json:"group,omitempty"`
+	Comment              string              `json:"comment,omitempty"`
+	BandwidthBps         uint64              `json:"bandwidth_bps"`
+	UploadBandwidthBps   uint64              `json:"upload_bandwidth_bps"`
+	UploadPeakBps        uint64              `json:"upload_peak_bps"`
+	UploadBurstBytes     uint64              `json:"upload_burst_bytes"`
+	DownloadBandwidthBps uint64              `json:"download_bandwidth_bps"`
+	DownloadPeakBps      uint64              `json:"download_peak_bps"`
+	DownloadBurstBytes   uint64              `json:"download_burst_bytes"`
+	ConnLimit            uint32              `json:"conn_limit"`
+	EgressTag            string              `json:"egress_tag"`
+	InboundIds           []int               `json:"inboundIds"`
+	Traffic              *xray.ClientTraffic `json:"traffic,omitempty"`
+	CreatedAt            int64               `json:"createdAt"`
+	UpdatedAt            int64               `json:"updatedAt"`
 }
 
 // ClientPageParams are the query params accepted by /panel/api/clients/list/paged.
@@ -489,22 +495,28 @@ func (q clientQuery) pageRows(params ClientPageParams, onlines []string, offset,
 			continue
 		}
 		items = append(items, ClientSlim{
-			Email:        rec.Email,
-			SubID:        rec.SubID,
-			Enable:       rec.Enable,
-			TotalGB:      rec.TotalGB,
-			ExpiryTime:   rec.ExpiryTime,
-			LimitIP:      rec.LimitIP,
-			Reset:        rec.Reset,
-			Group:        rec.Group,
-			Comment:      rec.Comment,
-			BandwidthBps: rec.BandwidthBps,
-			ConnLimit:    rec.ConnLimit,
-			EgressTag:    rec.EgressTag,
-			InboundIds:   attachments[rec.Id],
-			Traffic:      trafficByEmail[rec.Email],
-			CreatedAt:    rec.CreatedAt,
-			UpdatedAt:    rec.UpdatedAt,
+			Email:                rec.Email,
+			SubID:                rec.SubID,
+			Enable:               rec.Enable,
+			TotalGB:              rec.TotalGB,
+			ExpiryTime:           rec.ExpiryTime,
+			LimitIP:              rec.LimitIP,
+			Reset:                rec.Reset,
+			Group:                rec.Group,
+			Comment:              rec.Comment,
+			BandwidthBps:         rec.BandwidthBps,
+			UploadBandwidthBps:   rec.UploadBandwidthBps,
+			UploadPeakBps:        rec.UploadPeakBps,
+			UploadBurstBytes:     rec.UploadBurstBytes,
+			DownloadBandwidthBps: rec.DownloadBandwidthBps,
+			DownloadPeakBps:      rec.DownloadPeakBps,
+			DownloadBurstBytes:   rec.DownloadBurstBytes,
+			ConnLimit:            rec.ConnLimit,
+			EgressTag:            rec.EgressTag,
+			InboundIds:           attachments[rec.Id],
+			Traffic:              trafficByEmail[rec.Email],
+			CreatedAt:            rec.CreatedAt,
+			UpdatedAt:            rec.UpdatedAt,
 		})
 	}
 	return items, nil

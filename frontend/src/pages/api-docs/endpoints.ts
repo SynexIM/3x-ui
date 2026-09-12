@@ -40,6 +40,7 @@ export interface Endpoint {
   errorResponse?: string;
   errorStatus?: number;
   responseSchema?: string;
+  requestSchema?: string;
   responseSchemaArray?: boolean;
 }
 
@@ -618,6 +619,16 @@ export const sections: readonly Section[] = [
         ],
         body: '{\n  "email": "alice@example.com",\n  "totalGB": 107374182400,\n  "expiryTime": 1767225600000,\n  "tgId": 123456789,\n  "bandwidth_bps": 100000000,\n  "committed_bps": 10000000,\n  "committed_burst_bytes": 5000000,\n  "rateUnit": "Mbps",\n  "burstUnit": "MB",\n  "enable": true\n}',
         response: '{\n  "success": true,\n  "msg": "Client updated"\n}',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/clients/runtime/:email',
+        summary: 'Patch runtime rate limits, connection limit and egress tag for one identity. Omitted fields are preserved; zero clears a limit. Credentials, validity, traffic quota and per-inbound flow are preserved. A failed or pending receipt requires reconciliation before reporting the change as usable.',
+        requestSchema: 'ClientRuntimePatch',
+        responseSchema: 'ClientRuntimeReceipt',
+        params: [
+          { name: 'email', in: 'path', type: 'string', desc: 'Stable client identity.' },
+        ],
       },
       {
         method: 'POST',

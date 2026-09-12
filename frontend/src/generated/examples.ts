@@ -248,6 +248,9 @@ export const EXAMPLES: Record<string, unknown> = {
     "committed_burst_bytes": 0,
     "conn_limit": 0,
     "created_at": 0,
+    "download_bandwidth_bps": 0,
+    "download_burst_bytes": 0,
+    "download_peak_bps": 0,
     "egress_tag": "",
     "email": "",
     "enable": false,
@@ -269,7 +272,10 @@ export const EXAMPLES: Record<string, unknown> = {
     "subId": "",
     "tgId": 0,
     "totalGB": 0,
-    "updated_at": 0
+    "updated_at": 0,
+    "upload_bandwidth_bps": 0,
+    "upload_burst_bytes": 0,
+    "upload_peak_bps": 0
   },
   "ClientInbound": {
     "clientId": 0,
@@ -288,6 +294,9 @@ export const EXAMPLES: Record<string, unknown> = {
     "committed_burst_bytes": 0,
     "conn_limit": 0,
     "createdAt": 0,
+    "download_bandwidth_bps": 0,
+    "download_burst_bytes": 0,
+    "download_peak_bps": 0,
     "egress_tag": "",
     "email": "",
     "enable": false,
@@ -310,10 +319,31 @@ export const EXAMPLES: Record<string, unknown> = {
     "tgId": 0,
     "totalGB": 0,
     "updatedAt": 0,
+    "upload_bandwidth_bps": 0,
+    "upload_burst_bytes": 0,
+    "upload_peak_bps": 0,
     "uuid": ""
   },
   "ClientReverse": {
     "tag": ""
+  },
+  "ClientRuntimePatch": {
+    "bandwidth_bps": null,
+    "committed_bps": null,
+    "committed_burst_bytes": null,
+    "conn_limit": null,
+    "download_bandwidth_bps": null,
+    "download_burst_bytes": null,
+    "download_peak_bps": null,
+    "egress_tag": null,
+    "upload_bandwidth_bps": null,
+    "upload_burst_bytes": null,
+    "upload_peak_bps": null
+  },
+  "ClientRuntimeReceipt": {
+    "hotApplied": true,
+    "nodePending": false,
+    "requiresRestart": false
   },
   "ClientTraffic": {
     "down": 2097152,

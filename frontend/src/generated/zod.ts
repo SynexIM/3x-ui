@@ -270,6 +270,9 @@ export const ClientSchema = z.object({
   committed_burst_bytes: z.number().int().optional(),
   conn_limit: z.number().int().optional(),
   created_at: z.number().int().optional(),
+  download_bandwidth_bps: z.number().int().optional(),
+  download_burst_bytes: z.number().int().optional(),
+  download_peak_bps: z.number().int().optional(),
   egress_tag: z.string().optional(),
   email: z.string(),
   enable: z.boolean(),
@@ -292,6 +295,9 @@ export const ClientSchema = z.object({
   tgId: z.number().int(),
   totalGB: z.number().int(),
   updated_at: z.number().int().optional(),
+  upload_bandwidth_bps: z.number().int().optional(),
+  upload_burst_bytes: z.number().int().optional(),
+  upload_peak_bps: z.number().int().optional(),
 });
 export type Client = z.infer<typeof ClientSchema>;
 
@@ -314,6 +320,9 @@ export const ClientRecordSchema = z.object({
   committed_burst_bytes: z.number().int(),
   conn_limit: z.number().int(),
   createdAt: z.number().int(),
+  download_bandwidth_bps: z.number().int(),
+  download_burst_bytes: z.number().int(),
+  download_peak_bps: z.number().int(),
   egress_tag: z.string(),
   email: z.string(),
   enable: z.boolean(),
@@ -336,6 +345,9 @@ export const ClientRecordSchema = z.object({
   tgId: z.number().int(),
   totalGB: z.number().int(),
   updatedAt: z.number().int(),
+  upload_bandwidth_bps: z.number().int(),
+  upload_burst_bytes: z.number().int(),
+  upload_peak_bps: z.number().int(),
   uuid: z.string(),
 });
 export type ClientRecord = z.infer<typeof ClientRecordSchema>;
@@ -344,6 +356,28 @@ export const ClientReverseSchema = z.object({
   tag: z.string(),
 });
 export type ClientReverse = z.infer<typeof ClientReverseSchema>;
+
+export const ClientRuntimePatchSchema = z.object({
+  bandwidth_bps: z.number().int().nullable().optional(),
+  committed_bps: z.number().int().nullable().optional(),
+  committed_burst_bytes: z.number().int().nullable().optional(),
+  conn_limit: z.number().int().nullable().optional(),
+  download_bandwidth_bps: z.number().int().nullable().optional(),
+  download_burst_bytes: z.number().int().nullable().optional(),
+  download_peak_bps: z.number().int().nullable().optional(),
+  egress_tag: z.string().nullable().optional(),
+  upload_bandwidth_bps: z.number().int().nullable().optional(),
+  upload_burst_bytes: z.number().int().nullable().optional(),
+  upload_peak_bps: z.number().int().nullable().optional(),
+});
+export type ClientRuntimePatch = z.infer<typeof ClientRuntimePatchSchema>;
+
+export const ClientRuntimeReceiptSchema = z.object({
+  hotApplied: z.boolean(),
+  nodePending: z.boolean(),
+  requiresRestart: z.boolean(),
+});
+export type ClientRuntimeReceipt = z.infer<typeof ClientRuntimeReceiptSchema>;
 
 export const ClientTrafficSchema = z.object({
   down: z.number().int(),

@@ -124,7 +124,20 @@ function buildOperation(ep, tag) {
 
   if (params.length > 0) op.parameters = params;
 
-  if (ep.body || bodyByMediaType.size > 0) {
+  if (ep.requestSchema) {
+    if (!SCHEMAS[ep.requestSchema] || !EXAMPLES[ep.requestSchema]) {
+      throw new Error(`${ep.method} ${ep.path}: requestSchema has no generated schema/example`);
+    }
+    op.requestBody = {
+      required: true,
+      content: {
+        'application/json': {
+          schema: { $ref: `#/components/schemas/${ep.requestSchema}` },
+          example: EXAMPLES[ep.requestSchema],
+        },
+      },
+    };
+  } else if (ep.body || bodyByMediaType.size > 0) {
     const example = tryParseJson(ep.body);
     const content = {};
     let anyRequired = false;

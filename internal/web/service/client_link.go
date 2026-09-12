@@ -59,6 +59,12 @@ func applyClientRecordMerge(row *model.ClientRecord, incoming *model.ClientRecor
 	row.BandwidthBps = incoming.BandwidthBps
 	row.CommittedBps = incoming.CommittedBps
 	row.CommittedBurstBytes = incoming.CommittedBurstBytes
+	row.UploadBandwidthBps = incoming.UploadBandwidthBps
+	row.UploadPeakBps = incoming.UploadPeakBps
+	row.UploadBurstBytes = incoming.UploadBurstBytes
+	row.DownloadBandwidthBps = incoming.DownloadBandwidthBps
+	row.DownloadPeakBps = incoming.DownloadPeakBps
+	row.DownloadBurstBytes = incoming.DownloadBurstBytes
 	row.ConnLimit = incoming.ConnLimit
 	row.RateUnit = incoming.RateUnit
 	row.BurstUnit = incoming.BurstUnit

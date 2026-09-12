@@ -1027,11 +1027,17 @@ type Client struct {
 
 	// PIR/CIR/CBS per-user limits, 0 = unlimited. The json names are xray's
 	// protocol.User field names verbatim — renaming silently drops the limit.
-	BandwidthBps        uint64 `json:"bandwidth_bps,omitempty" form:"bandwidth_bps"`
-	CommittedBps        uint64 `json:"committed_bps,omitempty" form:"committed_bps"`
-	CommittedBurstBytes uint64 `json:"committed_burst_bytes,omitempty" form:"committed_burst_bytes"`
-	ConnLimit           uint32 `json:"conn_limit,omitempty" form:"conn_limit"`
-	EgressTag           string `json:"egress_tag,omitempty" form:"egress_tag"`
+	BandwidthBps         uint64 `json:"bandwidth_bps,omitempty" form:"bandwidth_bps"`
+	CommittedBps         uint64 `json:"committed_bps,omitempty" form:"committed_bps"`
+	CommittedBurstBytes  uint64 `json:"committed_burst_bytes,omitempty" form:"committed_burst_bytes"`
+	UploadBandwidthBps   uint64 `json:"upload_bandwidth_bps,omitempty" form:"upload_bandwidth_bps"`
+	UploadPeakBps        uint64 `json:"upload_peak_bps,omitempty" form:"upload_peak_bps"`
+	UploadBurstBytes     uint64 `json:"upload_burst_bytes,omitempty" form:"upload_burst_bytes"`
+	DownloadBandwidthBps uint64 `json:"download_bandwidth_bps,omitempty" form:"download_bandwidth_bps"`
+	DownloadPeakBps      uint64 `json:"download_peak_bps,omitempty" form:"download_peak_bps"`
+	DownloadBurstBytes   uint64 `json:"download_burst_bytes,omitempty" form:"download_burst_bytes"`
+	ConnLimit            uint32 `json:"conn_limit,omitempty" form:"conn_limit"`
+	EgressTag            string `json:"egress_tag,omitempty" form:"egress_tag"`
 
 	// Display units the operator picked, so reopening the form shows the number
 	// they typed. camelCase keeps them clearly out of xray's snake_case set.
@@ -1068,13 +1074,19 @@ type ClientRecord struct {
 	UpdatedAt    int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
 	// Per-client limits (see Client). One line = one client, so all five
 	// protocols it is attached to share the same tier.
-	BandwidthBps        uint64 `json:"bandwidth_bps" gorm:"column:bandwidth_bps;default:0"`
-	CommittedBps        uint64 `json:"committed_bps" gorm:"column:committed_bps;default:0"`
-	CommittedBurstBytes uint64 `json:"committed_burst_bytes" gorm:"column:committed_burst_bytes;default:0"`
-	ConnLimit           uint32 `json:"conn_limit" gorm:"column:conn_limit;default:0"`
-	RateUnit            string `json:"rateUnit" gorm:"column:rate_unit;default:''"`
-	BurstUnit           string `json:"burstUnit" gorm:"column:burst_unit;default:''"`
-	EgressTag           string `json:"egress_tag" gorm:"column:egress_tag;default:''"`
+	BandwidthBps         uint64 `json:"bandwidth_bps" gorm:"column:bandwidth_bps;default:0"`
+	CommittedBps         uint64 `json:"committed_bps" gorm:"column:committed_bps;default:0"`
+	CommittedBurstBytes  uint64 `json:"committed_burst_bytes" gorm:"column:committed_burst_bytes;default:0"`
+	UploadBandwidthBps   uint64 `json:"upload_bandwidth_bps" gorm:"column:upload_bandwidth_bps;default:0"`
+	UploadPeakBps        uint64 `json:"upload_peak_bps" gorm:"column:upload_peak_bps;default:0"`
+	UploadBurstBytes     uint64 `json:"upload_burst_bytes" gorm:"column:upload_burst_bytes;default:0"`
+	DownloadBandwidthBps uint64 `json:"download_bandwidth_bps" gorm:"column:download_bandwidth_bps;default:0"`
+	DownloadPeakBps      uint64 `json:"download_peak_bps" gorm:"column:download_peak_bps;default:0"`
+	DownloadBurstBytes   uint64 `json:"download_burst_bytes" gorm:"column:download_burst_bytes;default:0"`
+	ConnLimit            uint32 `json:"conn_limit" gorm:"column:conn_limit;default:0"`
+	RateUnit             string `json:"rateUnit" gorm:"column:rate_unit;default:''"`
+	BurstUnit            string `json:"burstUnit" gorm:"column:burst_unit;default:''"`
+	EgressTag            string `json:"egress_tag" gorm:"column:egress_tag;default:''"`
 	// Owned solely by the node-snapshot sweep, which soft-orphans instead of
 	// deleting; orphans from any other cause stay at zero and are never reaped.
 	SyncOrphanedAt int64 `json:"-" gorm:"column:sync_orphaned_at;default:0"`
@@ -1082,7 +1094,7 @@ type ClientRecord struct {
 
 // ClientRateLimitKeys are the xray-facing limit keys, in one place so every
 // emit path (config.json, mixed accounts, runtime AddUser) stays in sync.
-var ClientRateLimitKeys = []string{"bandwidth_bps", "committed_bps", "committed_burst_bytes", "conn_limit"}
+var ClientRateLimitKeys = []string{"bandwidth_bps", "committed_bps", "committed_burst_bytes", "conn_limit", "upload_bandwidth_bps", "upload_peak_bps", "upload_burst_bytes", "download_bandwidth_bps", "download_peak_bps", "download_burst_bytes"}
 
 func (ClientRecord) TableName() string { return "clients" }
 
@@ -1247,13 +1259,19 @@ func (c *Client) ToRecord() *ClientRecord {
 		CreatedAt:  c.CreatedAt,
 		UpdatedAt:  c.UpdatedAt,
 
-		BandwidthBps:        c.BandwidthBps,
-		CommittedBps:        c.CommittedBps,
-		CommittedBurstBytes: c.CommittedBurstBytes,
-		ConnLimit:           c.ConnLimit,
-		RateUnit:            c.RateUnit,
-		BurstUnit:           c.BurstUnit,
-		EgressTag:           c.EgressTag,
+		BandwidthBps:         c.BandwidthBps,
+		CommittedBps:         c.CommittedBps,
+		CommittedBurstBytes:  c.CommittedBurstBytes,
+		UploadBandwidthBps:   c.UploadBandwidthBps,
+		UploadPeakBps:        c.UploadPeakBps,
+		UploadBurstBytes:     c.UploadBurstBytes,
+		DownloadBandwidthBps: c.DownloadBandwidthBps,
+		DownloadPeakBps:      c.DownloadPeakBps,
+		DownloadBurstBytes:   c.DownloadBurstBytes,
+		ConnLimit:            c.ConnLimit,
+		RateUnit:             c.RateUnit,
+		BurstUnit:            c.BurstUnit,
+		EgressTag:            c.EgressTag,
 
 		PrivateKey:   c.PrivateKey,
 		PublicKey:    c.PublicKey,
@@ -1308,13 +1326,19 @@ func (r *ClientRecord) ToClient() *Client {
 		CreatedAt:  r.CreatedAt,
 		UpdatedAt:  r.UpdatedAt,
 
-		BandwidthBps:        r.BandwidthBps,
-		CommittedBps:        r.CommittedBps,
-		CommittedBurstBytes: r.CommittedBurstBytes,
-		ConnLimit:           r.ConnLimit,
-		RateUnit:            r.RateUnit,
-		BurstUnit:           r.BurstUnit,
-		EgressTag:           r.EgressTag,
+		BandwidthBps:         r.BandwidthBps,
+		CommittedBps:         r.CommittedBps,
+		CommittedBurstBytes:  r.CommittedBurstBytes,
+		UploadBandwidthBps:   r.UploadBandwidthBps,
+		UploadPeakBps:        r.UploadPeakBps,
+		UploadBurstBytes:     r.UploadBurstBytes,
+		DownloadBandwidthBps: r.DownloadBandwidthBps,
+		DownloadPeakBps:      r.DownloadPeakBps,
+		DownloadBurstBytes:   r.DownloadBurstBytes,
+		ConnLimit:            r.ConnLimit,
+		RateUnit:             r.RateUnit,
+		BurstUnit:            r.BurstUnit,
+		EgressTag:            r.EgressTag,
 
 		PrivateKey:   r.PrivateKey,
 		PublicKey:    r.PublicKey,

@@ -1074,6 +1074,18 @@
             "format": "int64",
             "type": "integer"
           },
+          "download_bandwidth_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "download_burst_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "download_peak_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
           "egress_tag": {
             "type": "string"
           },
@@ -1165,6 +1177,18 @@
             "description": "Last update timestamp",
             "format": "int64",
             "type": "integer"
+          },
+          "upload_bandwidth_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "upload_burst_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "upload_peak_bps": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "required": [
@@ -1242,6 +1266,18 @@
             "format": "int64",
             "type": "integer"
           },
+          "download_bandwidth_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "download_burst_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "download_peak_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
           "egress_tag": {
             "type": "string"
           },
@@ -1310,6 +1346,18 @@
             "format": "int64",
             "type": "integer"
           },
+          "upload_bandwidth_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "upload_burst_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "upload_peak_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
           "uuid": {
             "type": "string"
           }
@@ -1325,6 +1373,9 @@
           "committed_burst_bytes",
           "conn_limit",
           "createdAt",
+          "download_bandwidth_bps",
+          "download_burst_bytes",
+          "download_peak_bps",
           "egress_tag",
           "email",
           "enable",
@@ -1347,6 +1398,9 @@
           "tgId",
           "totalGB",
           "updatedAt",
+          "upload_bandwidth_bps",
+          "upload_burst_bytes",
+          "upload_peak_bps",
           "uuid"
         ],
         "type": "object"
@@ -1359,6 +1413,87 @@
         },
         "required": [
           "tag"
+        ],
+        "type": "object"
+      },
+      "ClientRuntimePatch": {
+        "description": "Omitted fields stay unchanged; explicit zero clears only that runtime limit.",
+        "properties": {
+          "bandwidth_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "committed_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "committed_burst_bytes": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "conn_limit": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "download_bandwidth_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "download_burst_bytes": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "download_peak_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "egress_tag": {
+            "nullable": true,
+            "type": "string"
+          },
+          "upload_bandwidth_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "upload_burst_bytes": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "upload_peak_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ClientRuntimeReceipt": {
+        "properties": {
+          "hotApplied": {
+            "example": true,
+            "type": "boolean"
+          },
+          "nodePending": {
+            "example": false,
+            "type": "boolean"
+          },
+          "requiresRestart": {
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "hotApplied",
+          "nodePending",
+          "requiresRestart"
         ],
         "type": "object"
       },
@@ -6723,6 +6858,80 @@
                 "example": {
                   "success": true,
                   "msg": "Client updated"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/clients/runtime/{email}": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Patch runtime rate limits, connection limit and egress tag for one identity. Omitted fields are preserved; zero clears a limit. Credentials, validity, traffic quota and per-inbound flow are preserved. A failed or pending receipt requires reconciliation before reporting the change as usable.",
+        "operationId": "post_panel_api_clients_runtime_email",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Stable client identity.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientRuntimePatch"
+              },
+              "example": {
+                "bandwidth_bps": null,
+                "committed_bps": null,
+                "committed_burst_bytes": null,
+                "conn_limit": null,
+                "download_bandwidth_bps": null,
+                "download_burst_bytes": null,
+                "download_peak_bps": null,
+                "egress_tag": null,
+                "upload_bandwidth_bps": null,
+                "upload_burst_bytes": null,
+                "upload_peak_bps": null
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/ClientRuntimeReceipt"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "hotApplied": true,
+                    "nodePending": false,
+                    "requiresRestart": false
+                  }
                 }
               }
             }

@@ -813,6 +813,12 @@ func applyUserRateLimits(u *protocol.User, src map[string]any) *protocol.User {
 	u.BandwidthBps = uint64Field(src, "bandwidth_bps")
 	u.CommittedBps = uint64Field(src, "committed_bps")
 	u.CommittedBurstBytes = uint64Field(src, "committed_burst_bytes")
+	u.UploadBandwidthBps = uint64Field(src, "upload_bandwidth_bps")
+	u.UploadPeakBps = uint64Field(src, "upload_peak_bps")
+	u.UploadBurstBytes = uint64Field(src, "upload_burst_bytes")
+	u.DownloadBandwidthBps = uint64Field(src, "download_bandwidth_bps")
+	u.DownloadPeakBps = uint64Field(src, "download_peak_bps")
+	u.DownloadBurstBytes = uint64Field(src, "download_burst_bytes")
 	u.ConnLimit = uint32(uint64Field(src, "conn_limit"))
 	if tag, ok := src["egress_tag"].(string); ok {
 		u.EgressTag = tag

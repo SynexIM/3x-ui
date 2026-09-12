@@ -155,6 +155,24 @@ func addClientRateLimits(entry map[string]any, c model.Client) {
 	if c.CommittedBurstBytes > 0 {
 		entry["committed_burst_bytes"] = c.CommittedBurstBytes
 	}
+	if c.UploadBandwidthBps > 0 {
+		entry["upload_bandwidth_bps"] = c.UploadBandwidthBps
+	}
+	if c.UploadPeakBps > 0 {
+		entry["upload_peak_bps"] = c.UploadPeakBps
+	}
+	if c.UploadBurstBytes > 0 {
+		entry["upload_burst_bytes"] = c.UploadBurstBytes
+	}
+	if c.DownloadBandwidthBps > 0 {
+		entry["download_bandwidth_bps"] = c.DownloadBandwidthBps
+	}
+	if c.DownloadPeakBps > 0 {
+		entry["download_peak_bps"] = c.DownloadPeakBps
+	}
+	if c.DownloadBurstBytes > 0 {
+		entry["download_burst_bytes"] = c.DownloadBurstBytes
+	}
 	if c.ConnLimit > 0 {
 		entry["conn_limit"] = c.ConnLimit
 	}

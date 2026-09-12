@@ -42,6 +42,17 @@ func TestApplyUserRateLimitsLeavesUnlimitedAlone(t *testing.T) {
 	}
 }
 
+func TestApplyDirectionalUserLimitsFromJSON(t *testing.T) {
+	var src map[string]any
+	if err := json.Unmarshal([]byte(`{"upload_bandwidth_bps":8000000,"upload_peak_bps":16000000,"upload_burst_bytes":3000000,"download_bandwidth_bps":24000000,"download_peak_bps":48000000,"download_burst_bytes":5000000}`), &src); err != nil {
+		t.Fatal(err)
+	}
+	u := applyUserRateLimits(&protocol.User{Email: "shared-identity"}, src)
+	if u.UploadBandwidthBps != 8_000_000 || u.UploadPeakBps != 16_000_000 || u.UploadBurstBytes != 3_000_000 || u.DownloadBandwidthBps != 24_000_000 || u.DownloadPeakBps != 48_000_000 || u.DownloadBurstBytes != 5_000_000 {
+		t.Fatalf("directional policy lost on hot apply: %v", u)
+	}
+}
+
 func TestUint64FieldAcceptsEveryShapeTheseValuesArriveIn(t *testing.T) {
 	cases := []struct {
 		name string

@@ -1074,6 +1074,21 @@
             "format": "int64",
             "type": "integer"
           },
+          "download_bandwidth_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "download_burst_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "download_peak_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "egress_tag": {
+            "type": "string"
+          },
           "email": {
             "description": "Client email identifier",
             "type": "string"
@@ -1162,6 +1177,18 @@
             "description": "Last update timestamp",
             "format": "int64",
             "type": "integer"
+          },
+          "upload_bandwidth_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "upload_burst_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "upload_peak_bps": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "required": [
@@ -1239,6 +1266,21 @@
             "format": "int64",
             "type": "integer"
           },
+          "download_bandwidth_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "download_burst_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "download_peak_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "egress_tag": {
+            "type": "string"
+          },
           "email": {
             "type": "string"
           },
@@ -1304,6 +1346,18 @@
             "format": "int64",
             "type": "integer"
           },
+          "upload_bandwidth_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "upload_burst_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "upload_peak_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
           "uuid": {
             "type": "string"
           }
@@ -1319,6 +1373,10 @@
           "committed_burst_bytes",
           "conn_limit",
           "createdAt",
+          "download_bandwidth_bps",
+          "download_burst_bytes",
+          "download_peak_bps",
+          "egress_tag",
           "email",
           "enable",
           "expiryTime",
@@ -1340,6 +1398,9 @@
           "tgId",
           "totalGB",
           "updatedAt",
+          "upload_bandwidth_bps",
+          "upload_burst_bytes",
+          "upload_peak_bps",
           "uuid"
         ],
         "type": "object"
@@ -1352,6 +1413,87 @@
         },
         "required": [
           "tag"
+        ],
+        "type": "object"
+      },
+      "ClientRuntimePatch": {
+        "description": "Omitted fields stay unchanged; explicit zero clears only that runtime limit.",
+        "properties": {
+          "bandwidth_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "committed_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "committed_burst_bytes": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "conn_limit": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "download_bandwidth_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "download_burst_bytes": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "download_peak_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "egress_tag": {
+            "nullable": true,
+            "type": "string"
+          },
+          "upload_bandwidth_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "upload_burst_bytes": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "upload_peak_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ClientRuntimeReceipt": {
+        "properties": {
+          "hotApplied": {
+            "example": true,
+            "type": "boolean"
+          },
+          "nodePending": {
+            "example": false,
+            "type": "boolean"
+          },
+          "requiresRestart": {
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "hotApplied",
+          "nodePending",
+          "requiresRestart"
         ],
         "type": "object"
       },
@@ -3186,8 +3328,12 @@
         "type": "object"
       },
       "RuntimeRule": {
-        "description": "RuntimeRule is one routing rule the running core currently holds.\n\nOnly the two tags are readable here. The core's richer ListRuleFull would\nalso report the rule's user and inbound conditions, but the xray-core this\nmodule pins panics the WHOLE CORE when it is called: ListRule builds each\nRoute with a nil embedded routing.Context and ListRuleFull then calls\nGetUser() on it (app/router/router.go ListRule + app/router/command\ncommand.go:146). Fixed in the fork at 7300d185 and verified against a real\ncore, but that commit has no released module version yet, so switching this\ncall over has to wait for the dependency bump — doing it sooner would take\nthe node down on every listing. The conditions are read from the stored\ntemplate meanwhile, which is the authority for them anyway.",
+        "description": "RuntimeRule is one routing rule the running core currently holds.\n\nUser and InboundTag are the rule's own matching conditions, which is what a\nreconciler needs: \"does the rule the core is running still point this\ncustomer at this outbound?\" cannot be answered from the two tags alone.\n\nThey are empty for a rule that carries no such condition, and — because the\nwire type is singular while a rule's condition is a list — report the first\nentry. That matches the one-route-per-customer shape this panel is driven\nwith; a hand-written multi-user rule reports only its first user.",
         "properties": {
+          "inboundTag": {
+            "example": "inbound-vless",
+            "type": "string"
+          },
           "outboundTag": {
             "example": "proxy-jp",
             "type": "string"
@@ -3195,11 +3341,17 @@
           "ruleTag": {
             "example": "ipl_route_ln000001",
             "type": "string"
+          },
+          "user": {
+            "example": "ln000001@ipl",
+            "type": "string"
           }
         },
         "required": [
+          "inboundTag",
           "outboundTag",
-          "ruleTag"
+          "ruleTag",
+          "user"
         ],
         "type": "object"
       },
@@ -6706,6 +6858,80 @@
                 "example": {
                   "success": true,
                   "msg": "Client updated"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/clients/runtime/{email}": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Patch runtime rate limits, connection limit and egress tag for one identity. Omitted fields are preserved; zero clears a limit. Credentials, validity, traffic quota and per-inbound flow are preserved. A failed or pending receipt requires reconciliation before reporting the change as usable.",
+        "operationId": "post_panel_api_clients_runtime_email",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Stable client identity.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientRuntimePatch"
+              },
+              "example": {
+                "bandwidth_bps": null,
+                "committed_bps": null,
+                "committed_burst_bytes": null,
+                "conn_limit": null,
+                "download_bandwidth_bps": null,
+                "download_burst_bytes": null,
+                "download_peak_bps": null,
+                "egress_tag": null,
+                "upload_bandwidth_bps": null,
+                "upload_burst_bytes": null,
+                "upload_peak_bps": null
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/ClientRuntimeReceipt"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "hotApplied": true,
+                    "nodePending": false,
+                    "requiresRestart": false
+                  }
                 }
               }
             }
@@ -13005,8 +13231,10 @@
                     "pid": 1234,
                     "rules": [
                       {
+                        "inboundTag": "inbound-vless",
                         "outboundTag": "proxy-jp",
-                        "ruleTag": "ipl_route_ln000001"
+                        "ruleTag": "ipl_route_ln000001",
+                        "user": "ln000001@ipl"
                       }
                     ],
                     "running": true,
@@ -13055,8 +13283,10 @@
                     "rules": null,
                     "runtime": [
                       {
+                        "inboundTag": "inbound-vless",
                         "outboundTag": "proxy-jp",
-                        "ruleTag": "ipl_route_ln000001"
+                        "ruleTag": "ipl_route_ln000001",
+                        "user": "ln000001@ipl"
                       }
                     ],
                     "runtimeError": ""

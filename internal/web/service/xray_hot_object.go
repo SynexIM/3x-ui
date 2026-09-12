@@ -327,6 +327,12 @@ func (s *XrayService) hotUserMap(db *gorm.DB, ib hotInbound, record *model.Clien
 	user["bandwidth_bps"] = client.BandwidthBps
 	user["committed_bps"] = client.CommittedBps
 	user["committed_burst_bytes"] = client.CommittedBurstBytes
+	user["upload_bandwidth_bps"] = client.UploadBandwidthBps
+	user["upload_peak_bps"] = client.UploadPeakBps
+	user["upload_burst_bytes"] = client.UploadBurstBytes
+	user["download_bandwidth_bps"] = client.DownloadBandwidthBps
+	user["download_peak_bps"] = client.DownloadPeakBps
+	user["download_burst_bytes"] = client.DownloadBurstBytes
 	user["conn_limit"] = uint64(client.ConnLimit)
 	if client.EgressTag != "" {
 		user["egress_tag"] = client.EgressTag

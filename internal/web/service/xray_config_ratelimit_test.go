@@ -16,12 +16,14 @@ const (
 )
 
 func limitedClient(email, id string) model.Client {
-	return model.Client{
+	client := model.Client{
 		Email: email, ID: id, Password: id, Auth: id, Enable: true, EgressTag: "dedicated-us",
 		BandwidthBps: testPIR, CommittedBps: testCIR, CommittedBurstBytes: testCBS,
 		ConnLimit: testConnLimit,
 		RateUnit:  "Mbps", BurstUnit: "MB",
 	}
+	_ = json.Unmarshal([]byte(`{"upload_bandwidth_bps":8000000,"upload_peak_bps":16000000,"upload_burst_bytes":3000000,"download_bandwidth_bps":24000000,"download_peak_bps":48000000,"download_burst_bytes":5000000}`), &client)
+	return client
 }
 
 func seedInbound(t *testing.T, protocol model.Protocol, tag string, port int, settings string, clients []model.Client) {
@@ -64,10 +66,16 @@ func emittedSettings(t *testing.T, tag string) map[string]any {
 func assertLimits(t *testing.T, where string, obj map[string]any) {
 	t.Helper()
 	want := map[string]float64{
-		"bandwidth_bps":         float64(testPIR),
-		"committed_bps":         float64(testCIR),
-		"committed_burst_bytes": float64(testCBS),
-		"conn_limit":            float64(testConnLimit),
+		"bandwidth_bps":          float64(testPIR),
+		"committed_bps":          float64(testCIR),
+		"committed_burst_bytes":  float64(testCBS),
+		"conn_limit":             float64(testConnLimit),
+		"upload_bandwidth_bps":   8_000_000,
+		"upload_peak_bps":        16_000_000,
+		"upload_burst_bytes":     3_000_000,
+		"download_bandwidth_bps": 24_000_000,
+		"download_peak_bps":      48_000_000,
+		"download_burst_bytes":   5_000_000,
 	}
 	for key, expect := range want {
 		got, ok := obj[key]

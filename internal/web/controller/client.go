@@ -68,6 +68,7 @@ func (a *ClientController) initRouter(g *gin.RouterGroup) {
 
 	g.POST("/add", a.create)
 	g.POST("/update/:email", a.update)
+	g.POST("/runtime/:email", a.updateRuntime)
 	g.POST("/del/:email", a.delete)
 	g.POST("/:email/attach", a.attach)
 	g.POST("/:email/detach", a.detach)
@@ -223,6 +224,29 @@ func (a *ClientController) update(c *gin.Context) {
 		"hotApplied":      true,
 		"requiresRestart": false,
 		"nodePending":     pending,
+	}, nil)
+	notifyClientsChanged()
+}
+
+func (a *ClientController) updateRuntime(c *gin.Context) {
+	email := c.Param("email")
+	var patch service.ClientRuntimePatch
+	decoder := json.NewDecoder(c.Request.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&patch); err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	if err := a.clientService.UpdateRuntime(c.Request.Context(), &a.inboundService, email, patch); err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	if !requireClientMutationHotApply(c, &a.xrayService, email) {
+		return
+	}
+	jsonObj(c, service.ClientRuntimeReceipt{
+		HotApplied:  true,
+		NodePending: a.clientService.HasPendingNode(&a.inboundService, email),
 	}, nil)
 	notifyClientsChanged()
 }
