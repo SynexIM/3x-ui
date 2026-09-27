@@ -594,6 +594,18 @@ export const EXAMPLES: Record<string, unknown> = {
     "wgMtu": 0,
     "wgPublicKey": ""
   },
+  "IngressProbeRequest": {
+    "address": "203.0.113.10",
+    "port": 443,
+    "serverName": "entry.example.com",
+    "transport": "TLS"
+  },
+  "IngressProbeResult": {
+    "certificateFingerprint": "",
+    "certificateNotAfter": "2027-01-01T00:00:00Z",
+    "errorCode": "",
+    "reachable": true
+  },
   "Msg": {
     "msg": "",
     "obj": null,

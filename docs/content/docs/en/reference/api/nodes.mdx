@@ -89,6 +89,11 @@ _openapi:
         managed.'
       url: '#save-and-push-the-node-level-fair-share-policy-to-the-running-core-setnodebandwidth--setclasspolicy-the-class-list-is-replaced-whole-a-class-left-out-is-deleted-rejected-while-the-node-is-declaratively-managed'
     - depth: 2
+      title: Probe an ingress IP over TCP, TLS or QUIC; certificate verification is
+        mandatory for encrypted transports. This does not test customer
+        authentication.
+      url: '#probe-an-ingress-ip-over-tcp-tls-or-quic-certificate-verification-is-mandatory-for-encrypted-transports-this-does-not-test-customer-authentication'
+    - depth: 2
       title: "Live state of the local core's fair-share scheduler. `congested` is the
         first thing to check when limits look like they do nothing: outside fair
         mode nothing is shaped at all. The fill* fields report water-filling
@@ -161,6 +166,10 @@ _openapi:
           a class left out is deleted. Rejected while the node is declaratively
           managed.'
         id: save-and-push-the-node-level-fair-share-policy-to-the-running-core-setnodebandwidth--setclasspolicy-the-class-list-is-replaced-whole-a-class-left-out-is-deleted-rejected-while-the-node-is-declaratively-managed
+      - content: Probe an ingress IP over TCP, TLS or QUIC; certificate verification is
+          mandatory for encrypted transports. This does not test customer
+          authentication.
+        id: probe-an-ingress-ip-over-tcp-tls-or-quic-certificate-verification-is-mandatory-for-encrypted-transports-this-does-not-test-customer-authentication
       - content: "Live state of the local core's fair-share scheduler. `congested` is
           the first thing to check when limits look like they do nothing:
           outside fair mode nothing is shaped at all. The fill* fields report
@@ -179,7 +188,7 @@ export default function Layout(props) {
   return (
     <>
       {props.children}
-      <Comp document="./public/openapi.json" webhooks={[]} operations={[{"path":"/panel/api/nodes/list","method":"get"},{"path":"/panel/api/nodes/mtls/ca","method":"post"},{"path":"/panel/api/nodes/mtls/trustCA","method":"post"},{"path":"/panel/api/nodes/get/{id}","method":"get"},{"path":"/panel/api/nodes/webCert/{id}","method":"get"},{"path":"/panel/api/nodes/add","method":"post"},{"path":"/panel/api/nodes/update/{id}","method":"post"},{"path":"/panel/api/nodes/del/{id}","method":"post"},{"path":"/panel/api/nodes/setEnable/{id}","method":"post"},{"path":"/panel/api/nodes/test","method":"post"},{"path":"/panel/api/nodes/certFingerprint","method":"post"},{"path":"/panel/api/nodes/inbounds","method":"post"},{"path":"/panel/api/nodes/probe/{id}","method":"post"},{"path":"/panel/api/nodes/updatePanel","method":"post"},{"path":"/panel/api/nodes/history/{id}/{metric}/{bucket}","method":"get"},{"path":"/panel/api/nodes/fairshare","method":"get"},{"path":"/panel/api/nodes/fairshare","method":"post"},{"path":"/panel/api/nodes/fairshare/status","method":"get"}]} showTitle />
+      <Comp document="./public/openapi.json" webhooks={[]} operations={[{"path":"/panel/api/nodes/list","method":"get"},{"path":"/panel/api/nodes/mtls/ca","method":"post"},{"path":"/panel/api/nodes/mtls/trustCA","method":"post"},{"path":"/panel/api/nodes/get/{id}","method":"get"},{"path":"/panel/api/nodes/webCert/{id}","method":"get"},{"path":"/panel/api/nodes/add","method":"post"},{"path":"/panel/api/nodes/update/{id}","method":"post"},{"path":"/panel/api/nodes/del/{id}","method":"post"},{"path":"/panel/api/nodes/setEnable/{id}","method":"post"},{"path":"/panel/api/nodes/test","method":"post"},{"path":"/panel/api/nodes/certFingerprint","method":"post"},{"path":"/panel/api/nodes/inbounds","method":"post"},{"path":"/panel/api/nodes/probe/{id}","method":"post"},{"path":"/panel/api/nodes/updatePanel","method":"post"},{"path":"/panel/api/nodes/history/{id}/{metric}/{bucket}","method":"get"},{"path":"/panel/api/nodes/fairshare","method":"get"},{"path":"/panel/api/nodes/fairshare","method":"post"},{"path":"/panel/api/nodes/ingress-probe","method":"post"},{"path":"/panel/api/nodes/fairshare/status","method":"get"}]} showTitle />
     </>
   );
 }

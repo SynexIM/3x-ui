@@ -554,6 +554,20 @@ export interface InboundOption {
   wgPublicKey?: string;
 }
 
+export interface IngressProbeRequest {
+  address: string;
+  port: number;
+  serverName: string;
+  transport: string;
+}
+
+export interface IngressProbeResult {
+  certificateFingerprint: string;
+  certificateNotAfter: string;
+  errorCode: string;
+  reachable: boolean;
+}
+
 export interface Msg {
   msg: string;
   obj: unknown;

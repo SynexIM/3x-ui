@@ -1055,6 +1055,13 @@ export const sections: readonly Section[] = [
         responseSchema: 'FairSharePolicyView',
       },
       {
+        method: 'POST',
+        path: '/panel/api/nodes/ingress-probe',
+        summary: 'Probe an ingress IP over TCP, TLS or QUIC; certificate verification is mandatory for encrypted transports. This does not test customer authentication.',
+        requestSchema: 'IngressProbeRequest',
+        responseSchema: 'IngressProbeResult',
+      },
+      {
         method: 'GET',
         path: '/panel/api/nodes/fairshare/status',
         summary: "Live state of the local core's fair-share scheduler. `congested` is the first thing to check when limits look like they do nothing: outside fair mode nothing is shaped at all. The fill* fields report water-filling truncation, which is an approximation, not a fault. running=false means the core is down and there are no numbers yet.",

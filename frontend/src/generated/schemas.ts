@@ -2386,6 +2386,58 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "IngressProbeRequest": {
+    "properties": {
+      "address": {
+        "example": "203.0.113.10",
+        "type": "string"
+      },
+      "port": {
+        "example": 443,
+        "type": "integer"
+      },
+      "serverName": {
+        "example": "entry.example.com",
+        "type": "string"
+      },
+      "transport": {
+        "example": "TLS",
+        "type": "string"
+      }
+    },
+    "required": [
+      "address",
+      "port",
+      "serverName",
+      "transport"
+    ],
+    "type": "object"
+  },
+  "IngressProbeResult": {
+    "properties": {
+      "certificateFingerprint": {
+        "type": "string"
+      },
+      "certificateNotAfter": {
+        "example": "2027-01-01T00:00:00Z",
+        "type": "string"
+      },
+      "errorCode": {
+        "type": "string"
+      },
+      "reachable": {
+        "example": true,
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "certificateFingerprint",
+      "certificateNotAfter",
+      "errorCode",
+      "reachable"
+    ],
+    "type": "object"
+  },
   "Msg": {
     "properties": {
       "msg": {

@@ -589,6 +589,22 @@ export const InboundOptionSchema = z.object({
 });
 export type InboundOption = z.infer<typeof InboundOptionSchema>;
 
+export const IngressProbeRequestSchema = z.object({
+  address: z.string(),
+  port: z.number().int(),
+  serverName: z.string(),
+  transport: z.string(),
+});
+export type IngressProbeRequest = z.infer<typeof IngressProbeRequestSchema>;
+
+export const IngressProbeResultSchema = z.object({
+  certificateFingerprint: z.string(),
+  certificateNotAfter: z.string(),
+  errorCode: z.string(),
+  reachable: z.boolean(),
+});
+export type IngressProbeResult = z.infer<typeof IngressProbeResultSchema>;
+
 export const MsgSchema = z.object({
   msg: z.string(),
   obj: z.unknown(),

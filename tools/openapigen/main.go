@@ -80,6 +80,8 @@ func run(root, outDir string) error {
 			Path: resolveRel(root, "internal/web/service"),
 			StructAllow: setOf(
 				"FairShareClassPolicy",
+				"IngressProbeRequest",
+				"IngressProbeResult",
 				"ClientRuntimePatch",
 				"ClientRuntimeReceipt",
 				"FairSharePolicy",

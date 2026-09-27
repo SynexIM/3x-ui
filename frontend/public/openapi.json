@@ -2412,6 +2412,58 @@
         ],
         "type": "object"
       },
+      "IngressProbeRequest": {
+        "properties": {
+          "address": {
+            "example": "203.0.113.10",
+            "type": "string"
+          },
+          "port": {
+            "example": 443,
+            "type": "integer"
+          },
+          "serverName": {
+            "example": "entry.example.com",
+            "type": "string"
+          },
+          "transport": {
+            "example": "TLS",
+            "type": "string"
+          }
+        },
+        "required": [
+          "address",
+          "port",
+          "serverName",
+          "transport"
+        ],
+        "type": "object"
+      },
+      "IngressProbeResult": {
+        "properties": {
+          "certificateFingerprint": {
+            "type": "string"
+          },
+          "certificateNotAfter": {
+            "example": "2027-01-01T00:00:00Z",
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "reachable": {
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "certificateFingerprint",
+          "certificateNotAfter",
+          "errorCode",
+          "reachable"
+        ],
+        "type": "object"
+      },
       "Msg": {
         "properties": {
           "msg": {
@@ -9909,6 +9961,63 @@
                       "type": "string"
                     },
                     "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/nodes/ingress-probe": {
+      "post": {
+        "tags": [
+          "Nodes"
+        ],
+        "summary": "Probe an ingress IP over TCP, TLS or QUIC; certificate verification is mandatory for encrypted transports. This does not test customer authentication.",
+        "operationId": "post_panel_api_nodes_ingress_probe",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngressProbeRequest"
+              },
+              "example": {
+                "address": "203.0.113.10",
+                "port": 443,
+                "serverName": "entry.example.com",
+                "transport": "TLS"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/IngressProbeResult"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "certificateFingerprint": "",
+                    "certificateNotAfter": "2027-01-01T00:00:00Z",
+                    "errorCode": "",
+                    "reachable": true
                   }
                 }
               }

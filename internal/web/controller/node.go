@@ -49,6 +49,7 @@ func (a *NodeController) initRouter(g *gin.RouterGroup) {
 	g.GET("/fairshare", a.fairShare)
 	g.GET("/fairshare/status", a.fairShareStatus)
 	g.POST("/fairshare", a.setFairShare)
+	g.POST("/ingress-probe", a.ingressProbe)
 }
 
 // fairShare returns this panel's own node-level fair-share policy, plus whether
