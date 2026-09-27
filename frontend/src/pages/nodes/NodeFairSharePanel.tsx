@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Button, Card, Col, Descriptions, Form, Input, InputNumber, Row, Space, Table, Tag, Tooltip, message } from 'antd';
 import { DeleteOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
@@ -25,10 +25,12 @@ export default function NodeFairSharePanel() {
 
   const managed = policy.data?.declarativelyManaged === true;
 
-  useEffect(() => {
-    if (!policy.data) return;
+  // Re-seed the form when a new policy arrives, during render rather than in an effect.
+  const [seededFrom, setSeededFrom] = useState<typeof policy.data>(undefined);
+  if (policy.data && policy.data !== seededFrom) {
+    setSeededFrom(policy.data);
     setForm(payloadToForm(policy.data.policy));
-  }, [policy.data]);
+  }
 
   const setField = <K extends keyof FairShareForm>(key: K, value: FairShareForm[K]) =>
     setForm((previous) => ({ ...previous, [key]: value }));
