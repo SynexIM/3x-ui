@@ -207,6 +207,10 @@ func (a *ClientController) create(c *gin.Context) {
 		return
 	}
 	_, err := a.clientService.Create(&a.inboundService, &payload)
+	if errors.Is(err, service.ErrClientCredentialConflict) {
+		c.JSON(http.StatusConflict, gin.H{"success": false, "code": "CLIENT_CREDENTIAL_CONFLICT", "msg": err.Error()})
+		return
+	}
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
@@ -509,6 +513,14 @@ func (a *ClientController) bulkCreate(c *gin.Context) {
 	}
 	if !requireClientMutationHotApply(c, &a.xrayService) {
 		return
+	}
+	for _, skipped := range result.Skipped {
+		if strings.HasPrefix(skipped.Reason, service.ErrClientCredentialConflict.Error()) {
+			// The rest of the batch was applied; the conflicting items were not.
+			c.JSON(http.StatusConflict, gin.H{"success": false, "code": "CLIENT_CREDENTIAL_CONFLICT", "msg": skipped.Reason, "obj": result})
+			notifyClientsChanged()
+			return
+		}
 	}
 	jsonObj(c, result, nil)
 	notifyClientsChanged()

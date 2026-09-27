@@ -119,6 +119,15 @@ the SynexIM xray-core (`common/protocol/tier_shaper.go`).
   email / password. Failures: `409 CLIENT_CREDENTIAL_CONFLICT` (another client on
   the same inbound already authenticates with that UUID, Hysteria2 auth,
   Shadowsocks password or Mixed login), `422 CLIENT_CREDENTIAL_INVALID`.
+  `/clients/add` and `/clients/bulkCreate` run the same check (also between two
+  items of one bulk request) and answer `409 CLIENT_CREDENTIAL_CONFLICT` instead
+  of letting the core silently hand one client's login to another; bulkCreate
+  still applies the non-conflicting items and returns them in `obj`.
+- **Unlimited → limited on live connections**: the core attaches its (pass-through)
+  shaper to every connection of a client that has an `egress_tag`, so a later
+  runtime patch that adds limits reaches connections already open. A client with
+  no `egress_tag` and no limits keeps the core's zero-copy path; limiting it only
+  affects its new connections.
 - **Mixed login**: Mixed accounts now carry `email` next to `user`/`pass`, so a
   login that differs from the email still shares shaping and stats with the
   client's other inbounds, also after a core restart.

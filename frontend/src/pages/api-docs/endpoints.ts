@@ -1152,6 +1152,10 @@ export const sections: readonly Section[] = [
         ],
         body: '{\n  "client": {\n    "email": "alice@example.com",\n    "totalGB": 53687091200,\n    "expiryTime": 1735689600000,\n    "tgId": 0,\n    "limitIp": 0,\n    "bandwidth_bps": 100000000,\n    "committed_bps": 10000000,\n    "committed_burst_bytes": 5000000,\n    "rateUnit": "Mbps",\n    "burstUnit": "MB",\n    "enable": true\n  },\n  "inboundIds": [3, 5]\n}',
         response: '{\n  "success": true,\n  "msg": "Client added"\n}',
+        codedErrors: {
+          '409':
+            '{\n  "success": false,\n  "code": "CLIENT_CREDENTIAL_CONFLICT",\n  "msg": "CLIENT_CREDENTIAL_CONFLICT: inbound \\"in-vless\\" already has a client with this credential"\n}',
+        },
       },
       {
         method: 'POST',
@@ -1346,6 +1350,10 @@ export const sections: readonly Section[] = [
         summary: 'Create many clients in one call. Body is a JSON array of {client, inboundIds} payloads — the same shape /add accepts, including bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit, and burstUnit. Items are processed sequentially; per-email skip reasons are returned for items that fail (e.g., duplicate email). The running core is reconciled once after the batch.',
         body: '[\n  {\n    "client": {\n      "email": "alice@example.com",\n      "totalGB": 53687091200,\n      "expiryTime": 0,\n      "bandwidth_bps": 100000000,\n      "committed_bps": 10000000,\n      "committed_burst_bytes": 5000000,\n      "rateUnit": "Mbps",\n      "burstUnit": "MB",\n      "enable": true\n    },\n    "inboundIds": [7]\n  },\n  {\n    "client": {\n      "email": "bob@example.com",\n      "totalGB": 53687091200,\n      "expiryTime": 0,\n      "enable": true\n    },\n    "inboundIds": [7, 9]\n  }\n]',
         response: '{\n  "success": true,\n  "obj": {\n    "created": 2,\n    "skipped": [\n      { "email": "alice@example.com", "reason": "email already in use" }\n    ]\n  }\n}',
+        codedErrors: {
+          '409':
+            '{\n  "success": false,\n  "code": "CLIENT_CREDENTIAL_CONFLICT",\n  "msg": "CLIENT_CREDENTIAL_CONFLICT: inbound \\"in-vless\\" already has a client with this credential"\n}',
+        },
       },
       {
         method: 'POST',

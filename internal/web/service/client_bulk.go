@@ -1068,6 +1068,7 @@ func (s *ClientService) BulkCreate(inboundSvc *InboundService, payloads []Client
 		}
 	}
 
+	seenCredential := make(map[string]struct{})
 	inboundCache := make(map[int]*model.Inbound)
 	getIb := func(id int) (*model.Inbound, error) {
 		if ib, ok := inboundCache[id]; ok {
@@ -1111,6 +1112,26 @@ func (s *ClientService) BulkCreate(inboundSvc *InboundService, payloads []Client
 		if owner, ok := existingSubOwner[prep[idx].client.SubID]; ok && owner != le {
 			failed[idx] = true
 			reason[idx] = "subId already in use: " + prep[idx].client.SubID
+			continue
+		}
+		excludeID := 0
+		if rec, ok := existingByEmail[le]; ok {
+			excludeID = rec.Id
+		}
+		if e := createCredentialConflict(db, prep[idx].client, prep[idx].inboundIds, excludeID); e != nil {
+			failed[idx] = true
+			reason[idx] = e.Error()
+			continue
+		}
+		targets := make([]*model.Inbound, 0, len(prep[idx].inboundIds))
+		for _, ibId := range prep[idx].inboundIds {
+			if ib, e := getIb(ibId); e == nil {
+				targets = append(targets, ib)
+			}
+		}
+		if key := batchCredentialClash(seenCredential, prep[idx].client, targets); key != "" {
+			failed[idx] = true
+			reason[idx] = ErrClientCredentialConflict.Error() + ": another client in this request uses the same credential (" + key + ")"
 			continue
 		}
 
@@ -1420,4 +1441,36 @@ func (s *ClientService) bulkSetEnableInboundClients(inboundSvc *InboundService, 
 		}
 	}
 	return res
+}
+
+// batchCredentialClash catches two clients of one bulk request that claim the same
+// credential on the same inbound; the database check cannot see either yet.
+func batchCredentialClash(seen map[string]struct{}, client model.Client, inbounds []*model.Inbound) string {
+	keys := make([]string, 0, len(inbounds))
+	for _, ib := range inbounds {
+		var kind, value string
+		switch ib.Protocol {
+		case model.VLESS, model.VMESS:
+			kind, value = "id", client.ID
+		case model.Hysteria:
+			kind, value = "auth", client.Auth
+		case model.Shadowsocks:
+			kind, value = "password", client.Password
+		case model.Mixed:
+			user, _ := client.MixedCredentials()
+			kind, value = "mixed_user", user
+		}
+		if value == "" {
+			continue
+		}
+		key := fmt.Sprintf("%d/%s/%s", ib.Id, kind, value)
+		if _, dup := seen[key]; dup {
+			return fmt.Sprintf("inbound %q %s", ib.Tag, kind)
+		}
+		keys = append(keys, key)
+	}
+	for _, key := range keys {
+		seen[key] = struct{}{}
+	}
+	return ""
 }

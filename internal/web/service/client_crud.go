@@ -108,6 +108,14 @@ func (s *ClientService) Create(inboundSvc *InboundService, payload *ClientCreate
 		}
 	}
 
+	excludeID := 0
+	if emailTaken {
+		excludeID = existing.Id
+	}
+	if err := createCredentialConflict(database.GetDB(), client, payload.InboundIds, excludeID); err != nil {
+		return false, err
+	}
+
 	// Scoped to the one email being added, not every email in the panel.
 	// The global scan is still right for bulk attach, which genuinely asks about
 	// hundreds at once; here it was 71ms of pure waste per add at 50k.

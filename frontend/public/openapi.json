@@ -8814,6 +8814,32 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Error response with a stable error code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "success": false,
+                  "code": "CLIENT_CREDENTIAL_CONFLICT",
+                  "msg": "CLIENT_CREDENTIAL_CONFLICT: inbound \"in-vless\" already has a client with this credential"
+                }
+              }
+            }
           }
         }
       }
@@ -9891,6 +9917,32 @@
                       }
                     ]
                   }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error response with a stable error code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "success": false,
+                  "code": "CLIENT_CREDENTIAL_CONFLICT",
+                  "msg": "CLIENT_CREDENTIAL_CONFLICT: inbound \"in-vless\" already has a client with this credential"
                 }
               }
             }

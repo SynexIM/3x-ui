@@ -136,3 +136,20 @@ func validMixedUser(v string) bool {
 	}
 	return true
 }
+
+// createCredentialConflict refuses a new or re-added client whose credentials
+// another client already authenticates with on one of the target inbounds.
+// excludeID is the client's own existing record when an identity is re-added.
+func createCredentialConflict(db *gorm.DB, client model.Client, inboundIDs []int, excludeID int) error {
+	var inbounds []model.Inbound
+	if err := db.Where("id IN ?", inboundIDs).Find(&inbounds).Error; err != nil {
+		return err
+	}
+	updates := map[string]any{
+		"uuid":       client.ID,
+		"auth":       client.Auth,
+		"password":   client.Password,
+		"mixed_user": client.MixedUser,
+	}
+	return checkCredentialConflicts(db, model.ClientRecord{Id: excludeID, Email: client.Email}, inbounds, updates)
+}
