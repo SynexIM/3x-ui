@@ -96,6 +96,7 @@ func run(root, outDir string) error {
 				"IngressProbeRequest",
 				"IngressProbeResult",
 				"ClientRuntimePatch",
+				"ClientCredentialPatch",
 				"ClientRuntimeReceipt",
 				"FairSharePolicy",
 				"FairSharePolicyView",

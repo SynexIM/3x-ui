@@ -904,7 +904,7 @@ func (s *SubJsonService) genServer(subReq *SubService, inbound *model.Inbound, s
 		// server password in multi-user 2022 protocols
 		if strings.HasPrefix(method, "2022") {
 			if serverPassword, ok := inboundSettings["password"].(string); ok {
-				serverData[0].Password = fmt.Sprintf("%s:%s", serverPassword, client.Password)
+				serverData[0].Password = fmt.Sprintf("%s:%s", serverPassword, model.ShadowsocksClientKey(method, inbound.Tag, client.Password))
 			}
 		}
 	}

@@ -3,6 +3,7 @@ package sub
 import (
 	"encoding/base64"
 	"encoding/json"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -168,7 +169,9 @@ func TestChar_C3_ShadowsocksExternalProxy(t *testing.T) {
 	}
 	s := &SubService{}
 	got := s.genShadowsocksLink(in, "user")
-	want := "ss://2022-blake3-aes-256-gcm:inboundpw:clientpw@ss.example.com:8443?fp=chrome&security=tls&sni=ss.sni&type=tcp#char-SS-user"
+	// A raw client password is turned into the inbound's 2022 key (inbound tag "" here).
+	key := url.QueryEscape(model.ShadowsocksClientKey("2022-blake3-aes-256-gcm", "", "clientpw"))
+	want := "ss://2022-blake3-aes-256-gcm:inboundpw:" + key + "@ss.example.com:8443?fp=chrome&security=tls&sni=ss.sni&type=tcp#char-SS-user"
 	if got != want {
 		t.Fatalf("C3-SS mismatch.\n got: %q\nwant: %q", got, want)
 	}

@@ -350,6 +350,8 @@ export interface Client {
   auth?: string;
   bandwidth_bps?: number;
   burstUnit?: string;
+  burst_bps?: number;
+  burst_credit_bytes?: number;
   comment: string;
   committed_bps?: number;
   committed_burst_bytes?: number;
@@ -368,6 +370,8 @@ export interface Client {
   id?: string;
   keepAlive?: number | null;
   limitIp: number;
+  mixed_pass?: string;
+  mixed_user?: string;
   password?: string;
   preSharedKey?: string;
   privateKey?: string;
@@ -380,6 +384,8 @@ export interface Client {
   secret?: string;
   security: string;
   subId: string;
+  sustained_after_seconds?: number;
+  sustained_bps?: number;
   tgId: number;
   totalGB: number;
   trafficReset?: string;
@@ -388,6 +394,13 @@ export interface Client {
   upload_bandwidth_bps?: number;
   upload_burst_bytes?: number;
   upload_peak_bps?: number;
+}
+
+export interface ClientCredentialPatch {
+  id?: string | null;
+  mixed_pass?: string | null;
+  mixed_user?: string | null;
+  password?: string | null;
 }
 
 export interface ClientInbound {
@@ -415,6 +428,8 @@ export interface ClientRecord {
   auth: string;
   bandwidth_bps: number;
   burstUnit: string;
+  burst_bps: number;
+  burst_credit_bytes: number;
   comment: string;
   committed_bps: number;
   committed_burst_bytes: number;
@@ -434,6 +449,8 @@ export interface ClientRecord {
   keepAlive: number;
   limitHwid: number;
   limitIp: number;
+  mixed_pass: string;
+  mixed_user: string;
   password: string;
   preSharedKey: string;
   privateKey: string;
@@ -446,6 +463,8 @@ export interface ClientRecord {
   secret: string;
   security: string;
   subId: string;
+  sustained_after_seconds: number;
+  sustained_bps: number;
   tgId: number;
   totalGB: number;
   trafficReset: string;
@@ -463,6 +482,8 @@ export interface ClientReverse {
 
 export interface ClientRuntimePatch {
   bandwidth_bps?: number | null;
+  burst_bps?: number | null;
+  burst_credit_bytes?: number | null;
   committed_bps?: number | null;
   committed_burst_bytes?: number | null;
   conn_limit?: number | null;
@@ -470,6 +491,8 @@ export interface ClientRuntimePatch {
   download_burst_bytes?: number | null;
   download_peak_bps?: number | null;
   egress_tag?: string | null;
+  sustained_after_seconds?: number | null;
+  sustained_bps?: number | null;
   upload_bandwidth_bps?: number | null;
   upload_burst_bytes?: number | null;
   upload_peak_bps?: number | null;

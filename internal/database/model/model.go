@@ -4,6 +4,8 @@ package model
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -178,8 +180,8 @@ type ApiToken struct {
 	// Empty means unrestricted, which is what every token created before this
 	// column existed keeps being.
 	Namespaces string `json:"namespaces" gorm:"column:namespaces;default:''"`
-	Scope     string `json:"scope" gorm:"not null;default:admin"`
-	ExpiresAt int64  `json:"expiresAt" gorm:"not null;default:0"`
+	Scope      string `json:"scope" gorm:"not null;default:admin"`
+	ExpiresAt  int64  `json:"expiresAt" gorm:"not null;default:0"`
 }
 
 // MarshalJSON emits settings, streamSettings, and sniffing as nested JSON
@@ -1069,6 +1071,17 @@ type Client struct {
 	ConnLimit            uint32 `json:"conn_limit,omitempty" form:"conn_limit"`
 	EgressTag            string `json:"egress_tag,omitempty" form:"egress_tag"`
 
+	// Three-tier shaping on top of the upload/download standard rates; bit/s,
+	// bytes and seconds, 0 = tier off. Emitted to xray as *_bit_per_sec names.
+	BurstBps              uint64 `json:"burst_bps,omitempty" form:"burst_bps"`
+	BurstCreditBytes      uint64 `json:"burst_credit_bytes,omitempty" form:"burst_credit_bytes"`
+	SustainedBps          uint64 `json:"sustained_bps,omitempty" form:"sustained_bps"`
+	SustainedAfterSeconds uint32 `json:"sustained_after_seconds,omitempty" form:"sustained_after_seconds"`
+
+	// Mixed (HTTP+SOCKS5) login; empty falls back to email / password.
+	MixedUser string `json:"mixed_user,omitempty" form:"mixed_user"`
+	MixedPass string `json:"mixed_pass,omitempty" form:"mixed_pass"`
+
 	// Display units the operator picked, so reopening the form shows the number
 	// they typed. camelCase keeps them clearly out of xray's snake_case set.
 	RateUnit  string `json:"rateUnit,omitempty" form:"rateUnit"`   // Mbps / Kbps / MB/s / KB/s
@@ -1110,19 +1123,25 @@ type ClientRecord struct {
 	UpdatedAt       int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
 	// Per-client limits (see Client). One line = one client, so all five
 	// protocols it is attached to share the same tier.
-	BandwidthBps         uint64 `json:"bandwidth_bps" gorm:"column:bandwidth_bps;default:0"`
-	CommittedBps         uint64 `json:"committed_bps" gorm:"column:committed_bps;default:0"`
-	CommittedBurstBytes  uint64 `json:"committed_burst_bytes" gorm:"column:committed_burst_bytes;default:0"`
-	UploadBandwidthBps   uint64 `json:"upload_bandwidth_bps" gorm:"column:upload_bandwidth_bps;default:0"`
-	UploadPeakBps        uint64 `json:"upload_peak_bps" gorm:"column:upload_peak_bps;default:0"`
-	UploadBurstBytes     uint64 `json:"upload_burst_bytes" gorm:"column:upload_burst_bytes;default:0"`
-	DownloadBandwidthBps uint64 `json:"download_bandwidth_bps" gorm:"column:download_bandwidth_bps;default:0"`
-	DownloadPeakBps      uint64 `json:"download_peak_bps" gorm:"column:download_peak_bps;default:0"`
-	DownloadBurstBytes   uint64 `json:"download_burst_bytes" gorm:"column:download_burst_bytes;default:0"`
-	ConnLimit            uint32 `json:"conn_limit" gorm:"column:conn_limit;default:0"`
-	RateUnit             string `json:"rateUnit" gorm:"column:rate_unit;default:''"`
-	BurstUnit            string `json:"burstUnit" gorm:"column:burst_unit;default:''"`
-	EgressTag            string `json:"egress_tag" gorm:"column:egress_tag;default:''"`
+	BandwidthBps          uint64 `json:"bandwidth_bps" gorm:"column:bandwidth_bps;default:0"`
+	CommittedBps          uint64 `json:"committed_bps" gorm:"column:committed_bps;default:0"`
+	CommittedBurstBytes   uint64 `json:"committed_burst_bytes" gorm:"column:committed_burst_bytes;default:0"`
+	UploadBandwidthBps    uint64 `json:"upload_bandwidth_bps" gorm:"column:upload_bandwidth_bps;default:0"`
+	UploadPeakBps         uint64 `json:"upload_peak_bps" gorm:"column:upload_peak_bps;default:0"`
+	UploadBurstBytes      uint64 `json:"upload_burst_bytes" gorm:"column:upload_burst_bytes;default:0"`
+	DownloadBandwidthBps  uint64 `json:"download_bandwidth_bps" gorm:"column:download_bandwidth_bps;default:0"`
+	DownloadPeakBps       uint64 `json:"download_peak_bps" gorm:"column:download_peak_bps;default:0"`
+	DownloadBurstBytes    uint64 `json:"download_burst_bytes" gorm:"column:download_burst_bytes;default:0"`
+	ConnLimit             uint32 `json:"conn_limit" gorm:"column:conn_limit;default:0"`
+	RateUnit              string `json:"rateUnit" gorm:"column:rate_unit;default:''"`
+	BurstUnit             string `json:"burstUnit" gorm:"column:burst_unit;default:''"`
+	EgressTag             string `json:"egress_tag" gorm:"column:egress_tag;default:''"`
+	BurstBps              uint64 `json:"burst_bps" gorm:"column:burst_bps;default:0"`
+	BurstCreditBytes      uint64 `json:"burst_credit_bytes" gorm:"column:burst_credit_bytes;default:0"`
+	SustainedBps          uint64 `json:"sustained_bps" gorm:"column:sustained_bps;default:0"`
+	SustainedAfterSeconds uint32 `json:"sustained_after_seconds" gorm:"column:sustained_after_seconds;default:0"`
+	MixedUser             string `json:"mixed_user" gorm:"column:mixed_user;default:''"`
+	MixedPass             string `json:"mixed_pass" gorm:"column:mixed_pass;default:''"`
 	// Owned solely by the node-snapshot sweep, which soft-orphans instead of
 	// deleting; orphans from any other cause stay at zero and are never reaped.
 	SyncOrphanedAt int64 `json:"-" gorm:"column:sync_orphaned_at;default:0"`
@@ -1130,7 +1149,7 @@ type ClientRecord struct {
 
 // ClientRateLimitKeys are the xray-facing limit keys, in one place so every
 // emit path (config.json, mixed accounts, runtime AddUser) stays in sync.
-var ClientRateLimitKeys = []string{"bandwidth_bps", "committed_bps", "committed_burst_bytes", "conn_limit", "upload_bandwidth_bps", "upload_peak_bps", "upload_burst_bytes", "download_bandwidth_bps", "download_peak_bps", "download_burst_bytes"}
+var ClientRateLimitKeys = []string{"bandwidth_bps", "committed_bps", "committed_burst_bytes", "conn_limit", "upload_bandwidth_bps", "upload_peak_bps", "upload_burst_bytes", "download_bandwidth_bps", "download_peak_bps", "download_burst_bytes", "burst_bps", "burst_credit_bytes", "sustained_bps", "sustained_after_seconds"}
 
 func (ClientRecord) TableName() string { return "clients" }
 
@@ -1339,19 +1358,25 @@ func (c *Client) ToRecord() *ClientRecord {
 		CreatedAt:       c.CreatedAt,
 		UpdatedAt:       c.UpdatedAt,
 
-		BandwidthBps:         c.BandwidthBps,
-		CommittedBps:         c.CommittedBps,
-		CommittedBurstBytes:  c.CommittedBurstBytes,
-		UploadBandwidthBps:   c.UploadBandwidthBps,
-		UploadPeakBps:        c.UploadPeakBps,
-		UploadBurstBytes:     c.UploadBurstBytes,
-		DownloadBandwidthBps: c.DownloadBandwidthBps,
-		DownloadPeakBps:      c.DownloadPeakBps,
-		DownloadBurstBytes:   c.DownloadBurstBytes,
-		ConnLimit:            c.ConnLimit,
-		RateUnit:             c.RateUnit,
-		BurstUnit:            c.BurstUnit,
-		EgressTag:            c.EgressTag,
+		BandwidthBps:          c.BandwidthBps,
+		CommittedBps:          c.CommittedBps,
+		CommittedBurstBytes:   c.CommittedBurstBytes,
+		UploadBandwidthBps:    c.UploadBandwidthBps,
+		UploadPeakBps:         c.UploadPeakBps,
+		UploadBurstBytes:      c.UploadBurstBytes,
+		DownloadBandwidthBps:  c.DownloadBandwidthBps,
+		DownloadPeakBps:       c.DownloadPeakBps,
+		DownloadBurstBytes:    c.DownloadBurstBytes,
+		ConnLimit:             c.ConnLimit,
+		BurstBps:              c.BurstBps,
+		BurstCreditBytes:      c.BurstCreditBytes,
+		SustainedBps:          c.SustainedBps,
+		SustainedAfterSeconds: c.SustainedAfterSeconds,
+		MixedUser:             c.MixedUser,
+		MixedPass:             c.MixedPass,
+		RateUnit:              c.RateUnit,
+		BurstUnit:             c.BurstUnit,
+		EgressTag:             c.EgressTag,
 
 		PrivateKey:     c.PrivateKey,
 		PublicKey:      c.PublicKey,
@@ -1411,19 +1436,25 @@ func (r *ClientRecord) ToClient() *Client {
 		CreatedAt:       r.CreatedAt,
 		UpdatedAt:       r.UpdatedAt,
 
-		BandwidthBps:         r.BandwidthBps,
-		CommittedBps:         r.CommittedBps,
-		CommittedBurstBytes:  r.CommittedBurstBytes,
-		UploadBandwidthBps:   r.UploadBandwidthBps,
-		UploadPeakBps:        r.UploadPeakBps,
-		UploadBurstBytes:     r.UploadBurstBytes,
-		DownloadBandwidthBps: r.DownloadBandwidthBps,
-		DownloadPeakBps:      r.DownloadPeakBps,
-		DownloadBurstBytes:   r.DownloadBurstBytes,
-		ConnLimit:            r.ConnLimit,
-		RateUnit:             r.RateUnit,
-		BurstUnit:            r.BurstUnit,
-		EgressTag:            r.EgressTag,
+		BandwidthBps:          r.BandwidthBps,
+		CommittedBps:          r.CommittedBps,
+		CommittedBurstBytes:   r.CommittedBurstBytes,
+		UploadBandwidthBps:    r.UploadBandwidthBps,
+		UploadPeakBps:         r.UploadPeakBps,
+		UploadBurstBytes:      r.UploadBurstBytes,
+		DownloadBandwidthBps:  r.DownloadBandwidthBps,
+		DownloadPeakBps:       r.DownloadPeakBps,
+		DownloadBurstBytes:    r.DownloadBurstBytes,
+		ConnLimit:             r.ConnLimit,
+		BurstBps:              r.BurstBps,
+		BurstCreditBytes:      r.BurstCreditBytes,
+		SustainedBps:          r.SustainedBps,
+		SustainedAfterSeconds: r.SustainedAfterSeconds,
+		MixedUser:             r.MixedUser,
+		MixedPass:             r.MixedPass,
+		RateUnit:              r.RateUnit,
+		BurstUnit:             r.BurstUnit,
+		EgressTag:             r.EgressTag,
 
 		PrivateKey:     r.PrivateKey,
 		PublicKey:      r.PublicKey,
@@ -1689,4 +1720,79 @@ func MergeClientRecord(existing *ClientRecord, incoming *ClientRecord) []ClientM
 		existing.UpdatedAt = incoming.UpdatedAt
 	}
 	return conflicts
+}
+
+// MixedCredentials is the Mixed (HTTP+SOCKS5) login, falling back to email and
+// password so clients created before the separate fields keep their old login.
+func (c Client) MixedCredentials() (user, pass string) {
+	user, pass = c.MixedUser, c.MixedPass
+	if user == "" {
+		user = c.Email
+	}
+	if pass == "" {
+		pass = c.Password
+	}
+	return user, pass
+}
+
+// ShadowsocksClientKey turns one client password into the per-inbound key a
+// Shadowsocks-2022 inbound needs; see FORK.md for the derivation contract.
+func ShadowsocksClientKey(method, inboundTag, password string) string {
+	if !strings.HasPrefix(method, "2022-blake3-") || password == "" {
+		return password
+	}
+	size := 32
+	if method == "2022-blake3-aes-128-gcm" {
+		size = 16
+	}
+	if raw, err := base64.StdEncoding.DecodeString(password); err == nil && len(raw) == size {
+		return password
+	}
+	sum := sha256.Sum256([]byte("ss2022-client/" + inboundTag + "/" + password))
+	return base64.StdEncoding.EncodeToString(sum[:size])
+}
+
+// RuntimeLimitFields are the client's protocol.User runtime keys under xray's
+// own names (bit/s, bytes, seconds); zero values are kept so a clear applies.
+func (c Client) RuntimeLimitFields() map[string]any {
+	fields := map[string]any{
+		"bandwidth_bps":           c.BandwidthBps,
+		"committed_bps":           c.CommittedBps,
+		"committed_burst_bytes":   c.CommittedBurstBytes,
+		"upload_bandwidth_bps":    c.UploadBandwidthBps,
+		"upload_peak_bps":         c.UploadPeakBps,
+		"upload_burst_bytes":      c.UploadBurstBytes,
+		"download_bandwidth_bps":  c.DownloadBandwidthBps,
+		"download_peak_bps":       c.DownloadPeakBps,
+		"download_burst_bytes":    c.DownloadBurstBytes,
+		"conn_limit":              uint64(c.ConnLimit),
+		"burst_bit_per_sec":       c.BurstBps,
+		"burst_credit_bytes":      c.BurstCreditBytes,
+		"sustained_bit_per_sec":   c.SustainedBps,
+		"sustained_after_seconds": uint64(c.SustainedAfterSeconds),
+	}
+	if c.EgressTag != "" {
+		fields["egress_tag"] = c.EgressTag
+	}
+	return fields
+}
+
+// RuntimeCredentialFields are the protocol-specific login keys a runtime user
+// map needs on this inbound: derived Shadowsocks-2022 key, Mixed login.
+func (c Client) RuntimeCredentialFields(ib *Inbound) map[string]any {
+	fields := map[string]any{}
+	switch ib.Protocol {
+	case Shadowsocks:
+		var settings struct {
+			Method string `json:"method"`
+		}
+		_ = json.Unmarshal([]byte(ib.Settings), &settings)
+		fields["password"] = ShadowsocksClientKey(settings.Method, ib.Tag, c.Password)
+		if settings.Method != "" {
+			fields["cipher"] = settings.Method
+		}
+	case Mixed:
+		fields["user"], fields["pass"] = c.MixedCredentials()
+	}
+	return fields
 }

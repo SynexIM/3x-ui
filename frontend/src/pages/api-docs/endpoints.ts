@@ -43,6 +43,8 @@ export interface Endpoint {
   response?: string;
   errorResponse?: string;
   errorStatus?: number;
+  // HTTP status -> example body for failures that carry a stable `code`.
+  codedErrors?: Record<string, string>;
   // A generated schema name, or an inline schema object.
   requestSchema?: string | Record<string, unknown>;
   bodyRequiredOneOf?: string[];
@@ -1145,7 +1147,7 @@ export const sections: readonly Section[] = [
         path: '/panel/api/clients/add',
         summary: 'Create a new client and attach it to one or more inbounds in a single call. Body is JSON. Per-protocol secrets (UUID for VLESS/VMess, password for Trojan/Mixed/HTTP/Shadowsocks, auth for Hysteria) are generated server-side when omitted, so callers can send only the universal fields.',
         params: [
-          { name: 'client', in: 'body (json)', type: 'object', desc: 'Client fields: email, subId, id (uuid), password, auth, flow, totalGB, expiryTime, limitIp, tgId, comment, enable; bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit (Mbps/Kbps/MB/s/KB/s), burstUnit (MB/GB). Zero rate values mean unlimited; units are display metadata.' },
+          { name: 'client', in: 'body (json)', type: 'object', desc: 'Client fields: email, subId, id (uuid), password, auth, flow, totalGB, expiryTime, limitIp, tgId, comment, enable; bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit (Mbps/Kbps/MB/s/KB/s), burstUnit (MB/GB); upload_bandwidth_bps / download_bandwidth_bps (standard bits/s), burst_bps, burst_credit_bytes, sustained_bps, sustained_after_seconds (three-tier shaping); mixed_user / mixed_pass (Mixed login, default email / password). Zero rate values mean unlimited; units are display metadata.' },
           { name: 'inboundIds', in: 'body (json)', type: 'integer[]', desc: 'Inbound IDs to attach the client to. At least one required.' },
         ],
         body: '{\n  "client": {\n    "email": "alice@example.com",\n    "totalGB": 53687091200,\n    "expiryTime": 1735689600000,\n    "tgId": 0,\n    "limitIp": 0,\n    "bandwidth_bps": 100000000,\n    "committed_bps": 10000000,\n    "committed_burst_bytes": 5000000,\n    "rateUnit": "Mbps",\n    "burstUnit": "MB",\n    "enable": true\n  },\n  "inboundIds": [3, 5]\n}',
@@ -1172,12 +1174,26 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/clients/runtime/:email',
-        summary: 'Patch runtime rate limits, connection limit and egress tag for one identity. Omitted fields are preserved; zero clears a limit. Credentials, validity, traffic quota and per-inbound flow are preserved. A failed or pending receipt requires reconciliation before reporting the change as usable.',
+        summary: 'Patch runtime rate limits, connection limit and egress tag for one identity. upload_bandwidth_bps / download_bandwidth_bps are the standard rates; burst_bps + burst_credit_bytes add a credit-paid burst and sustained_bps + sustained_after_seconds a long-saturation rate (symmetric, 0 = tier off, burst >= standard >= sustained). Omitted fields are preserved; zero clears a limit. Applied to the running core without restarting it or dropping established connections. Credentials, validity, traffic quota and per-inbound flow are preserved. A failed or pending receipt requires reconciliation before reporting the change as usable.',
         requestSchema: 'ClientRuntimePatch',
         responseSchema: 'ClientRuntimeReceipt',
         params: [
           { name: 'email', in: 'path', type: 'string', desc: 'Stable client identity.' },
         ],
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/clients/:email/credentials',
+        summary: 'Rotate one client\'s credentials on every inbound it is attached to, hot-applied without restarting the core. id is the VLESS/VMess UUID; password is the Trojan/Shadowsocks password and the Hysteria2 auth (Shadowsocks-2022 inbounds derive a per-inbound key from it); mixed_user / mixed_pass are the Mixed inbound login (empty restores the email / password fallback). Only the fields sent change.',
+        requestSchema: 'ClientCredentialPatch',
+        responseSchema: 'ClientRuntimeReceipt',
+        params: [{ name: 'email', in: 'path', type: 'string', desc: 'Stable client identity.' }],
+        codedErrors: {
+          '409':
+            '{\n  "success": false,\n  "code": "CLIENT_CREDENTIAL_CONFLICT",\n  "msg": "CLIENT_CREDENTIAL_CONFLICT: inbound \\"in-vless\\" already has a client with this credential"\n}',
+          '422':
+            '{\n  "success": false,\n  "code": "CLIENT_CREDENTIAL_INVALID",\n  "msg": "CLIENT_CREDENTIAL_INVALID: id must be a UUID"\n}',
+        },
       },
       {
         method: 'POST',

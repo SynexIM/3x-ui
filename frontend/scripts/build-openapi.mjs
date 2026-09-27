@@ -312,6 +312,26 @@ function buildOperation(ep, tag) {
     };
   }
 
+  // Machine-readable failures: HTTP status plus a stable `code` callers branch on.
+  for (const [status, raw] of Object.entries(ep.codedErrors || {})) {
+    responses[status] = {
+      description: 'Error response with a stable error code',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              code: { type: 'string' },
+              msg: { type: 'string' },
+            },
+          },
+          example: tryParseJson(raw),
+        },
+      },
+    };
+  }
+
   op.responses = responses;
   if (ep.security !== undefined) op.security = ep.security;
   return op;

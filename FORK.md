@@ -100,6 +100,37 @@ surfaces its gRPC error instead of rendering an empty list.
   a real-core test asserts a rule's `user` survives the round trip — reverting
   the call makes it fail with an empty `User`.
 
+## Three-tier shaping, credential rotation and derived Shadowsocks keys
+
+Panel side of the dedicated-line contract; the shaping algorithm itself lives in
+the SynexIM xray-core (`common/protocol/tier_shaper.go`).
+
+- **Client fields** (`clients` table, `/clients/add`, `/clients/runtime/:email`,
+  `GET /clients/get/:email`): `upload_bandwidth_bps` / `download_bandwidth_bps`
+  are the standard rate; `burst_bps`, `burst_credit_bytes`, `sustained_bps`,
+  `sustained_after_seconds` add the burst and sustained tiers (0 = tier off,
+  burst >= standard >= sustained). They are emitted to the core as
+  `burst_bit_per_sec`, `burst_credit_bytes`, `sustained_bit_per_sec`,
+  `sustained_after_seconds`; a runtime patch re-adds the user and the core swaps
+  the policy under established connections.
+- **`POST /clients/:email/credentials`** `{id?, password?, mixed_user?, mixed_pass?}`
+  rotates credentials on every attached inbound and hot-applies them. `password`
+  is also the Hysteria2 `auth`; empty `mixed_user` / `mixed_pass` fall back to
+  email / password. Failures: `409 CLIENT_CREDENTIAL_CONFLICT` (another client on
+  the same inbound already authenticates with that UUID, Hysteria2 auth,
+  Shadowsocks password or Mixed login), `422 CLIENT_CREDENTIAL_INVALID`.
+- **Mixed login**: Mixed accounts now carry `email` next to `user`/`pass`, so a
+  login that differs from the email still shares shaping and stats with the
+  client's other inbounds, also after a core restart.
+- **Shadowsocks-2022 key derivation** (`model.ShadowsocksClientKey`): one logical
+  client has one password, but a 2022 inbound needs a base64 key of the cipher's
+  length. For a `2022-blake3-*` inbound the panel uses the password unchanged if
+  it already decodes to exactly 16 bytes (`aes-128-gcm`) or 32 bytes (others);
+  otherwise it uses
+  `base64(sha256("ss2022-client/" + inboundTag + "/" + password)[:N])`.
+  The core user, share links, Clash and JSON subscriptions all go through that
+  one function. Legacy (non-2022) Shadowsocks keeps the raw password.
+
 ## Upstream merge 2026-09 (MHSanaei/3x-ui v3.8.5)
 
 Merged on top of the fork's normalized client authority. Upstream's client and

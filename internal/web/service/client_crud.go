@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -157,9 +156,9 @@ func (s *ClientService) fillProtocolDefaults(c *model.Client, ib *model.Inbound)
 			c.Password = strings.ReplaceAll(uuid.NewString(), "-", "")
 		}
 	case model.Shadowsocks:
-		method := shadowsocksMethodFromSettings(ib.Settings)
-		if c.Password == "" || !validShadowsocksClientKey(method, c.Password) {
-			c.Password = randomShadowsocksClientKey(method)
+		// Any password works: a 2022 inbound derives its key via model.ShadowsocksClientKey.
+		if c.Password == "" {
+			c.Password = randomShadowsocksClientKey(shadowsocksMethodFromSettings(ib.Settings))
 		}
 	case model.Hysteria:
 		if c.Auth == "" {
@@ -219,18 +218,6 @@ func randomShadowsocksClientKey(method string) string {
 		return random.Base64Bytes(n)
 	}
 	return strings.ReplaceAll(uuid.NewString(), "-", "")
-}
-
-func validShadowsocksClientKey(method, key string) bool {
-	n := shadowsocksKeyBytes(method)
-	if n == 0 {
-		return key != ""
-	}
-	decoded, err := base64.StdEncoding.DecodeString(key)
-	if err != nil {
-		return false
-	}
-	return len(decoded) == n
 }
 
 func shadowsocksKeyBytes(method string) int {

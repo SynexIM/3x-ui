@@ -398,7 +398,6 @@ func splitSettingsUsers(
 	switch protocolName {
 	case "mixed":
 		usersKey = "accounts"
-		emailKey = "user"
 	case "shadowsocks":
 		// The account builder needs the inbound-level method to select the
 		// correct legacy/2022 typed account for each live user operation.
@@ -442,6 +441,10 @@ func splitSettingsEntries(
 			return nil, nil, false
 		}
 		email, _ := obj[emailKey].(string)
+		if email == "" {
+			// Mixed accounts written before they carried an email used the login as identity.
+			email, _ = obj["user"].(string)
+		}
 		if email == "" {
 			return nil, nil, false
 		}

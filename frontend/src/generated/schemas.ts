@@ -1454,6 +1454,15 @@ export const SCHEMAS: Record<string, unknown> = {
         "description": "MB / GB",
         "type": "string"
       },
+      "burst_bps": {
+        "description": "Three-tier shaping on top of the upload/download standard rates; bit/s,\nbytes and seconds, 0 = tier off. Emitted to xray as *_bit_per_sec names.",
+        "format": "int64",
+        "type": "integer"
+      },
+      "burst_credit_bytes": {
+        "format": "int64",
+        "type": "integer"
+      },
       "comment": {
         "description": "Client comment",
         "type": "string"
@@ -1527,6 +1536,13 @@ export const SCHEMAS: Record<string, unknown> = {
         "description": "IP limit for this client",
         "type": "integer"
       },
+      "mixed_pass": {
+        "type": "string"
+      },
+      "mixed_user": {
+        "description": "Mixed (HTTP+SOCKS5) login; empty falls back to email / password.",
+        "type": "string"
+      },
       "password": {
         "description": "Client password",
         "type": "string"
@@ -1576,6 +1592,13 @@ export const SCHEMAS: Record<string, unknown> = {
       "subId": {
         "description": "Subscription identifier",
         "type": "string"
+      },
+      "sustained_after_seconds": {
+        "type": "integer"
+      },
+      "sustained_bps": {
+        "format": "int64",
+        "type": "integer"
       },
       "tgId": {
         "description": "Telegram user ID for notifications",
@@ -1635,6 +1658,32 @@ export const SCHEMAS: Record<string, unknown> = {
       "tgId",
       "totalGB"
     ],
+    "type": "object"
+  },
+  "ClientCredentialPatch": {
+    "description": "ClientCredentialPatch changes only the fields it names; password also becomes\nthe Hysteria2 auth, and empty mixed_user/mixed_pass fall back to email/password.",
+    "properties": {
+      "id": {
+        "example": "0f7a8c1e-4d2b-4e6a-9c3f-1b2d3e4f5a6b",
+        "nullable": true,
+        "type": "string"
+      },
+      "mixed_pass": {
+        "example": "s3cret-Pass_02",
+        "nullable": true,
+        "type": "string"
+      },
+      "mixed_user": {
+        "example": "line-0001",
+        "nullable": true,
+        "type": "string"
+      },
+      "password": {
+        "example": "s3cret-Pass_01",
+        "nullable": true,
+        "type": "string"
+      }
+    },
     "type": "object"
   },
   "ClientInbound": {
@@ -1731,6 +1780,14 @@ export const SCHEMAS: Record<string, unknown> = {
       "burstUnit": {
         "type": "string"
       },
+      "burst_bps": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "burst_credit_bytes": {
+        "format": "int64",
+        "type": "integer"
+      },
       "comment": {
         "type": "string"
       },
@@ -1795,6 +1852,12 @@ export const SCHEMAS: Record<string, unknown> = {
       "limitIp": {
         "type": "integer"
       },
+      "mixed_pass": {
+        "type": "string"
+      },
+      "mixed_user": {
+        "type": "string"
+      },
       "password": {
         "type": "string"
       },
@@ -1828,6 +1891,13 @@ export const SCHEMAS: Record<string, unknown> = {
       },
       "subId": {
         "type": "string"
+      },
+      "sustained_after_seconds": {
+        "type": "integer"
+      },
+      "sustained_bps": {
+        "format": "int64",
+        "type": "integer"
       },
       "tgId": {
         "format": "int64",
@@ -1869,6 +1939,8 @@ export const SCHEMAS: Record<string, unknown> = {
       "auth",
       "bandwidth_bps",
       "burstUnit",
+      "burst_bps",
+      "burst_credit_bytes",
       "comment",
       "committed_bps",
       "committed_burst_bytes",
@@ -1888,6 +1960,8 @@ export const SCHEMAS: Record<string, unknown> = {
       "keepAlive",
       "limitHwid",
       "limitIp",
+      "mixed_pass",
+      "mixed_user",
       "password",
       "preSharedKey",
       "privateKey",
@@ -1900,6 +1974,8 @@ export const SCHEMAS: Record<string, unknown> = {
       "secret",
       "security",
       "subId",
+      "sustained_after_seconds",
+      "sustained_bps",
       "tgId",
       "totalGB",
       "trafficReset",
@@ -1927,6 +2003,17 @@ export const SCHEMAS: Record<string, unknown> = {
     "description": "Omitted fields stay unchanged; explicit zero clears only that runtime limit.",
     "properties": {
       "bandwidth_bps": {
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
+      },
+      "burst_bps": {
+        "description": "Three-tier shaping over the upload/download standard rates (symmetric).",
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
+      },
+      "burst_credit_bytes": {
         "format": "int64",
         "nullable": true,
         "type": "integer"
@@ -1963,6 +2050,15 @@ export const SCHEMAS: Record<string, unknown> = {
       "egress_tag": {
         "nullable": true,
         "type": "string"
+      },
+      "sustained_after_seconds": {
+        "nullable": true,
+        "type": "integer"
+      },
+      "sustained_bps": {
+        "format": "int64",
+        "nullable": true,
+        "type": "integer"
       },
       "upload_bandwidth_bps": {
         "format": "int64",

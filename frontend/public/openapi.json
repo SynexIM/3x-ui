@@ -1480,6 +1480,15 @@
             "description": "MB / GB",
             "type": "string"
           },
+          "burst_bps": {
+            "description": "Three-tier shaping on top of the upload/download standard rates; bit/s,\nbytes and seconds, 0 = tier off. Emitted to xray as *_bit_per_sec names.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "burst_credit_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
           "comment": {
             "description": "Client comment",
             "type": "string"
@@ -1553,6 +1562,13 @@
             "description": "IP limit for this client",
             "type": "integer"
           },
+          "mixed_pass": {
+            "type": "string"
+          },
+          "mixed_user": {
+            "description": "Mixed (HTTP+SOCKS5) login; empty falls back to email / password.",
+            "type": "string"
+          },
           "password": {
             "description": "Client password",
             "type": "string"
@@ -1602,6 +1618,13 @@
           "subId": {
             "description": "Subscription identifier",
             "type": "string"
+          },
+          "sustained_after_seconds": {
+            "type": "integer"
+          },
+          "sustained_bps": {
+            "format": "int64",
+            "type": "integer"
           },
           "tgId": {
             "description": "Telegram user ID for notifications",
@@ -1661,6 +1684,32 @@
           "tgId",
           "totalGB"
         ],
+        "type": "object"
+      },
+      "ClientCredentialPatch": {
+        "description": "ClientCredentialPatch changes only the fields it names; password also becomes\nthe Hysteria2 auth, and empty mixed_user/mixed_pass fall back to email/password.",
+        "properties": {
+          "id": {
+            "example": "0f7a8c1e-4d2b-4e6a-9c3f-1b2d3e4f5a6b",
+            "nullable": true,
+            "type": "string"
+          },
+          "mixed_pass": {
+            "example": "s3cret-Pass_02",
+            "nullable": true,
+            "type": "string"
+          },
+          "mixed_user": {
+            "example": "line-0001",
+            "nullable": true,
+            "type": "string"
+          },
+          "password": {
+            "example": "s3cret-Pass_01",
+            "nullable": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "ClientInbound": {
@@ -1757,6 +1806,14 @@
           "burstUnit": {
             "type": "string"
           },
+          "burst_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "burst_credit_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
           "comment": {
             "type": "string"
           },
@@ -1821,6 +1878,12 @@
           "limitIp": {
             "type": "integer"
           },
+          "mixed_pass": {
+            "type": "string"
+          },
+          "mixed_user": {
+            "type": "string"
+          },
           "password": {
             "type": "string"
           },
@@ -1854,6 +1917,13 @@
           },
           "subId": {
             "type": "string"
+          },
+          "sustained_after_seconds": {
+            "type": "integer"
+          },
+          "sustained_bps": {
+            "format": "int64",
+            "type": "integer"
           },
           "tgId": {
             "format": "int64",
@@ -1895,6 +1965,8 @@
           "auth",
           "bandwidth_bps",
           "burstUnit",
+          "burst_bps",
+          "burst_credit_bytes",
           "comment",
           "committed_bps",
           "committed_burst_bytes",
@@ -1914,6 +1986,8 @@
           "keepAlive",
           "limitHwid",
           "limitIp",
+          "mixed_pass",
+          "mixed_user",
           "password",
           "preSharedKey",
           "privateKey",
@@ -1926,6 +2000,8 @@
           "secret",
           "security",
           "subId",
+          "sustained_after_seconds",
+          "sustained_bps",
           "tgId",
           "totalGB",
           "trafficReset",
@@ -1953,6 +2029,17 @@
         "description": "Omitted fields stay unchanged; explicit zero clears only that runtime limit.",
         "properties": {
           "bandwidth_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "burst_bps": {
+            "description": "Three-tier shaping over the upload/download standard rates (symmetric).",
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "burst_credit_bytes": {
             "format": "int64",
             "nullable": true,
             "type": "integer"
@@ -1989,6 +2076,15 @@
           "egress_tag": {
             "nullable": true,
             "type": "string"
+          },
+          "sustained_after_seconds": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "sustained_bps": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
           },
           "upload_bandwidth_bps": {
             "format": "int64",
@@ -8658,7 +8754,7 @@
                 "properties": {
                   "client": {
                     "type": "object",
-                    "description": "Client fields: email, subId, id (uuid), password, auth, flow, totalGB, expiryTime, limitIp, tgId, comment, enable; bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit (Mbps/Kbps/MB/s/KB/s), burstUnit (MB/GB). Zero rate values mean unlimited; units are display metadata."
+                    "description": "Client fields: email, subId, id (uuid), password, auth, flow, totalGB, expiryTime, limitIp, tgId, comment, enable; bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit (Mbps/Kbps/MB/s/KB/s), burstUnit (MB/GB); upload_bandwidth_bps / download_bandwidth_bps (standard bits/s), burst_bps, burst_credit_bytes, sustained_bps, sustained_after_seconds (three-tier shaping); mixed_user / mixed_pass (Mixed login, default email / password). Zero rate values mean unlimited; units are display metadata."
                   },
                   "inboundIds": {
                     "type": "array",
@@ -8795,7 +8891,7 @@
         "tags": [
           "Clients"
         ],
-        "summary": "Patch runtime rate limits, connection limit and egress tag for one identity. Omitted fields are preserved; zero clears a limit. Credentials, validity, traffic quota and per-inbound flow are preserved. A failed or pending receipt requires reconciliation before reporting the change as usable.",
+        "summary": "Patch runtime rate limits, connection limit and egress tag for one identity. upload_bandwidth_bps / download_bandwidth_bps are the standard rates; burst_bps + burst_credit_bytes add a credit-paid burst and sustained_bps + sustained_after_seconds a long-saturation rate (symmetric, 0 = tier off, burst >= standard >= sustained). Omitted fields are preserved; zero clears a limit. Applied to the running core without restarting it or dropping established connections. Credentials, validity, traffic quota and per-inbound flow are preserved. A failed or pending receipt requires reconciliation before reporting the change as usable.",
         "operationId": "post_panel_api_clients_runtime_email",
         "parameters": [
           {
@@ -8817,6 +8913,8 @@
               },
               "example": {
                 "bandwidth_bps": null,
+                "burst_bps": null,
+                "burst_credit_bytes": null,
                 "committed_bps": null,
                 "committed_burst_bytes": null,
                 "conn_limit": null,
@@ -8824,6 +8922,8 @@
                 "download_burst_bytes": null,
                 "download_peak_bps": null,
                 "egress_tag": null,
+                "sustained_after_seconds": null,
+                "sustained_bps": null,
                 "upload_bandwidth_bps": null,
                 "upload_burst_bytes": null,
                 "upload_peak_bps": null
@@ -8857,6 +8957,125 @@
                     "nodePending": false,
                     "requiresRestart": false
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/clients/{email}/credentials": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Rotate one client's credentials on every inbound it is attached to, hot-applied without restarting the core. id is the VLESS/VMess UUID; password is the Trojan/Shadowsocks password and the Hysteria2 auth (Shadowsocks-2022 inbounds derive a per-inbound key from it); mixed_user / mixed_pass are the Mixed inbound login (empty restores the email / password fallback). Only the fields sent change.",
+        "operationId": "post_panel_api_clients_email_credentials",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Stable client identity.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientCredentialPatch"
+              },
+              "example": {
+                "id": "0f7a8c1e-4d2b-4e6a-9c3f-1b2d3e4f5a6b",
+                "mixed_pass": "s3cret-Pass_02",
+                "mixed_user": "line-0001",
+                "password": "s3cret-Pass_01"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/ClientRuntimeReceipt"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "hotApplied": true,
+                    "nodePending": false,
+                    "requiresRestart": false
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error response with a stable error code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "success": false,
+                  "code": "CLIENT_CREDENTIAL_CONFLICT",
+                  "msg": "CLIENT_CREDENTIAL_CONFLICT: inbound \"in-vless\" already has a client with this credential"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error response with a stable error code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "success": false,
+                  "code": "CLIENT_CREDENTIAL_INVALID",
+                  "msg": "CLIENT_CREDENTIAL_INVALID: id must be a UUID"
                 }
               }
             }

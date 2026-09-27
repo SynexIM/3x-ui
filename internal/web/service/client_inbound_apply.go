@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 	"time"
@@ -424,7 +425,7 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 				if !client.Enable {
 					continue
 				}
-				err1 := rt.AddUser(context.Background(), oldInbound, map[string]any{
+				user := map[string]any{
 					"email":        client.Email,
 					"id":           client.ID,
 					"auth":         client.Auth,
@@ -436,7 +437,10 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 					"allowedIPs":   client.AllowedIPs,
 					"preSharedKey": client.PreSharedKey,
 					"keepAlive":    keepAliveStr(client.KeepAliveSeconds()),
-				})
+				}
+				maps.Copy(user, client.RuntimeLimitFields())
+				maps.Copy(user, client.RuntimeCredentialFields(oldInbound))
+				err1 := rt.AddUser(context.Background(), oldInbound, user)
 				if err1 == nil {
 					logger.Debug("Client added on", rt.Name(), ":", client.Email)
 				} else {

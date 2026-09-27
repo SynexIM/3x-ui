@@ -9,8 +9,8 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -203,6 +203,12 @@ func addClientRateLimits(entry map[string]any, c model.Client) {
 	if c.EgressTag != "" {
 		entry["egress_tag"] = c.EgressTag
 	}
+	// The core's three-tier rate fields carry an explicit _bit_per_sec suffix.
+	for _, key := range []string{"burst_bit_per_sec", "burst_credit_bytes", "sustained_bit_per_sec", "sustained_after_seconds"} {
+		if value, _ := c.RuntimeLimitFields()[key].(uint64); value > 0 {
+			entry[key] = value
+		}
+	}
 }
 
 func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
@@ -328,10 +334,11 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 					entry["flow"] = flow
 				}
 			case model.Mixed:
-				delete(entry, "email")
-				entry["user"] = c.Email
-				if c.Password != "" {
-					entry["pass"] = c.Password
+				// email stays: it is the identity shared with the client's other inbounds.
+				user, pass := c.MixedCredentials()
+				entry["user"] = user
+				if pass != "" {
+					entry["pass"] = pass
 				}
 			case model.HTTP:
 				delete(entry, "email")
@@ -341,7 +348,8 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				}
 			case model.Shadowsocks:
 				if c.Password != "" {
-					entry["password"] = c.Password
+					method, _ := settings["method"].(string)
+					entry["password"] = model.ShadowsocksClientKey(method, inbound.Tag, c.Password)
 				}
 			case model.Hysteria:
 				if c.Auth != "" {

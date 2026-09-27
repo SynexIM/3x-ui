@@ -456,7 +456,7 @@ func (s *SubClashService) buildProxy(subReq *SubService, inbound *model.Inbound,
 		proxy["cipher"] = method
 		if strings.HasPrefix(method, "2022") {
 			if serverPassword, ok := inboundSettings["password"].(string); ok && serverPassword != "" {
-				proxy["password"] = fmt.Sprintf("%s:%s", serverPassword, client.Password)
+				proxy["password"] = fmt.Sprintf("%s:%s", serverPassword, model.ShadowsocksClientKey(method, inbound.Tag, client.Password))
 			}
 		}
 	default:

@@ -844,6 +844,10 @@ func applyUserRateLimits(u *protocol.User, src map[string]any) *protocol.User {
 	u.DownloadPeakBps = uint64Field(src, "download_peak_bps")
 	u.DownloadBurstBytes = uint64Field(src, "download_burst_bytes")
 	u.ConnLimit = uint32(uint64Field(src, "conn_limit"))
+	u.BurstBitPerSec = uint64Field(src, "burst_bit_per_sec")
+	u.BurstCreditBytes = uint64Field(src, "burst_credit_bytes")
+	u.SustainedBitPerSec = uint64Field(src, "sustained_bit_per_sec")
+	u.SustainedAfterSeconds = uint32(uint64Field(src, "sustained_after_seconds"))
 	if tag, ok := src["egress_tag"].(string); ok {
 		u.EgressTag = tag
 	}

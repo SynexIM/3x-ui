@@ -808,17 +808,21 @@ func (s *SubService) genMixedLink(inbound *model.Inbound, email string) string {
 		return ""
 	}
 	client, ok := s.clientForLink(inbound, email)
-	if !ok || client.Password == "" {
+	if !ok {
+		return ""
+	}
+	user, pass := client.MixedCredentials()
+	if pass == "" {
 		return ""
 	}
 	address := s.resolveInboundAddress(inbound)
-	authority := encodeUserinfo(client.Email) + ":" + encodeUserinfo(client.Password) +
+	authority := encodeUserinfo(user) + ":" + encodeUserinfo(pass) +
 		"@" + joinHostPort(address, inbound.Port)
 	params := map[string]string{
 		"server": address,
 		"port":   strconv.Itoa(inbound.Port),
-		"user":   client.Email,
-		"pass":   client.Password,
+		"user":   user,
+		"pass":   pass,
 	}
 	return strings.Join([]string{
 		"socks5://" + authority,
@@ -1372,7 +1376,7 @@ func (s *SubService) genShadowsocksLink(inbound *model.Inbound, email string) st
 		userInfo = fmt.Sprintf("%s:%s:%s",
 			url.QueryEscape(method),
 			url.QueryEscape(inboundPassword),
-			url.QueryEscape(client.Password))
+			url.QueryEscape(model.ShadowsocksClientKey(method, inbound.Tag, client.Password)))
 	} else {
 		userInfo = base64.RawURLEncoding.EncodeToString(fmt.Appendf(nil, "%s:%s", method, client.Password))
 	}

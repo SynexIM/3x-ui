@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"strconv"
 	"strings"
 	"sync"
@@ -316,6 +317,8 @@ func (l *Local) AddClient(ctx context.Context, ib *model.Inbound, client model.C
 		"preSharedKey": client.PreSharedKey,
 		"keepAlive":    wgKeepAlive(client.KeepAliveSeconds()),
 	}
+	maps.Copy(user, client.RuntimeLimitFields())
+	maps.Copy(user, client.RuntimeCredentialFields(ib))
 	return l.AddUser(ctx, ib, user)
 }
 
@@ -360,6 +363,8 @@ func (l *Local) UpdateUser(ctx context.Context, ib *model.Inbound, oldEmail stri
 		"preSharedKey": payload.PreSharedKey,
 		"keepAlive":    wgKeepAlive(payload.KeepAliveSeconds()),
 	}
+	maps.Copy(user, payload.RuntimeLimitFields())
+	maps.Copy(user, payload.RuntimeCredentialFields(ib))
 	return l.AddUser(ctx, ib, user)
 }
 

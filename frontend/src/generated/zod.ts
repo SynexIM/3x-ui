@@ -369,6 +369,8 @@ export const ClientSchema = z.object({
   auth: z.string().optional(),
   bandwidth_bps: z.number().int().optional(),
   burstUnit: z.string().optional(),
+  burst_bps: z.number().int().optional(),
+  burst_credit_bytes: z.number().int().optional(),
   comment: z.string(),
   committed_bps: z.number().int().optional(),
   committed_burst_bytes: z.number().int().optional(),
@@ -387,6 +389,8 @@ export const ClientSchema = z.object({
   id: z.string().optional(),
   keepAlive: z.number().int().nullable().optional(),
   limitIp: z.number().int(),
+  mixed_pass: z.string().optional(),
+  mixed_user: z.string().optional(),
   password: z.string().optional(),
   preSharedKey: z.string().optional(),
   privateKey: z.string().optional(),
@@ -399,6 +403,8 @@ export const ClientSchema = z.object({
   secret: z.string().optional(),
   security: z.string(),
   subId: z.string(),
+  sustained_after_seconds: z.number().int().optional(),
+  sustained_bps: z.number().int().optional(),
   tgId: z.number().int(),
   totalGB: z.number().int(),
   trafficReset: z.enum(['never', 'hourly', 'daily', 'weekly', 'monthly']).optional(),
@@ -409,6 +415,14 @@ export const ClientSchema = z.object({
   upload_peak_bps: z.number().int().optional(),
 });
 export type Client = z.infer<typeof ClientSchema>;
+
+export const ClientCredentialPatchSchema = z.object({
+  id: z.string().nullable().optional(),
+  mixed_pass: z.string().nullable().optional(),
+  mixed_user: z.string().nullable().optional(),
+  password: z.string().nullable().optional(),
+});
+export type ClientCredentialPatch = z.infer<typeof ClientCredentialPatchSchema>;
 
 export const ClientInboundSchema = z.object({
   clientId: z.number().int(),
@@ -437,6 +451,8 @@ export const ClientRecordSchema = z.object({
   auth: z.string(),
   bandwidth_bps: z.number().int(),
   burstUnit: z.string(),
+  burst_bps: z.number().int(),
+  burst_credit_bytes: z.number().int(),
   comment: z.string(),
   committed_bps: z.number().int(),
   committed_burst_bytes: z.number().int(),
@@ -456,6 +472,8 @@ export const ClientRecordSchema = z.object({
   keepAlive: z.number().int(),
   limitHwid: z.number().int(),
   limitIp: z.number().int(),
+  mixed_pass: z.string(),
+  mixed_user: z.string(),
   password: z.string(),
   preSharedKey: z.string(),
   privateKey: z.string(),
@@ -468,6 +486,8 @@ export const ClientRecordSchema = z.object({
   secret: z.string(),
   security: z.string(),
   subId: z.string(),
+  sustained_after_seconds: z.number().int(),
+  sustained_bps: z.number().int(),
   tgId: z.number().int(),
   totalGB: z.number().int(),
   trafficReset: z.string(),
@@ -487,6 +507,8 @@ export type ClientReverse = z.infer<typeof ClientReverseSchema>;
 
 export const ClientRuntimePatchSchema = z.object({
   bandwidth_bps: z.number().int().nullable().optional(),
+  burst_bps: z.number().int().nullable().optional(),
+  burst_credit_bytes: z.number().int().nullable().optional(),
   committed_bps: z.number().int().nullable().optional(),
   committed_burst_bytes: z.number().int().nullable().optional(),
   conn_limit: z.number().int().nullable().optional(),
@@ -494,6 +516,8 @@ export const ClientRuntimePatchSchema = z.object({
   download_burst_bytes: z.number().int().nullable().optional(),
   download_peak_bps: z.number().int().nullable().optional(),
   egress_tag: z.string().nullable().optional(),
+  sustained_after_seconds: z.number().int().nullable().optional(),
+  sustained_bps: z.number().int().nullable().optional(),
   upload_bandwidth_bps: z.number().int().nullable().optional(),
   upload_burst_bytes: z.number().int().nullable().optional(),
   upload_peak_bps: z.number().int().nullable().optional(),

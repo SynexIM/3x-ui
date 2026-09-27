@@ -84,7 +84,12 @@ func injectNormalizedClients(settings map[string]any, protocol model.Protocol, c
 			peers = append(peers, model.WireguardPeerFromClient(clients[i]))
 			continue
 		}
-		if protocol == model.Mixed || protocol == model.HTTP {
+		if protocol == model.Mixed {
+			user, pass := clients[i].MixedCredentials()
+			entries = append(entries, map[string]any{"email": clients[i].Email, "user": user, "pass": pass})
+			continue
+		}
+		if protocol == model.HTTP {
 			entries = append(entries, map[string]any{"user": clients[i].Email, "pass": clients[i].Password})
 			continue
 		}

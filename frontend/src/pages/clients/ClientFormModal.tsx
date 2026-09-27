@@ -151,6 +151,13 @@ type Values = ClientFormValues & {
   rateUnit: RateUnit;
   burstSize: number;
   burstUnit: BurstUnit;
+  standardRate: number;
+  tierBurstRate: number;
+  tierBurstCredit: number;
+  sustainedRate: number;
+  sustainedAfter: number;
+  mixedUser: string;
+  mixedPass: string;
 };
 
 const EMPTY: Values = {
@@ -193,6 +200,13 @@ const EMPTY: Values = {
   rateUnit: DEFAULT_RATE_UNIT,
   burstSize: 0,
   burstUnit: DEFAULT_BURST_UNIT,
+  standardRate: 0,
+  tierBurstRate: 0,
+  tierBurstCredit: 0,
+  sustainedRate: 0,
+  sustainedAfter: 0,
+  mixedUser: '',
+  mixedPass: '',
 };
 
 function toExternalLinkRows(links: ExternalLink[] | undefined): ExternalLinkRow[] {
@@ -294,6 +308,18 @@ export default function ClientFormModal({
   const peakRate = useWatch({ control: methods.control, name: 'peakRate' });
   const committedRate = useWatch({ control: methods.control, name: 'committedRate' });
   const rateUnit = useWatch({ control: methods.control, name: 'rateUnit' });
+  const standardRate = useWatch({ control: methods.control, name: 'standardRate' });
+  const tierBurstRate = useWatch({ control: methods.control, name: 'tierBurstRate' });
+  const tierBurstCredit = useWatch({ control: methods.control, name: 'tierBurstCredit' });
+  const sustainedRate = useWatch({ control: methods.control, name: 'sustainedRate' });
+  const sustainedAfter = useWatch({ control: methods.control, name: 'sustainedAfter' });
+  const mixedUser = useWatch({ control: methods.control, name: 'mixedUser' });
+  const mixedPass = useWatch({ control: methods.control, name: 'mixedPass' });
+  // burst >= standard >= sustained; a zero tier is off and never out of order.
+  const tierOrderBroken =
+    Number(standardRate) > 0 &&
+    ((Number(tierBurstRate) > 0 && Number(tierBurstRate) < Number(standardRate)) ||
+      Number(sustainedRate) > Number(standardRate));
   const burstSize = useWatch({ control: methods.control, name: 'burstSize' });
   const burstUnit = useWatch({ control: methods.control, name: 'burstUnit' });
   const committedTooHigh = committedExceedsPeak(
@@ -419,6 +445,16 @@ export default function ClientFormModal({
         committedRate: bpsToRate(Number(client.committed_bps) || 0, seedRateUnit),
         rateUnit: seedRateUnit,
         burstSize: bytesToBurst(Number(client.committed_burst_bytes) || 0, seedBurstUnit),
+        standardRate: bpsToRate(
+          Math.max(Number(client.upload_bandwidth_bps) || 0, Number(client.download_bandwidth_bps) || 0),
+          seedRateUnit,
+        ),
+        tierBurstRate: bpsToRate(Number(client.burst_bps) || 0, seedRateUnit),
+        tierBurstCredit: bytesToBurst(Number(client.burst_credit_bytes) || 0, seedBurstUnit),
+        sustainedRate: bpsToRate(Number(client.sustained_bps) || 0, seedRateUnit),
+        sustainedAfter: Number(client.sustained_after_seconds) || 0,
+        mixedUser: client.mixed_user || '',
+        mixedPass: client.mixed_pass || '',
         burstUnit: seedBurstUnit,
       };
       if (et < 0) {
@@ -550,6 +586,11 @@ export default function ClientFormModal({
     () => (inboundIds || []).some((id) => mtprotoIds.has(id)),
     [inboundIds, mtprotoIds],
   );
+
+  const showMixed = useMemo(() => {
+    const mixedIds = new Set((inbounds || []).filter((row) => row?.protocol === 'mixed').map((row) => row.id));
+    return (inboundIds || []).some((id) => mixedIds.has(id));
+  }, [inbounds, inboundIds]);
 
   function regenerateWireguardKeys() {
     const kp = Wireguard.generateKeypair();
@@ -747,6 +788,14 @@ export default function ClientFormModal({
       bandwidth_bps: rateToBps(Number(values.peakRate) || 0, values.rateUnit),
       committed_bps: rateToBps(Number(values.committedRate) || 0, values.rateUnit),
       committed_burst_bytes: burstToBytes(Number(values.burstSize) || 0, values.burstUnit),
+      upload_bandwidth_bps: rateToBps(Number(values.standardRate) || 0, values.rateUnit),
+      download_bandwidth_bps: rateToBps(Number(values.standardRate) || 0, values.rateUnit),
+      burst_bps: rateToBps(Number(values.tierBurstRate) || 0, values.rateUnit),
+      burst_credit_bytes: burstToBytes(Number(values.tierBurstCredit) || 0, values.burstUnit),
+      sustained_bps: rateToBps(Number(values.sustainedRate) || 0, values.rateUnit),
+      sustained_after_seconds: Number(values.sustainedAfter) || 0,
+      mixed_user: showMixed ? values.mixedUser.trim() : '',
+      mixed_pass: showMixed ? values.mixedPass : '',
       rateUnit: values.rateUnit,
       burstUnit: values.burstUnit,
     };
@@ -1058,6 +1107,81 @@ export default function ClientFormModal({
                       </Row>
 
                       <Row gutter={16}>
+                        <Col xs={24} md={8}>
+                          <Form.Item label={t('pages.clients.standardRate')} tooltip={t('pages.clients.standardRateDesc')}>
+                            <InputNumber
+                              value={standardRate}
+                              min={0}
+                              step={1}
+                              addonAfter={rateUnit ?? DEFAULT_RATE_UNIT}
+                              placeholder={t('pages.clients.rateUnlimited')}
+                              style={{ width: '100%' }}
+                              onChange={(v) => methods.setValue('standardRate', Number(v) || 0)}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={8}>
+                          <Form.Item
+                            label={t('pages.clients.tierBurstRate')}
+                            tooltip={t('pages.clients.tierBurstRateDesc')}
+                            validateStatus={tierOrderBroken ? 'error' : undefined}
+                            help={tierOrderBroken ? t('pages.clients.tierOrder') : undefined}
+                          >
+                            <InputNumber
+                              value={tierBurstRate}
+                              min={0}
+                              step={1}
+                              addonAfter={rateUnit ?? DEFAULT_RATE_UNIT}
+                              placeholder={t('pages.clients.tierOff')}
+                              style={{ width: '100%' }}
+                              onChange={(v) => methods.setValue('tierBurstRate', Number(v) || 0)}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={8}>
+                          <Form.Item label={t('pages.clients.tierBurstCredit')} tooltip={t('pages.clients.tierBurstCreditDesc')}>
+                            <InputNumber
+                              value={tierBurstCredit}
+                              min={0}
+                              step={1}
+                              addonAfter={burstUnit ?? DEFAULT_BURST_UNIT}
+                              placeholder={t('pages.clients.tierOff')}
+                              style={{ width: '100%' }}
+                              onChange={(v) => methods.setValue('tierBurstCredit', Number(v) || 0)}
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+
+                      <Row gutter={16}>
+                        <Col xs={24} md={8}>
+                          <Form.Item label={t('pages.clients.sustainedRate')} tooltip={t('pages.clients.sustainedRateDesc')}>
+                            <InputNumber
+                              value={sustainedRate}
+                              min={0}
+                              step={1}
+                              addonAfter={rateUnit ?? DEFAULT_RATE_UNIT}
+                              placeholder={t('pages.clients.tierOff')}
+                              style={{ width: '100%' }}
+                              onChange={(v) => methods.setValue('sustainedRate', Number(v) || 0)}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={8}>
+                          <Form.Item label={t('pages.clients.sustainedAfter')} tooltip={t('pages.clients.sustainedAfterDesc')}>
+                            <InputNumber
+                              value={sustainedAfter}
+                              min={0}
+                              step={1}
+                              addonAfter={t('pages.clients.seconds')}
+                              style={{ width: '100%' }}
+                              onChange={(v) => methods.setValue('sustainedAfter', Number(v) || 0)}
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+
+                      <Row gutter={16}>
                         <Col xs={24} md={12}>
                           {delayedStart ? (
                             <FormField
@@ -1305,6 +1429,35 @@ export default function ClientFormModal({
                           />
                         </Space.Compact>
                       </Form.Item>
+
+                      {showMixed && (
+                        <>
+                          <Form.Item label={t('pages.clients.mixedUser')} tooltip={t('pages.clients.mixedUserDesc')}>
+                            <Input
+                              value={mixedUser}
+                              maxLength={64}
+                              placeholder={t('pages.clients.mixedUserBlank')}
+                              onChange={(e) => methods.setValue('mixedUser', e.target.value)}
+                            />
+                          </Form.Item>
+                          <Form.Item label={t('pages.clients.mixedPass')} tooltip={t('pages.clients.mixedPassDesc')}>
+                            <Space.Compact style={{ display: 'flex' }}>
+                              <Input
+                                value={mixedPass}
+                                maxLength={128}
+                                style={{ flex: 1 }}
+                                placeholder={t('pages.clients.mixedPassBlank')}
+                                onChange={(e) => methods.setValue('mixedPass', e.target.value)}
+                              />
+                              <Button
+                                aria-label={t('regenerate')}
+                                icon={<ReloadOutlined />}
+                                onClick={() => methods.setValue('mixedPass', RandomUtil.randomLowerAndNum(16))}
+                              />
+                            </Space.Compact>
+                          </Form.Item>
+                        </>
+                      )}
 
                       {showFlow && (
                         <FormField name="flow" label={t('pages.clients.flow')}>

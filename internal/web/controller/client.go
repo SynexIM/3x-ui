@@ -75,6 +75,7 @@ func (a *ClientController) initRouter(g *gin.RouterGroup) {
 	g.POST("/add", a.create)
 	g.POST("/update/:email", a.update)
 	g.POST("/runtime/:email", a.updateRuntime)
+	g.POST("/:email/credentials", a.updateCredentials)
 	g.POST("/del/:email", a.delete)
 	g.POST("/:email/attach", a.attach)
 	g.POST("/:email/detach", a.detach)
@@ -242,6 +243,36 @@ func (a *ClientController) update(c *gin.Context) {
 		"hotApplied":      true,
 		"requiresRestart": false,
 		"nodePending":     pending,
+	}, nil)
+	notifyClientsChanged()
+}
+
+func (a *ClientController) updateCredentials(c *gin.Context) {
+	email := c.Param("email")
+	var patch service.ClientCredentialPatch
+	decoder := json.NewDecoder(c.Request.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&patch); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"success": false, "code": "CLIENT_CREDENTIAL_INVALID", "msg": err.Error()})
+		return
+	}
+	if err := a.clientService.UpdateCredentials(c.Request.Context(), &a.inboundService, email, patch); err != nil {
+		switch {
+		case errors.Is(err, service.ErrClientCredentialInvalid):
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"success": false, "code": "CLIENT_CREDENTIAL_INVALID", "msg": err.Error()})
+		case errors.Is(err, service.ErrClientCredentialConflict):
+			c.JSON(http.StatusConflict, gin.H{"success": false, "code": "CLIENT_CREDENTIAL_CONFLICT", "msg": err.Error()})
+		default:
+			jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		}
+		return
+	}
+	if !requireClientMutationHotApply(c, &a.xrayService, email) {
+		return
+	}
+	jsonObj(c, service.ClientRuntimeReceipt{
+		HotApplied:  true,
+		NodePending: a.clientService.HasPendingNode(&a.inboundService, email),
 	}, nil)
 	notifyClientsChanged()
 }

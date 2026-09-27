@@ -394,7 +394,7 @@ func migrateClientRateLimitColumns() error {
 			return err
 		}
 	}
-	for _, col := range []string{"rate_unit", "burst_unit"} {
+	for _, col := range []string{"rate_unit", "burst_unit", "mixed_user", "mixed_pass"} {
 		if !db.Migrator().HasColumn(&model.ClientRecord{}, col) {
 			continue
 		}

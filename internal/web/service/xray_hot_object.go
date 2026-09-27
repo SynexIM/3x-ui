@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
@@ -322,21 +323,8 @@ func (s *XrayService) hotUserMap(db *gorm.DB, ib hotInbound, record *model.Clien
 		flow = "xtls-rprx-vision"
 	}
 	user := map[string]any{"email": record.Email}
-	// Limits ride on protocol.User, so one assignment covers every protocol
-	// that has users.
-	user["bandwidth_bps"] = client.BandwidthBps
-	user["committed_bps"] = client.CommittedBps
-	user["committed_burst_bytes"] = client.CommittedBurstBytes
-	user["upload_bandwidth_bps"] = client.UploadBandwidthBps
-	user["upload_peak_bps"] = client.UploadPeakBps
-	user["upload_burst_bytes"] = client.UploadBurstBytes
-	user["download_bandwidth_bps"] = client.DownloadBandwidthBps
-	user["download_peak_bps"] = client.DownloadPeakBps
-	user["download_burst_bytes"] = client.DownloadBurstBytes
-	user["conn_limit"] = uint64(client.ConnLimit)
-	if client.EgressTag != "" {
-		user["egress_tag"] = client.EgressTag
-	}
+	// Limits ride on protocol.User, so one assignment covers every protocol.
+	maps.Copy(user, client.RuntimeLimitFields())
 
 	switch ib.Protocol {
 	case model.VLESS:
@@ -349,18 +337,15 @@ func (s *XrayService) hotUserMap(db *gorm.DB, ib hotInbound, record *model.Clien
 	case model.Hysteria:
 		user["auth"] = client.Auth
 	case model.Shadowsocks:
-		user["password"] = client.Password
 		method, err := shadowsocksMethodForInbound(db, ib.Id)
 		if err != nil {
 			return nil, err
 		}
+		user["password"] = model.ShadowsocksClientKey(method, ib.Tag, client.Password)
 		user["cipher"] = method
 	case model.Mixed:
-		// Xray's mixed inbound uses the SOCKS account type at runtime. The
-		// route/traffic identity is still email, while authentication needs the
-		// same username plus the panel's unified client password.
-		user["user"] = record.Email
-		user["pass"] = client.Password
+		// SOCKS account at runtime: email stays the identity, the login may differ.
+		user["user"], user["pass"] = client.MixedCredentials()
 	default:
 		return nil, errNeedsFullReconcile
 	}

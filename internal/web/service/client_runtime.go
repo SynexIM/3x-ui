@@ -26,6 +26,11 @@ type ClientRuntimePatch struct {
 	DownloadBurstBytes   *uint64 `json:"download_burst_bytes,omitempty"`
 	ConnLimit            *uint32 `json:"conn_limit,omitempty"`
 	EgressTag            *string `json:"egress_tag,omitempty"`
+	// Three-tier shaping over the upload/download standard rates (symmetric).
+	BurstBps              *uint64 `json:"burst_bps,omitempty"`
+	BurstCreditBytes      *uint64 `json:"burst_credit_bytes,omitempty"`
+	SustainedBps          *uint64 `json:"sustained_bps,omitempty"`
+	SustainedAfterSeconds *uint32 `json:"sustained_after_seconds,omitempty"`
 }
 
 type ClientRuntimeReceipt struct {
@@ -47,6 +52,9 @@ func (s *ClientService) UpdateRuntime(ctx context.Context, inboundSvc *InboundSe
 		"download_bandwidth_bps": patch.DownloadBandwidthBps,
 		"download_peak_bps":      patch.DownloadPeakBps,
 		"download_burst_bytes":   patch.DownloadBurstBytes,
+		"burst_bps":              patch.BurstBps,
+		"burst_credit_bytes":     patch.BurstCreditBytes,
+		"sustained_bps":          patch.SustainedBps,
 	} {
 		if value != nil {
 			updates[key] = *value
@@ -55,6 +63,9 @@ func (s *ClientService) UpdateRuntime(ctx context.Context, inboundSvc *InboundSe
 	if patch.ConnLimit != nil {
 		updates["conn_limit"] = *patch.ConnLimit
 	}
+	if patch.SustainedAfterSeconds != nil {
+		updates["sustained_after_seconds"] = *patch.SustainedAfterSeconds
+	}
 	if patch.EgressTag != nil {
 		updates["egress_tag"] = strings.TrimSpace(*patch.EgressTag)
 	}
@@ -62,7 +73,21 @@ func (s *ClientService) UpdateRuntime(ctx context.Context, inboundSvc *InboundSe
 		return errors.New("at least one runtime field is required")
 	}
 	updates["updated_at"] = time.Now().UnixMilli()
+	return s.updateClientRecordLive(ctx, inboundSvc, email, updates, func(_ *gorm.DB, record model.ClientRecord, _ []model.Inbound) error {
+		return validateClientTiers(record, updates)
+	})
+}
 
+// updateClientRecordLive writes one client row, then pushes the result to the
+// node inbounds it is attached to. Local inbounds are left to the caller's
+// hot-apply, which rebuilds the full runtime user; check runs inside the tx.
+func (s *ClientService) updateClientRecordLive(
+	ctx context.Context,
+	inboundSvc *InboundService,
+	email string,
+	updates map[string]any,
+	check func(tx *gorm.DB, record model.ClientRecord, inbounds []model.Inbound) error,
+) error {
 	var record model.ClientRecord
 	var links []model.ClientInbound
 	var inbounds []model.Inbound
@@ -71,13 +96,16 @@ func (s *ClientService) UpdateRuntime(ctx context.Context, inboundSvc *InboundSe
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("email = ?", email).First(&record).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&model.ClientRecord{}).Where("id = ?", record.Id).Updates(updates).Error; err != nil {
-			return err
-		}
 		if err := tx.Where("client_id = ?", record.Id).Find(&links).Error; err != nil {
 			return err
 		}
 		if err := tx.Where("id IN (?)", tx.Model(&model.ClientInbound{}).Select("inbound_id").Where("client_id = ?", record.Id)).Find(&inbounds).Error; err != nil {
+			return err
+		}
+		if err := check(tx, record, inbounds); err != nil {
+			return err
+		}
+		if err := tx.Model(&model.ClientRecord{}).Where("id = ?", record.Id).Updates(updates).Error; err != nil {
 			return err
 		}
 		nodes := map[int]bool{}
@@ -104,6 +132,10 @@ func (s *ClientService) UpdateRuntime(ctx context.Context, inboundSvc *InboundSe
 	}
 	for i := range inbounds {
 		inbound := &inbounds[i]
+		// The local runtime's own UpdateUser would re-add the user without limits first.
+		if inbound.NodeID == nil {
+			continue
+		}
 		rt, push, _, err := inboundSvc.nodePushPlan(inbound)
 		if err != nil {
 			return err
@@ -115,6 +147,32 @@ func (s *ClientService) UpdateRuntime(ctx context.Context, inboundSvc *InboundSe
 		client.Flow = flows[inbound.Id]
 		if err := rt.UpdateUser(ctx, inbound, email, *client); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// ErrClientTierOrder rejects a tier set that violates burst >= standard >= sustained.
+var ErrClientTierOrder = errors.New("three-tier limits must satisfy burst_bps >= standard >= sustained_bps")
+
+// validateClientTiers checks the record as it will look after updates.
+func validateClientTiers(current model.ClientRecord, updates map[string]any) error {
+	pick := func(key string, value uint64) uint64 {
+		if v, ok := updates[key].(uint64); ok {
+			return v
+		}
+		return value
+	}
+	up := pick("upload_bandwidth_bps", current.UploadBandwidthBps)
+	down := pick("download_bandwidth_bps", current.DownloadBandwidthBps)
+	burst := pick("burst_bps", current.BurstBps)
+	sustained := pick("sustained_bps", current.SustainedBps)
+	for _, standard := range []uint64{up, down} {
+		if standard == 0 {
+			continue
+		}
+		if burst != 0 && burst < standard || sustained > standard {
+			return ErrClientTierOrder
 		}
 	}
 	return nil
