@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"crypto/x509"
@@ -13,12 +14,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
+	"math"
 	"mime/multipart"
 	stdnet "net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -28,8 +32,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/amneziawg"
+	"github.com/mhsanaei/3x-ui/v3/internal/amneziawgnet"
 	"github.com/mhsanaei/3x-ui/v3/internal/config"
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
+	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/sys"
@@ -88,6 +95,13 @@ type Status struct {
 		ErrorMsg string       `json:"errorMsg"`
 		Version  string       `json:"version"`
 	} `json:"xray"`
+	// AmneziaWG gates the overview's AmneziaWG log view: Configured stays true
+	// while an inbound exists but its embedded interface isn't up yet, which
+	// is exactly when that view's event lines are worth reading.
+	AmneziaWG struct {
+		Configured bool `json:"configured"`
+		Running    bool `json:"running"`
+	} `json:"amneziawg"`
 	PanelVersion string    `json:"panelVersion"`
 	PanelGuid    string    `json:"panelGuid"`
 	Uptime       uint64    `json:"uptime"`
@@ -339,13 +353,27 @@ func (s *ServerService) AggregateSystemMetric(metric string, bucketSeconds int, 
 }
 
 type LogEntry struct {
-	DateTime    time.Time
-	FromAddress string
-	ToAddress   string
-	Inbound     string
-	Outbound    string
-	Email       string
-	Event       int
+	DateTime    time.Time `json:"DateTime" example:"2025-01-01T12:00:00Z"`
+	FromAddress string    `json:"FromAddress" example:"192.0.2.10:54321"`
+	ToAddress   string    `json:"ToAddress" example:"example.com:443"`
+	Inbound     string    `json:"Inbound" example:"inbound-443"`
+	Outbound    string    `json:"Outbound" example:"direct"`
+	Email       string    `json:"Email" example:"alice@example.com"`
+	Event       int       `json:"Event" example:"0"`
+}
+
+type NewUUIDResponse struct {
+	UUID string `json:"uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
+}
+
+type MLDSA65Response struct {
+	Seed   string `json:"seed" example:"mldsa65-seed"`
+	Verify string `json:"verify" example:"mldsa65-verify"`
+}
+
+type MLKEM768Response struct {
+	Seed   string `json:"seed" example:"mlkem768-seed"`
+	Client string `json:"client" example:"mlkem768-client"`
 }
 
 func getPublicIP(url string) string {
@@ -599,7 +627,9 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 	// Xray status
 	if s.xrayService.IsXrayRunning() {
 		status.Xray.State = Running
-		status.Xray.ErrorMsg = ""
+		// A core that runs but was refused the new config is a fault the
+		// operator only ever sees here and in the node list.
+		status.Xray.ErrorMsg = s.xrayService.GetHeldBackConfig()
 	} else {
 		err := s.xrayService.GetXrayErr()
 		if err != nil {
@@ -610,6 +640,16 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 		status.Xray.ErrorMsg = s.xrayService.GetXrayResult()
 	}
 	status.Xray.Version = s.xrayService.GetXrayVersion()
+
+	var amneziawgCount int64
+	if err := database.GetDB().Model(model.Inbound{}).
+		Where("protocol = ? AND enable = ? AND node_id IS NULL", model.AmneziaWG, true).
+		Count(&amneziawgCount).Error; err != nil {
+		logger.Warning("count amneziawg inbounds failed:", err)
+	}
+	status.AmneziaWG.Configured = amneziawgCount > 0
+	status.AmneziaWG.Running = amneziawgnet.GetManager().HasRunning()
+
 	status.PanelVersion = config.GetPanelVersion()
 	if guid, err := s.settingService.GetPanelGuid(); err == nil {
 		status.PanelGuid = guid
@@ -1166,6 +1206,148 @@ func parseAccessLogFields(line string) LogEntry {
 	return entry
 }
 
+// PeerActivity is one peer's live embedded-Device-reported state, the
+// counterpart of an Xray access-log entry: a tunnel logs no requests, only
+// handshakes and bytes.
+type PeerActivity struct {
+	Interface  string `json:"interface" example:"awg1"`
+	Tag        string `json:"tag" example:"inbound-51820"`
+	InboundId  int    `json:"inboundId" example:"1"`
+	Email      string `json:"email" example:"peer@example.com"`
+	Endpoint   string `json:"endpoint" example:"203.0.113.9:51820"`
+	AllowedIPs string `json:"allowedIPs" example:"10.8.1.2/32"`
+	// Handshake is unix milliseconds, 0 when the peer has never connected.
+	Handshake int64 `json:"handshake" example:"1735732800000"`
+	Up        int64 `json:"up" example:"1048576"`
+	Down      int64 `json:"down" example:"4194304"`
+	Online    bool  `json:"online" example:"true"`
+}
+
+// amneziawgOnlineWindow mirrors the standard WireGuard convention (and this
+// fork's own prior kernel-module behavior): a handshake this recent counts
+// as online.
+const amneziawgOnlineWindow = 180 * time.Second
+
+// AmneziaWGLogs is what the overview's AmneziaWG log view renders: the live
+// per-peer activity of every running embedded interface, plus the panel's
+// own recent AmneziaWG lifecycle log lines that explain a peer being absent
+// from Peers at all.
+type AmneziaWGLogs struct {
+	Peers   []PeerActivity `json:"peers"`
+	Events  []string       `json:"events" example:"[\"2025/01/01 12:00:00 amneziawg: started interface awg1 for inbound 1\"]"`
+	Running bool           `json:"running" example:"true"`
+}
+
+// amneziawgEventMarker selects the panel's own AmneziaWG log lines: every
+// logger call in internal/amneziawg, internal/amneziawgnet and their jobs
+// prefixes its message with it.
+const amneziawgEventMarker = "amneziawg"
+
+// amneziawgLogActivity gathers live PeerActivity rows across every enabled,
+// non-node-hosted AmneziaWG inbound, newest handshake first. An inbound
+// amneziawgnet has no running Device for yet (not reconciled, disabled,
+// errored) contributes no rows -- not reported as an error, since the
+// caller (GetAmneziaWGLogs) already has a device-agnostic Running flag from
+// amneziawgnet.GetManager().HasRunning() for that.
+// clampUint64ToInt64 saturates at math.MaxInt64 instead of wrapping negative,
+// for a live uint64 byte counter (amneziawgnet's own UAPI-dump snapshot, not
+// a DB-accumulated total) going into an int64 API field -- unreachable in
+// practice at real traffic volumes, but a silent negative value would be
+// worse than a saturated one if it were ever hit.
+func clampUint64ToInt64(v uint64) int64 {
+	if v > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v)
+}
+
+func amneziawgLogActivity() []PeerActivity {
+	var inbounds []*model.Inbound
+	if err := database.GetDB().
+		Where("protocol = ? AND enable = ? AND node_id IS NULL", model.AmneziaWG, true).
+		Find(&inbounds).Error; err != nil {
+		logger.Warning("amneziawg logs: list inbounds failed:", err)
+		return nil
+	}
+
+	now := time.Now()
+	var out []PeerActivity
+	for _, inbound := range inbounds {
+		inst, ok := amneziawg.InstanceFromInbound(inbound)
+		if !ok {
+			continue
+		}
+		diag := amneziawgnet.Diagnose(inbound.Id, inst.Peers)
+		if !diag.Running {
+			continue
+		}
+		for _, cd := range diag.Clients {
+			var handshakeMs int64
+			online := false
+			if !cd.LastHandshake.IsZero() {
+				handshakeMs = cd.LastHandshake.UnixMilli()
+				online = now.Sub(cd.LastHandshake) < amneziawgOnlineWindow
+			}
+			out = append(out, PeerActivity{
+				Interface:  inst.InterfaceName,
+				Tag:        inbound.Tag,
+				InboundId:  inbound.Id,
+				Email:      cd.Email,
+				Endpoint:   cd.Endpoint,
+				AllowedIPs: cd.AllowedIPs,
+				Handshake:  handshakeMs,
+				Up:         clampUint64ToInt64(cd.RxBytes),
+				Down:       clampUint64ToInt64(cd.TxBytes),
+				Online:     online,
+			})
+		}
+	}
+	slices.SortFunc(out, func(a, b PeerActivity) int {
+		if a.Handshake != b.Handshake {
+			return cmp.Compare(b.Handshake, a.Handshake)
+		}
+		return strings.Compare(a.Email, b.Email)
+	})
+	return out
+}
+
+// GetAmneziaWGLogs returns at most count peer rows and count event lines,
+// optionally narrowed to rows whose text contains filter (case-insensitive),
+// mirroring GetXrayLogs' own count+filter contract.
+func (s *ServerService) GetAmneziaWGLogs(count string, filter string) *AmneziaWGLogs {
+	limit, err := strconv.Atoi(count)
+	if err != nil || limit < 1 || limit > 10000 {
+		limit = 100
+	}
+	needle := strings.ToLower(strings.TrimSpace(filter))
+
+	logs := &AmneziaWGLogs{Peers: []PeerActivity{}, Events: []string{}, Running: amneziawgnet.GetManager().HasRunning()}
+
+	for _, peer := range amneziawgLogActivity() {
+		if len(logs.Peers) >= limit {
+			break
+		}
+		if needle != "" && !strings.Contains(strings.ToLower(peer.Email+" "+peer.Tag+" "+peer.Interface+" "+peer.Endpoint+" "+peer.AllowedIPs), needle) {
+			continue
+		}
+		logs.Peers = append(logs.Peers, peer)
+	}
+
+	for _, line := range logger.GetLogs(10000, "debug") {
+		if len(logs.Events) >= limit {
+			break
+		}
+		if !strings.Contains(strings.ToLower(line), amneziawgEventMarker) {
+			continue
+		}
+		if needle != "" && !strings.Contains(strings.ToLower(line), needle) {
+			continue
+		}
+		logs.Events = append(logs.Events, line)
+	}
+	return logs
+}
+
 func (s *ServerService) GetXrayLogs(
 	count string,
 	filter string,
@@ -1434,9 +1616,93 @@ func (s *ServerService) GetMigration() ([]byte, string, error) {
 	return data, "x-ui.dump", nil
 }
 
-func (s *ServerService) ImportDB(file multipart.File) error {
+// hostBoundSettingKeys are the settings that describe *this* machine rather
+// than the configuration being carried: where the panel and the subscription
+// service listen, the certificates they present, and the identity this panel
+// uses towards its nodes. An import that overwrites them leaves the
+// destination unreachable on its own address, or impersonating the source.
+var hostBoundSettingKeys = []string{
+	"webListen", "webDomain", "webPort", "webCertFile", "webKeyFile", "webBasePath",
+	"subListen", "subDomain", "subPort", "subCertFile", "subKeyFile", "subURI", "subJsonURI",
+	"secret", "panelGuid",
+	"nodeMtlsCaCertPem", "nodeMtlsCaKeyPem", "nodeMtlsClientCertPem",
+	"nodeMtlsClientKeyPem", "nodeMtlsClientCertSha256", "nodeMtlsClientCAPem",
+}
+
+// hostBoundSnapshot records this machine's values, and just as importantly
+// which keys it had no row for: an absent row means the built-in default is in
+// force, and leaving the imported row in place would silently adopt the source
+// machine's certificate path or listen address.
+type hostBoundSnapshot struct {
+	values  map[string]string
+	present map[string]struct{}
+	taken   bool
+}
+
+func captureHostBoundSettings() hostBoundSnapshot {
+	db := database.GetDB()
+	if db == nil {
+		return hostBoundSnapshot{}
+	}
+	var rows []model.Setting
+	if err := db.Model(&model.Setting{}).Where("key IN ?", hostBoundSettingKeys).Find(&rows).Error; err != nil {
+		logger.Warningf("Import: could not read this machine's settings, they will come from the uploaded file: %v", err)
+		return hostBoundSnapshot{}
+	}
+	snap := hostBoundSnapshot{
+		values:  make(map[string]string, len(rows)),
+		present: make(map[string]struct{}, len(rows)),
+		taken:   true,
+	}
+	for _, row := range rows {
+		snap.values[row.Key] = row.Value
+		snap.present[row.Key] = struct{}{}
+	}
+	return snap
+}
+
+func restoreHostBoundSettings(snap hostBoundSnapshot) {
+	if !snap.taken {
+		return
+	}
+	db := database.GetDB()
+	if db == nil {
+		return
+	}
+	settingSvc := &SettingService{}
+	for _, key := range hostBoundSettingKeys {
+		if _, had := snap.present[key]; !had {
+			// Absent because it is minted on demand, not because a default applied:
+			// the imported copy is the only one that exists, so keep it (#6227).
+			if lazilyMintedSettingKeys[key] {
+				continue
+			}
+			if err := db.Where("key = ?", key).Delete(&model.Setting{}).Error; err != nil {
+				logger.Warningf("Import: could not drop imported setting %q: %v", key, err)
+			}
+			continue
+		}
+		// saveSetting rather than Assign(struct): GORM drops zero-valued fields from
+		// the assignment map, so an empty local value never overwrote the import.
+		if err := settingSvc.saveSetting(key, snap.values[key]); err != nil {
+			logger.Warningf("Import: could not restore setting %q for this machine: %v", key, err)
+		}
+	}
+}
+
+// Minted on demand, so a fresh install has no row: dropping the imported copy
+// would destroy the only one that exists, CA private key included.
+var lazilyMintedSettingKeys = map[string]bool{
+	"nodeMtlsCaCertPem":     true,
+	"nodeMtlsCaKeyPem":      true,
+	"nodeMtlsClientCertPem": true,
+	"nodeMtlsClientKeyPem":  true,
+	"nodeMtlsClientCAPem":   true,
+}
+
+func (s *ServerService) ImportDB(file multipart.File, keepHostSettings bool) error {
 	if database.IsPostgres() {
-		return s.importPostgresDB(file)
+		return s.importPostgresDB(file, keepHostSettings)
 	}
 	kind, err := sniffUploadKind(file)
 	if err != nil {
@@ -1486,6 +1752,11 @@ func (s *ServerService) ImportDB(file multipart.File) error {
 	}()
 	if errStop := s.StopXrayService(); errStop != nil {
 		logger.Warningf("Failed to stop Xray before DB import: %v", errStop)
+	}
+
+	var keptSettings hostBoundSnapshot
+	if keepHostSettings {
+		keptSettings = captureHostBoundSettings()
 	}
 
 	if errClose := database.CloseDB(); errClose != nil {
@@ -1542,6 +1813,8 @@ func (s *ServerService) ImportDB(file multipart.File) error {
 		return common.NewErrorf("Error migrating db: %v", err)
 	}
 	dbReopened = true
+
+	restoreHostBoundSettings(keptSettings)
 
 	s.inboundService.MigrateDB()
 
@@ -1697,14 +1970,14 @@ func sniffUploadKind(file multipart.File) (int, error) {
 	return sniffImportKind(header[:n]), nil
 }
 
-func (s *ServerService) importPostgresDB(file multipart.File) error {
+func (s *ServerService) importPostgresDB(file multipart.File, keepHostSettings bool) error {
 	kind, err := sniffUploadKind(file)
 	if err != nil {
 		return common.NewErrorf("Error reading uploaded file: %v", err)
 	}
 	switch kind {
 	case importKindPgDump:
-		return s.restorePostgresDump(file)
+		return s.restorePostgresDump(file, keepHostSettings)
 	case importKindSQLiteDB:
 		return s.migrateSQLiteIntoPostgres(file, false)
 	case importKindSQLiteDump:
@@ -1714,7 +1987,7 @@ func (s *ServerService) importPostgresDB(file multipart.File) error {
 	}
 }
 
-func (s *ServerService) restorePostgresDump(file multipart.File) error {
+func (s *ServerService) restorePostgresDump(file multipart.File, keepHostSettings bool) error {
 	bin, err := exec.LookPath("pg_restore")
 	if err != nil {
 		return common.NewError("pg_restore not found on the server; install the postgresql-client package to restore a PostgreSQL database")
@@ -1754,6 +2027,11 @@ func (s *ServerService) restorePostgresDump(file multipart.File) error {
 		logger.Warningf("Failed to stop Xray before DB restore: %v", errStop)
 	}
 
+	var keptSettings hostBoundSnapshot
+	if keepHostSettings {
+		keptSettings = captureHostBoundSettings()
+	}
+
 	if errClose := database.CloseDB(); errClose != nil {
 		logger.Warningf("Failed to close existing DB before restore: %v", errClose)
 	}
@@ -1770,6 +2048,8 @@ func (s *ServerService) restorePostgresDump(file multipart.File) error {
 	if errInit := database.InitDB(config.GetDBPath()); errInit != nil {
 		return common.NewErrorf("Restore finished but reopening the database failed: %v", errInit)
 	}
+	restoreHostBoundSettings(keptSettings)
+
 	s.inboundService.MigrateDB()
 
 	if runErr != nil {
@@ -1905,20 +2185,58 @@ func (s *ServerService) IsValidGeofileName(filename string) bool {
 	return matched
 }
 
-func (s *ServerService) UpdateGeofile(fileName string) error {
-	type geofileEntry struct {
-		URL      string
-		FileName string
-	}
-	geofileAllowlist := map[string]geofileEntry{
-		"geoip.dat":      {"https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat", "geoip.dat"},
-		"geosite.dat":    {"https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat", "geosite.dat"},
-		"geoip_IR.dat":   {"https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geoip.dat", "geoip_IR.dat"},
-		"geosite_IR.dat": {"https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geosite.dat", "geosite_IR.dat"},
-		"geoip_RU.dat":   {"https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geoip.dat", "geoip_RU.dat"},
-		"geosite_RU.dat": {"https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geosite.dat", "geosite_RU.dat"},
-	}
+// Repo is the upstream release base and Asset the name it publishes under; all
+// three publish "geoip.dat", so only FileName tells the local copies apart.
+type geofileEntry struct {
+	Repo     string
+	Asset    string
+	FileName string
+}
 
+var geofileAllowlist = map[string]geofileEntry{
+	"geoip.dat":      {"https://github.com/Loyalsoldier/v2ray-rules-dat", "geoip.dat", "geoip.dat"},
+	"geosite.dat":    {"https://github.com/Loyalsoldier/v2ray-rules-dat", "geosite.dat", "geosite.dat"},
+	"geoip_IR.dat":   {"https://github.com/chocolate4u/Iran-v2ray-rules", "geoip.dat", "geoip_IR.dat"},
+	"geosite_IR.dat": {"https://github.com/chocolate4u/Iran-v2ray-rules", "geosite.dat", "geosite_IR.dat"},
+	"geoip_RU.dat":   {"https://github.com/runetfreedom/russia-v2ray-rules-dat", "geoip.dat", "geoip_RU.dat"},
+	"geosite_RU.dat": {"https://github.com/runetfreedom/russia-v2ray-rules-dat", "geosite.dat", "geosite_RU.dat"},
+}
+
+// GeodataSource identifies a file Xray downloads through its geodata configuration.
+type GeodataSource struct {
+	URL  string `json:"url"`
+	File string `json:"file"`
+}
+
+// StandardGeodataSources derives the panel presets from the geofile update allowlist.
+func StandardGeodataSources() []GeodataSource {
+	sources := make([]GeodataSource, 0, len(geofileAllowlist))
+	for _, entry := range geofileAllowlist {
+		sources = append(sources, GeodataSource{URL: entry.latestURL(), File: entry.FileName})
+	}
+	slices.SortFunc(sources, func(a, b GeodataSource) int { return strings.Compare(a.File, b.File) })
+	return sources
+}
+
+func (entry geofileEntry) latestURL() string {
+	return entry.Repo + "/releases/latest/download/" + entry.Asset
+}
+
+func (entry geofileEntry) taggedURL(tag string) string {
+	return entry.Repo + "/releases/download/" + tag + "/" + entry.Asset
+}
+
+// stagedGeofile is a verified download waiting to be moved into the asset folder.
+type stagedGeofile struct {
+	destPath  string
+	stagePath string
+}
+
+// restartXrayAfterGeofileUpdate is a seam: tests assert that an update which
+// installed nothing also restarted nothing.
+var restartXrayAfterGeofileUpdate = (*ServerService).RestartXrayService
+
+func (s *ServerService) UpdateGeofile(fileName string) error {
 	// Strict allowlist check to avoid writing uncontrolled files
 	if fileName != "" {
 		if _, ok := geofileAllowlist[fileName]; !ok {
@@ -1926,96 +2244,54 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 		}
 	}
 
+	wanted := geofileAllowlist
+	if fileName != "" {
+		wanted = map[string]geofileEntry{fileName: geofileAllowlist[fileName]}
+	}
+
+	// Atomic per upstream, not across all six: one release's databases belong
+	// together, but a failing repo must not discard another repo's good files.
+	byRepo := make(map[string][]geofileEntry, len(wanted))
+	for _, entry := range wanted {
+		byRepo[entry.Repo] = append(byRepo[entry.Repo], entry)
+	}
+	repos := slices.Sorted(maps.Keys(byRepo))
+
+	binFolder := config.GetBinFolderPath()
+	stageDir, err := os.MkdirTemp(binFolder, "geofile-")
+	if err != nil {
+		return common.NewErrorf("Failed to create staging folder for Geofiles: %v", err)
+	}
+	defer os.RemoveAll(stageDir)
+
 	client := s.settingService.NewProxiedHTTPClient(0)
 
-	downloadFile := func(url, destPath string) error {
-		var req *http.Request
-		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
-		if err != nil {
-			return common.NewErrorf("Failed to create HTTP request for %s: %v", url, err)
-		}
-
-		var localFileModTime time.Time
-		if fileInfo, err := os.Stat(destPath); err == nil {
-			localFileModTime = fileInfo.ModTime()
-			if !localFileModTime.IsZero() {
-				req.Header.Set("If-Modified-Since", localFileModTime.UTC().Format(http.TimeFormat))
-			}
-		}
-
-		resp, err := client.Do(req)
-		if err != nil {
-			return common.NewErrorf("Failed to download Geofile from %s: %v", url, err)
-		}
-		defer resp.Body.Close()
-
-		// Parse Last-Modified header from server
-		var serverModTime time.Time
-		serverModTimeStr := resp.Header.Get("Last-Modified")
-		if serverModTimeStr != "" {
-			parsedTime, err := time.Parse(http.TimeFormat, serverModTimeStr)
-			if err != nil {
-				logger.Warningf("Failed to parse Last-Modified header for %s: %v", url, err)
-			} else {
-				serverModTime = parsedTime
-			}
-		}
-
-		// Function to update local file's modification time
-		updateFileModTime := func() {
-			if !serverModTime.IsZero() {
-				if err := os.Chtimes(destPath, serverModTime, serverModTime); err != nil {
-					logger.Warningf("Failed to update modification time for %s: %v", destPath, err)
-				}
-			}
-		}
-
-		// Handle 304 Not Modified
-		if resp.StatusCode == http.StatusNotModified {
-			updateFileModTime()
-			return nil
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			return common.NewErrorf("Failed to download Geofile from %s: received status code %d", url, resp.StatusCode)
-		}
-
-		file, err := os.Create(destPath)
-		if err != nil {
-			return common.NewErrorf("Failed to create Geofile %s: %v", destPath, err)
-		}
-		defer file.Close()
-
-		_, err = io.Copy(file, resp.Body)
-		if err != nil {
-			return common.NewErrorf("Failed to save Geofile %s: %v", destPath, err)
-		}
-
-		updateFileModTime()
-		return nil
-	}
-
 	var errorMessages []string
+	installed := 0
+	for _, repo := range repos {
+		entries := byRepo[repo]
+		slices.SortFunc(entries, func(a, b geofileEntry) int { return strings.Compare(a.FileName, b.FileName) })
 
-	if fileName == "" {
-		// Download all geofiles
-		for _, entry := range geofileAllowlist {
-			destPath := filepath.Join(config.GetBinFolderPath(), entry.FileName)
-			if err := downloadFile(entry.URL, destPath); err != nil {
-				errorMessages = append(errorMessages, fmt.Sprintf("Error downloading Geofile '%s': %v", entry.FileName, err))
-			}
+		staged, err := s.stageGeofileRelease(client, entries, binFolder, stageDir)
+		if err != nil {
+			errorMessages = append(errorMessages, err.Error())
+			continue
 		}
-	} else {
-		entry := geofileAllowlist[fileName]
-		destPath := filepath.Join(config.GetBinFolderPath(), entry.FileName)
-		if err := downloadFile(entry.URL, destPath); err != nil {
-			errorMessages = append(errorMessages, fmt.Sprintf("Error downloading Geofile '%s': %v", entry.FileName, err))
+		for _, file := range staged {
+			if err := os.Rename(file.stagePath, file.destPath); err != nil {
+				errorMessages = append(errorMessages, fmt.Sprintf("Failed to install Geofile %s: %v", file.destPath, err))
+				continue
+			}
+			installed++
 		}
 	}
 
-	err := s.RestartXrayService()
-	if err != nil {
-		errorMessages = append(errorMessages, fmt.Sprintf("Updated Geofile '%s' but Failed to start Xray: %v", fileName, err))
+	// Nothing changed, so there is no reason to restart the core and drop every
+	// client connection.
+	if installed > 0 {
+		if err := restartXrayAfterGeofileUpdate(s); err != nil {
+			errorMessages = append(errorMessages, fmt.Sprintf("Updated Geofiles but Failed to start Xray: %v", err))
+		}
 	}
 
 	if len(errorMessages) > 0 {
@@ -2023,6 +2299,191 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 	}
 
 	return nil
+}
+
+// stageGeofileRelease downloads one upstream's databases and verifies each
+// against a digest from the same release, staging all of them or none.
+func (s *ServerService) stageGeofileRelease(client *http.Client, entries []geofileEntry, binFolder, stageDir string) ([]stagedGeofile, error) {
+	// Resolve "latest" once. These upstreams publish several times a day, and a
+	// release landing mid-batch would check one release's digest against another's bytes.
+	tag, err := resolveGeofileTag(client, entries[0].latestURL())
+	if err != nil {
+		return nil, common.NewErrorf("Error resolving Geofile release from %s: %v", entries[0].Repo, err)
+	}
+
+	var staged []stagedGeofile
+	for _, entry := range entries {
+		destPath := filepath.Join(binFolder, entry.FileName)
+		stagePath := filepath.Join(stageDir, entry.FileName)
+		changed, err := s.stageGeofile(client, entry, tag, destPath, stagePath)
+		if err != nil {
+			return nil, common.NewErrorf("Error downloading Geofile '%s': %v", entry.FileName, err)
+		}
+		if changed {
+			staged = append(staged, stagedGeofile{destPath: destPath, stagePath: stagePath})
+		}
+	}
+	return staged, nil
+}
+
+// resolveGeofileTag reads the immutable release tag a `latest` download
+// redirects to, so the asset and its digest cannot come from two releases.
+func resolveGeofileTag(client *http.Client, latestURL string) (string, error) {
+	pinned := *client
+	pinned.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, latestURL, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := pinned.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return "", common.NewErrorf("expected a redirect to a tagged release, got HTTP %d", resp.StatusCode)
+	}
+	return geofileTagFromLocation(location)
+}
+
+// geofileTagFromLocation pulls <tag> out of a .../releases/download/<tag>/<asset>
+// redirect target.
+func geofileTagFromLocation(location string) (string, error) {
+	const marker = "/releases/download/"
+	_, after, ok := strings.Cut(location, marker)
+	if !ok {
+		return "", common.NewErrorf("unexpected release redirect %q", location)
+	}
+	tag, _, found := strings.Cut(after, "/")
+	if !found || tag == "" {
+		return "", common.NewErrorf("unexpected release redirect %q", location)
+	}
+	return tag, nil
+}
+
+// stageGeofile downloads one database into stagePath and checks it against the
+// SHA-256 its upstream publishes. It reports false on 304, staging nothing.
+func (s *ServerService) stageGeofile(client *http.Client, entry geofileEntry, tag, destPath, stagePath string) (bool, error) {
+	assetURL := entry.taggedURL(tag)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, assetURL, nil)
+	if err != nil {
+		return false, common.NewErrorf("Failed to create HTTP request for %s: %v", assetURL, err)
+	}
+
+	if fileInfo, err := os.Stat(destPath); err == nil {
+		if localFileModTime := fileInfo.ModTime(); !localFileModTime.IsZero() {
+			req.Header.Set("If-Modified-Since", localFileModTime.UTC().Format(http.TimeFormat))
+		}
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, common.NewErrorf("Failed to download Geofile from %s: %v", assetURL, err)
+	}
+	defer resp.Body.Close()
+
+	// Parse Last-Modified header from server
+	var serverModTime time.Time
+	if serverModTimeStr := resp.Header.Get("Last-Modified"); serverModTimeStr != "" {
+		parsedTime, err := time.Parse(http.TimeFormat, serverModTimeStr)
+		if err != nil {
+			logger.Warningf("Failed to parse Last-Modified header for %s: %v", assetURL, err)
+		} else {
+			serverModTime = parsedTime
+		}
+	}
+
+	// The conditional GET above reads this back, so it must survive the rename.
+	setModTime := func(target string) {
+		if !serverModTime.IsZero() {
+			if err := os.Chtimes(target, serverModTime, serverModTime); err != nil {
+				logger.Warningf("Failed to update modification time for %s: %v", target, err)
+			}
+		}
+	}
+
+	// Handle 304 Not Modified
+	if resp.StatusCode == http.StatusNotModified {
+		setModTime(destPath)
+		return false, nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return false, common.NewErrorf("Failed to download Geofile from %s: received status code %d", assetURL, resp.StatusCode)
+	}
+
+	file, err := os.Create(stagePath)
+	if err != nil {
+		return false, common.NewErrorf("Failed to create Geofile %s: %v", stagePath, err)
+	}
+	hasher := sha256.New()
+	if _, err := io.Copy(io.MultiWriter(file, hasher), resp.Body); err != nil {
+		file.Close()
+		return false, common.NewErrorf("Failed to save Geofile %s: %v", stagePath, err)
+	}
+	if err := file.Close(); err != nil {
+		return false, common.NewErrorf("Failed to save Geofile %s: %v", stagePath, err)
+	}
+
+	// TLS protects the transport, not the artifact. Xray parses these databases
+	// when it builds its routing matchers, so a bad one takes the core down.
+	want, err := s.fetchGeofileDigest(client, assetURL+".sha256sum", entry.Asset)
+	if err != nil {
+		return false, err
+	}
+	if got := hex.EncodeToString(hasher.Sum(nil)); !strings.EqualFold(got, want) {
+		return false, common.NewErrorf("does not match the published SHA-256 checksum, so the download is corrupted or has been tampered with (expected %s, got %s)", want, got)
+	}
+
+	setModTime(stagePath)
+	return true, nil
+}
+
+// fetchGeofileDigest downloads the .sha256sum sidecar published beside a geo
+// database and returns the digest it lists for assetName.
+func (s *ServerService) fetchGeofileDigest(client *http.Client, sumsURL, assetName string) (string, error) {
+	req, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet, sumsURL, nil)
+	if reqErr != nil {
+		return "", fmt.Errorf("download geofile checksum: %w", reqErr)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("download geofile checksum: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("download geofile checksum: unexpected HTTP %d", resp.StatusCode)
+	}
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxXrayDigestBytes))
+	if err != nil {
+		return "", fmt.Errorf("download geofile checksum: %w", err)
+	}
+	return parseGeofileDigest(raw, assetName)
+}
+
+// parseGeofileDigest returns the SHA-256 hex a sidecar lists for assetName,
+// matching on base name since upstreams record "geoip.dat" or "release/geoip.dat".
+func parseGeofileDigest(sums []byte, assetName string) (string, error) {
+	for line := range strings.SplitSeq(string(sums), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			continue
+		}
+		// A leading "*" is sha256sum's own binary-mode marker, not part of the name.
+		if path.Base(strings.TrimPrefix(fields[1], "*")) != assetName {
+			continue
+		}
+		digest := strings.ToLower(fields[0])
+		if _, err := hex.DecodeString(digest); err != nil || len(digest) != sha256.Size*2 {
+			return "", fmt.Errorf("geofile checksum: malformed SHA-256 entry for %s", assetName)
+		}
+		return digest, nil
+	}
+	return "", fmt.Errorf("geofile checksum: no SHA-256 entry for %s", assetName)
 }
 
 // parseXrayKeyPairOutput reads the two-line "Label: value" output that xray's
@@ -2066,7 +2527,7 @@ func (s *ServerService) GetNewX25519Cert() (any, error) {
 	return keyPair, nil
 }
 
-func (s *ServerService) GetNewmldsa65() (any, error) {
+func (s *ServerService) GetNewmldsa65() (*MLDSA65Response, error) {
 	// Run the command
 	cmd := exec.CommandContext(context.Background(), xray.GetBinaryPath(), "mldsa65")
 	var out bytes.Buffer
@@ -2081,9 +2542,9 @@ func (s *ServerService) GetNewmldsa65() (any, error) {
 		return nil, err
 	}
 
-	keyPair := map[string]any{
-		"seed":   seed,
-		"verify": verify,
+	keyPair := &MLDSA65Response{
+		Seed:   seed,
+		Verify: verify,
 	}
 
 	return keyPair, nil
@@ -2374,18 +2835,18 @@ func vlessEncAuthID(label string) string {
 	}
 }
 
-func (s *ServerService) GetNewUUID() (map[string]string, error) {
+func (s *ServerService) GetNewUUID() (*NewUUIDResponse, error) {
 	newUUID, err := uuid.NewRandom()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate UUID: %w", err)
 	}
 
-	return map[string]string{
-		"uuid": newUUID.String(),
+	return &NewUUIDResponse{
+		UUID: newUUID.String(),
 	}, nil
 }
 
-func (s *ServerService) GetNewmlkem768() (any, error) {
+func (s *ServerService) GetNewmlkem768() (*MLKEM768Response, error) {
 	// Run the command
 	cmd := exec.CommandContext(context.Background(), xray.GetBinaryPath(), "mlkem768")
 	var out bytes.Buffer
@@ -2400,9 +2861,9 @@ func (s *ServerService) GetNewmlkem768() (any, error) {
 		return nil, err
 	}
 
-	keyPair := map[string]any{
-		"seed":   seed,
-		"client": client,
+	keyPair := &MLKEM768Response{
+		Seed:   seed,
+		Client: client,
 	}
 
 	return keyPair, nil

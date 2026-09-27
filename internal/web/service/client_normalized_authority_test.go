@@ -59,7 +59,7 @@ func TestClientLifecycleDoesNotRewriteInboundSettings(t *testing.T) {
 	updated := rec.ToClient()
 	updated.Comment = "updated without settings JSON"
 	updated.BandwidthBps = 25_000_000
-	if _, err := clientSvc.Update(inboundSvc, rec.Id, *updated); err != nil {
+	if _, err := clientSvc.Update(inboundSvc, rec.Id, *updated, 0); err != nil {
 		t.Fatalf("update normalized client: %v", err)
 	}
 	got, err := clientSvc.GetRecordByEmail(nil, email)

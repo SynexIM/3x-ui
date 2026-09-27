@@ -6,16 +6,376 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/crypto"
+	"github.com/mhsanaei/3x-ui/v3/internal/util/netsafe"
 )
+
+type generationProbeTransport struct {
+	id     string
+	closed atomic.Int32
+}
+
+func (t *generationProbeTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       http.NoBody,
+		Header:     make(http.Header),
+		Request:    &http.Request{},
+	}, nil
+}
+
+func (t *generationProbeTransport) CloseIdleConnections() {
+	t.closed.Add(1)
+}
+
+func TestCredentialRotatingTransportDropsOldPoolBeforeNextRequest(t *testing.T) {
+	var selected atomic.Pointer[generationProbeTransport]
+	oldTransport := &generationProbeTransport{id: "old"}
+	newTransport := &generationProbeTransport{id: "new"}
+	selected.Store(oldTransport)
+
+	rotating, err := newCredentialRotatingTransport(func() (idleClosingRoundTripper, error) {
+		return selected.Load(), nil
+	})
+	if err != nil {
+		t.Fatalf("newCredentialRotatingTransport: %v", err)
+	}
+	rotating.mu.Lock()
+	initial := rotating.current
+	rotating.mu.Unlock()
+	if initial != oldTransport {
+		t.Fatalf("initial transport = %p, want old %p", initial, oldTransport)
+	}
+
+	selected.Store(newTransport)
+	InvalidateMasterClientConnections()
+
+	req := httptest.NewRequest(http.MethodGet, "https://node.example.test/panel/api/server/status", nil)
+	resp, err := rotating.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("RoundTrip after credential rotation: %v", err)
+	}
+	_ = resp.Body.Close()
+
+	rotating.mu.Lock()
+	current := rotating.current
+	rotating.mu.Unlock()
+	if current != newTransport {
+		t.Fatalf("transport after invalidation = %p, want new %p", current, newTransport)
+	}
+	if got := oldTransport.closed.Load(); got != 1 {
+		t.Fatalf("old transport CloseIdleConnections calls = %d, want 1", got)
+	}
+}
+
+// Heartbeat and traffic sync ask for a client every few seconds; a rebuilt one
+// owns an empty pool, so each tick paid a fresh TCP+TLS handshake per node.
+func TestHTTPClientForNodeReusesOneConnectionAcrossCalls(t *testing.T) {
+	var handshakes atomic.Int32
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	server.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		if state == http.StateNew {
+			handshakes.Add(1)
+		}
+	}
+	server.StartTLS()
+	defer server.Close()
+
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test server url: %v", err)
+	}
+	port, err := strconv.Atoi(u.Port())
+	if err != nil {
+		t.Fatalf("test server port: %v", err)
+	}
+	node := &model.Node{
+		Id: 31, Address: u.Hostname(), Port: port, Scheme: "https",
+		TlsVerifyMode: "skip", AllowPrivateAddress: true,
+	}
+
+	for tick := range 2 {
+		client, err := HTTPClientForNode(node, "")
+		if err != nil {
+			t.Fatalf("tick %d: HTTPClientForNode: %v", tick, err)
+		}
+		req, err := http.NewRequestWithContext(
+			netsafe.ContextWithAllowPrivate(context.Background(), true), http.MethodGet, server.URL, nil)
+		if err != nil {
+			t.Fatalf("tick %d: new request: %v", tick, err)
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("tick %d: request: %v", tick, err)
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}
+
+	if got := handshakes.Load(); got != 1 {
+		t.Fatalf("TLS handshakes = %d, want 1: a rebuilt client re-handshakes on every tick", got)
+	}
+}
+
+// A node that switches to pinning (or gains a proxy) must not be served by the
+// client built for its previous trust decision.
+func TestHTTPClientForNodeRebuildsWhenNodeIdentityChanges(t *testing.T) {
+	pin := base64.StdEncoding.EncodeToString(make([]byte, sha256.Size))
+	node := &model.Node{Id: 32, Address: "node.example.test", Port: 443, Scheme: "https", TlsVerifyMode: "skip"}
+	skipped, err := HTTPClientForNode(node, "")
+	if err != nil {
+		t.Fatalf("skip client: %v", err)
+	}
+
+	pinned := *node
+	pinned.TlsVerifyMode = "pin"
+	pinned.PinnedCertSha256 = pin
+	pinnedClient, err := HTTPClientForNode(&pinned, "")
+	if err != nil {
+		t.Fatalf("pin client: %v", err)
+	}
+	if skipped == pinnedClient {
+		t.Fatal("a pinned node must not reuse the client built to skip verification")
+	}
+
+	proxied, err := HTTPClientForNode(node, "socks5://127.0.0.1:1080")
+	if err != nil {
+		t.Fatalf("proxied client: %v", err)
+	}
+	if skipped == proxied {
+		t.Fatal("a proxied node must not reuse the direct client")
+	}
+
+	if again, err := HTTPClientForNode(node, ""); err != nil || again == pinnedClient {
+		t.Fatalf("a skip request must never be served the pinned client; again=%p err=%v", again, err)
+	}
+}
+
+func nodeClientEntries(id int) int {
+	nodeClientsMu.Lock()
+	defer nodeClientsMu.Unlock()
+	count := 0
+	for _, entry := range nodeClientsCache {
+		if entry.nodeID == id {
+			count++
+		}
+	}
+	return count
+}
+
+// withOutboundBridge mints a fresh loopback port per call, so the variant it
+// asks for can never be hit again; only the variant in use may stay cached.
+func TestHTTPClientForNodeKeepsOneClientPerNode(t *testing.T) {
+	node := &model.Node{Id: 77, Address: "node.example.test", Port: 443, Scheme: "https", TlsVerifyMode: "skip"}
+	variants := []string{"socks5://127.0.0.1:41001", "socks5://127.0.0.1:41002", ""}
+	for _, variant := range variants {
+		if _, err := HTTPClientForNode(node, variant); err != nil {
+			t.Fatalf("HTTPClientForNode(%q): %v", variant, err)
+		}
+		if got := nodeClientEntries(node.Id); got != 1 {
+			t.Fatalf("cached clients for the node after %q = %d, want 1", variant, got)
+		}
+		if client, err := HTTPClientForNode(node, variant); err != nil || client == nil {
+			t.Fatalf("repeat HTTPClientForNode(%q): client=%p err=%v", variant, client, err)
+		}
+	}
+
+	verify := *node
+	verify.TlsVerifyMode = "verify"
+	if client, err := HTTPClientForNode(&verify, ""); err != nil || client != defaultNodeHTTPClient {
+		t.Fatalf("verify client = %p, want the shared one (%p); err=%v", client, defaultNodeHTTPClient, err)
+	}
+	if got := nodeClientEntries(node.Id); got != 0 {
+		t.Fatalf("cached clients for a node now on verify = %d, want 0", got)
+	}
+}
+
+func TestReloadMasterClientConnectionsValidatesProviderBeforeInvalidation(t *testing.T) {
+	before := masterCertEpoch.Load()
+	SetMasterClientCertProvider(func() (tls.Certificate, error) {
+		return tls.Certificate{}, context.Canceled
+	})
+	if err := ReloadMasterClientConnections(); err == nil {
+		t.Fatal("reload with an invalid provider unexpectedly succeeded")
+	}
+	if got := masterCertEpoch.Load(); got != before {
+		t.Fatalf("failed reload changed generation from %d to %d", before, got)
+	}
+
+	SetMasterClientCertProvider(func() (tls.Certificate, error) {
+		return masterCertForTest(t), nil
+	})
+	t.Cleanup(func() { SetMasterClientCertProvider(nil) })
+	if err := ReloadMasterClientConnections(); err != nil {
+		t.Fatalf("ReloadMasterClientConnections: %v", err)
+	}
+	if got := masterCertEpoch.Load(); got != before+1 {
+		t.Fatalf("successful reload generation = %d, want %d", got, before+1)
+	}
+}
+
+func TestCredentialRotatingTransportRejectsBuildAcrossInvalidation(t *testing.T) {
+	oldTransport := &generationProbeTransport{id: "old"}
+	newTransport := &generationProbeTransport{id: "new"}
+	var selected atomic.Pointer[generationProbeTransport]
+	selected.Store(oldTransport)
+
+	firstBuildCaptured := make(chan struct{})
+	releaseFirstBuild := make(chan struct{})
+	var once sync.Once
+	build := func() (idleClosingRoundTripper, error) {
+		captured := selected.Load()
+		once.Do(func() {
+			close(firstBuildCaptured)
+			<-releaseFirstBuild
+		})
+		return captured, nil
+	}
+
+	type result struct {
+		transport *credentialRotatingTransport
+		err       error
+	}
+	resultCh := make(chan result, 1)
+	go func() {
+		transport, err := newCredentialRotatingTransport(build)
+		resultCh <- result{transport: transport, err: err}
+	}()
+
+	<-firstBuildCaptured
+	selected.Store(newTransport)
+	InvalidateMasterClientConnections()
+	close(releaseFirstBuild)
+
+	got := <-resultCh
+	if got.err != nil {
+		t.Fatalf("newCredentialRotatingTransport: %v", got.err)
+	}
+	got.transport.mu.Lock()
+	current := got.transport.current
+	got.transport.mu.Unlock()
+	if current != newTransport {
+		t.Fatalf("transport built across invalidation = %p, want new %p", current, newTransport)
+	}
+	if calls := oldTransport.closed.Load(); calls != 1 {
+		t.Fatalf("stale transport CloseIdleConnections calls = %d, want 1", calls)
+	}
+}
+
+func TestHTTPClientForNodeMTLSRebuildsTLSConfigAfterCredentialInvalidation(t *testing.T) {
+	oldCert := masterCertForTest(t)
+	newCert := masterCertForTest(t)
+	selected := oldCert
+	SetMasterClientCertProvider(func() (tls.Certificate, error) { return selected, nil })
+	t.Cleanup(func() { SetMasterClientCertProvider(nil) })
+
+	client, err := HTTPClientForNode(&model.Node{
+		Scheme:        "https",
+		Address:       "node.example.test",
+		Port:          443,
+		TlsVerifyMode: "mtls",
+	}, "")
+	if err != nil {
+		t.Fatalf("HTTPClientForNode: %v", err)
+	}
+	rotating, ok := client.Transport.(*credentialRotatingTransport)
+	if !ok {
+		t.Fatalf("transport = %T, want *credentialRotatingTransport", client.Transport)
+	}
+	leaf := func() []byte {
+		rotating.mu.Lock()
+		defer rotating.mu.Unlock()
+		transport, ok := rotating.current.(*http.Transport)
+		if !ok {
+			t.Fatalf("current transport = %T, want *http.Transport", rotating.current)
+		}
+		return transport.TLSClientConfig.Certificates[0].Certificate[0]
+	}
+	if got := leaf(); string(got) != string(oldCert.Certificate[0]) {
+		t.Fatal("initial TLS config does not contain the old credential")
+	}
+
+	selected = newCert
+	InvalidateMasterClientConnections()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://node.example.test/", nil)
+	if err != nil {
+		t.Fatalf("NewRequestWithContext: %v", err)
+	}
+	if _, err := client.Do(req); err == nil {
+		t.Fatal("canceled request unexpectedly succeeded")
+	}
+	if got := leaf(); string(got) != string(newCert.Certificate[0]) {
+		t.Fatal("TLS config retained the old credential after invalidation")
+	}
+}
+
+func TestHTTPClientForNodeProxyMTLSRebuildKeepsProxyAndNewCredential(t *testing.T) {
+	oldCert := masterCertForTest(t)
+	newCert := masterCertForTest(t)
+	selected := oldCert
+	SetMasterClientCertProvider(func() (tls.Certificate, error) { return selected, nil })
+	t.Cleanup(func() { SetMasterClientCertProvider(nil) })
+
+	const proxyURL = "http://127.0.0.1:18080"
+	client, err := HTTPClientForNode(&model.Node{Scheme: "https", TlsVerifyMode: "mtls"}, proxyURL)
+	if err != nil {
+		t.Fatalf("HTTPClientForNode: %v", err)
+	}
+	rotating, ok := client.Transport.(*credentialRotatingTransport)
+	if !ok {
+		t.Fatalf("transport = %T, want rotating transport", client.Transport)
+	}
+	current := func() *http.Transport {
+		rotating.mu.Lock()
+		defer rotating.mu.Unlock()
+		transport, ok := rotating.current.(*http.Transport)
+		if !ok {
+			t.Fatalf("current transport = %T, want *http.Transport", rotating.current)
+		}
+		return transport
+	}
+	assertProxy := func(transport *http.Transport) {
+		t.Helper()
+		if transport.Proxy == nil {
+			t.Fatalf("proxy function is nil, want %s", proxyURL)
+		}
+		req, _ := http.NewRequest(http.MethodGet, "https://node.example.test/", nil)
+		got, err := transport.Proxy(req)
+		if err != nil || got == nil || got.String() != proxyURL {
+			t.Fatalf("proxy = %v, error = %v, want %s", got, err, proxyURL)
+		}
+	}
+	assertProxy(current())
+
+	selected = newCert
+	InvalidateMasterClientConnections()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "https://node.example.test/", nil)
+	_, _ = client.Do(req)
+	rebuilt := current()
+	assertProxy(rebuilt)
+	if got := rebuilt.TLSClientConfig.Certificates[0].Certificate[0]; string(got) != string(newCert.Certificate[0]) {
+		t.Fatal("proxy mTLS rebuild retained the old credential")
+	}
+}
 
 // masterCertForTest builds a real CA-signed client certificate for mtls tests.
 func masterCertForTest(t *testing.T) tls.Certificate {

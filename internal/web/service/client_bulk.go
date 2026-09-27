@@ -266,7 +266,46 @@ var bulkFlowAllowed = map[string]struct{}{
 //
 // Work is grouped by inbound so the selected records can share one runtime
 // reconciliation decision without loading the inbound's persisted settings.
-func (s *ClientService) BulkAdjust(inboundSvc *InboundService, emails []string, addDays int, addBytes int64, flow string) (BulkAdjustResult, bool, error) {
+// BulkAdjust also sets limitHwid (0 = unlimited) and adTag ("none" clears) on
+// the normalized records; the MTProto sidecar picks ad-tags up on its next sync.
+func (s *ClientService) BulkAdjust(inboundSvc *InboundService, emails []string, addDays int, addBytes int64, flow string, limitHwid *int, adTag string) (BulkAdjustResult, bool, error) {
+	adTag = strings.TrimSpace(adTag)
+	if adTag != "" && adTag != bulkFlowClear && !model.ValidMtprotoAdTag(adTag) {
+		return BulkAdjustResult{}, false, common.NewError("mtproto client ad tag must be 32 hex characters")
+	}
+	if limitHwid == nil && adTag == "" {
+		return s.bulkAdjustCore(inboundSvc, emails, addDays, addBytes, flow)
+	}
+	result := BulkAdjustResult{}
+	needRestart := false
+	if addDays != 0 || addBytes != 0 || strings.TrimSpace(flow) != "" {
+		var err error
+		if result, needRestart, err = s.bulkAdjustCore(inboundSvc, emails, addDays, addBytes, flow); err != nil {
+			return result, needRestart, err
+		}
+	}
+	updates := map[string]any{}
+	if limitHwid != nil {
+		updates["limit_hwid"] = max(*limitHwid, 0)
+	}
+	if adTag == bulkFlowClear {
+		updates["ad_tag"] = ""
+	} else if adTag != "" {
+		updates["ad_tag"] = strings.ToLower(adTag)
+	}
+	clean := trimmedUniqueEmails(emails)
+	for _, batch := range chunkStrings(clean, sqlInChunk) {
+		if err := database.GetDB().Model(&model.ClientRecord{}).Where("email IN ?", batch).Updates(updates).Error; err != nil {
+			return result, needRestart, err
+		}
+	}
+	if result.Adjusted == 0 {
+		result.Adjusted = len(clean)
+	}
+	return result, needRestart, nil
+}
+
+func (s *ClientService) bulkAdjustCore(inboundSvc *InboundService, emails []string, addDays int, addBytes int64, flow string) (BulkAdjustResult, bool, error) {
 	result := BulkAdjustResult{}
 	if len(emails) == 0 {
 		return result, false, nil

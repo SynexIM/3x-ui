@@ -19,6 +19,33 @@ func (s *InboundService) GetAllInboundClientIps() ([]model.InboundClientIps, err
 	return ips, err
 }
 
+// nodeHostedEmails is every client one node serves, its descendants' included.
+// Per-node pushes are scoped to it so their cost tracks the node, not the fleet.
+func nodeHostedEmails(db *gorm.DB, nodeID int) ([]string, error) {
+	var emails []string
+	err := db.Model(&model.NodeClientTraffic{}).Where("node_id = ?", nodeID).Pluck("email", &emails).Error
+	return emails, err
+}
+
+// GetNodeInboundClientIps returns the IP rows of the clients nodeID hosts: a node's
+// IP-limit job reads no other row, so pushing the rest only made it echo them back.
+func (s *InboundService) GetNodeInboundClientIps(nodeID int) ([]model.InboundClientIps, error) {
+	db := database.GetDB()
+	emails, err := nodeHostedEmails(db, nodeID)
+	if err != nil || len(emails) == 0 {
+		return nil, err
+	}
+	var ips []model.InboundClientIps
+	for _, batch := range chunkStrings(emails, sqlInChunk) {
+		var page []model.InboundClientIps
+		if err := db.Where("client_email IN ?", batch).Find(&page).Error; err != nil {
+			return nil, err
+		}
+		ips = append(ips, page...)
+	}
+	return ips, nil
+}
+
 // clientIpStaleAfterSeconds mirrors job.ipStaleAfterSeconds: client IPs older than
 // 30 minutes are evicted. Applying the same cutoff inside the cross-node merge keeps
 // the synced blob bounded and stops the master's push-back from resurrecting IPs that
@@ -224,4 +251,40 @@ func (s *InboundService) ClearClientIps(clientEmail string) error {
 		return err
 	}
 	return nil
+}
+
+// PruneStaleClientIps enforces clientIpStaleAfterSeconds for rows the online
+// scan no longer rewrites: an offline client's addresses must still expire.
+func (s *InboundService) PruneStaleClientIps() error {
+	db := database.GetDB()
+	cutoff := time.Now().Unix() - clientIpStaleAfterSeconds
+
+	var rows []model.InboundClientIps
+	if err := db.Find(&rows).Error; err != nil {
+		return err
+	}
+	for _, row := range rows {
+		var entries []clientIpEntry
+		if row.Ips != "" {
+			// Legacy blobs without timestamps stay untouched; the next scan rewrites them.
+			if err := json.Unmarshal([]byte(row.Ips), &entries); err != nil {
+				continue
+			}
+		}
+		kept := mergeClientIpEntries(nil, entries, cutoff)
+		if len(kept) == 0 {
+			if err := db.Delete(&model.InboundClientIps{}, row.Id).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		if len(kept) == len(entries) {
+			continue
+		}
+		b, _ := json.Marshal(kept)
+		if err := db.Model(&model.InboundClientIps{}).Where("id = ?", row.Id).Update("ips", string(b)).Error; err != nil {
+			return err
+		}
+	}
+	return pruneStaleNodeClientIps(cutoff)
 }

@@ -41,10 +41,15 @@ export default function HysteriaForm() {
               MASQ_DOT,
               checked
                 ? {
-                  type: '', dir: '', url: '',
-                  rewriteHost: false, insecure: false,
-                  content: '', headers: {}, statusCode: 0,
-                }
+                    type: '',
+                    dir: '',
+                    url: '',
+                    rewriteHost: false,
+                    insecure: false,
+                    content: '',
+                    headers: {},
+                    statusCode: 0,
+                  }
                 : undefined,
             )
           }
@@ -70,6 +75,13 @@ export default function HysteriaForm() {
               <FormField
                 label={t('pages.inbounds.form.rewriteHost')}
                 name={[...MASQ, 'rewriteHost']}
+                valueProp="checked"
+              >
+                <Switch />
+              </FormField>
+              <FormField
+                label={t('pages.inbounds.form.xForwarded')}
+                name={[...MASQ, 'xForwarded']}
                 valueProp="checked"
               >
                 <Switch />

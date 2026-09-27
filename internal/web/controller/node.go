@@ -50,6 +50,7 @@ func (a *NodeController) initRouter(g *gin.RouterGroup) {
 	g.GET("/fairshare/status", a.fairShareStatus)
 	g.POST("/fairshare", a.setFairShare)
 	g.POST("/ingress-probe", a.ingressProbe)
+	g.POST("/mtls/reloadClient", a.reloadMtlsClient)
 }
 
 // fairShare returns this panel's own node-level fair-share policy, plus whether
@@ -85,6 +86,16 @@ func (a *NodeController) setFairShare(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.nodes.toasts.saveFairShare"), nil)
+}
+
+// reloadMtlsClient validates the credential currently stored by the master and
+// closes cached mTLS pools so subsequent node requests present the new leaf.
+func (a *NodeController) reloadMtlsClient(c *gin.Context) {
+	if err := a.nodeService.ReloadMasterMtlsClient(); err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.nodes.toasts.reloadMtls"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.nodes.toasts.reloadMtls"), nil)
 }
 
 // mtlsCa returns this panel's node-auth CA certificate (public) to paste into a

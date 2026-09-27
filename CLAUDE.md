@@ -8,7 +8,7 @@ index, layering rules), read `docs/architecture.md` on demand — do not guess
 file locations when it can answer in one hop.
 
 ## Stack
-- Backend: Go 1.26 (`module github.com/mhsanaei/3x-ui/v3`), Gin, GORM.
+- Backend: Go 1.27 (`module github.com/mhsanaei/3x-ui/v3`), Gin, GORM.
   Runs Xray-core as a managed child process (`internal/xray/process.go`) and
   imports `github.com/xtls/xray-core` for config types + gRPC stats/handler/router
   API. MTProto inbounds run a second managed child — the `mtg-multi` binary
@@ -31,14 +31,25 @@ file locations when it can answer in one hop.
   built into `internal/web/dist/` (gitignored) and embedded via `embed.FS`.
 
 ## Repo map
-- `main.go` — entry point + `x-ui` CLI (run, migrate, migrate-db, setting, cert).
+- `main.go` — entry point + `x-ui` CLI (run, migrate, migrate-db, encrypt-tokens, setting, cert).
 - `internal/config/` — env parsing (XUI_DEBUG, XUI_LOG_LEVEL, XUI_LOG_FOLDER,
   XUI_BIN_FOLDER, XUI_SKIP_HSTS, XUI_PORT, XUI_DB_*).
 - `internal/database/` + `internal/database/model/` — GORM schema (~24 models;
   Inbound, Client, Setting, User are the core), inbound Protocol enum,
   AutoMigrate + hand-written migrations in `db.go`.
 - `internal/xray/` — Xray child-process lifecycle, config generation, gRPC API.
+- `internal/xray/geodata/` — streaming geosite/geoip `.dat` reader (cached
+  category index + paged entries) and `geosite:`/`geoip:`/`ext:` token parsing.
 - `internal/mtproto/` — MTProto inbounds via the bundled `mtg-multi` binary.
+- `internal/tuic/` — TUIC v5 inbounds: `tuic-server` sidecar supervisor, native Go UDP relay traffic metering.
+- `internal/amneziawg/` — AmneziaWG protocol shape: instance/peer derivation
+  from an inbound, 3.1 obfuscation param generation + validation, port-forward
+  spec parsing.
+- `internal/amneziawgnet/` — embedded AmneziaWG runtime: amneziawg-go device
+  over a gVisor userspace netstack, per-inbound reconcile manager, TCP/UDP
+  relay into a loopback per-peer-auth SOCKS5 Xray inbound, port-forward
+  listeners, per-peer IPv6 egress aliases.
+- `internal/pia/` — PIA WireGuard protocol client (auth, signed server list, `/addKey`).
 - `internal/sub/` — subscription server (raw / JSON / Clash).
 - `internal/eventbus/` — in-process pub/sub (outbound/node health, xray.crash,
   cpu.high, memory.high, login.attempt).
@@ -47,8 +58,8 @@ file locations when it can answer in one hop.
 - `internal/web/` — Gin server (embeds `dist/` + `translation/`).
   - `controller/` — panel + REST API handlers; OpenAPI at /panel/api/openapi.json.
   - `service/` — business logic (InboundService, SettingService, XrayService,
-    node sync); subpackages tgbot/, email/, outbound/, panel/, integration/.
-  - `job/` — 17 cron jobs (traffic, fail2ban IP-limit, node heartbeat/sync, LDAP,
+    node sync); subpackages tgbot/, discord/, email/, outbound/, panel/, integration/.
+  - `job/` — 19 cron jobs (traffic, fail2ban IP-limit, node heartbeat/sync, LDAP,
     CPU/memory watchdogs, …); full table in `docs/architecture.md` §5.4.
   - `middleware/`, `entity/`, `global/`, `session/` (CSRF), `network/`,
     `runtime/` (master/sub-node over mTLS), `websocket/`.
@@ -57,8 +68,7 @@ file locations when it can answer in one hop.
 - `tools/openapigen/` — Go generator that emits frontend types + Zod/JSON schemas
   into `frontend/src/generated/` from Go structs. The OpenAPI doc itself
   (`frontend/public/openapi.json`) is assembled from those + `endpoints.ts` by
-  `frontend/scripts/build-openapi.mjs`. (`tools/seedperf/` is a separate seeding
-  /load helper.)
+  `frontend/scripts/build-openapi.mjs`.
 - `docs/` — separate Next.js/Fumadocs site (pnpm, own CI in `docs-ci.yml`,
   outside `make verify`). Holds a THIRD independent implementation of
   link/subscription generation in `docs/lib/xray/` — check it whenever

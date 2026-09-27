@@ -7,3 +7,5 @@ export { default as HttpFields } from './http';
 export { default as MixedFields } from './mixed';
 export { default as MtprotoFields } from './mtproto';
 export { default as VlessFields } from './vless';
+export { default as AmneziawgFields } from './amneziawg';
+export { default as TuicFields } from './tuic';

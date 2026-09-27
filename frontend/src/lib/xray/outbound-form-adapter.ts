@@ -1,11 +1,14 @@
 import { XHttpXmuxSchema } from '@/schemas/protocols/stream/xhttp';
 import { OutboundDomainStrategySchema } from '@/schemas/protocols/outbound';
+import { AmneziaWGOutboundSettingsSchema } from '@/schemas/protocols/outbound';
 import { normalizeStreamSettingsForWire } from '@/lib/xray/stream-wire-normalize';
 import { Wireguard } from '@/utils';
 import type { Sniffing, SniffingDest } from '@/schemas/primitives';
 import type { OutboundDomainStrategy } from '@/schemas/protocols/outbound';
 
 import type {
+  AmneziaWGOutboundFormSettings,
+  BlackholeOutboundFormSettings,
   DnsOutboundFormSettings,
   DnsRuleForm,
   FreedomFinalRuleForm,
@@ -63,9 +66,27 @@ function asPort(value: unknown, fallback: number): number {
 function targetStrategyFromWire(value: unknown): OutboundDomainStrategy | '' {
   const s = asString(value);
   if (!s) return '';
-  return OutboundDomainStrategySchema.options.find(
-    (v) => v.toLowerCase() === s.toLowerCase(),
-  ) ?? '';
+  return (
+    OutboundDomainStrategySchema.options.find((v) => v.toLowerCase() === s.toLowerCase()) ?? ''
+  );
+}
+
+// Mirrors the order the loader migrates freedom's legacy strategy keys in:
+// root targetStrategy, settings targetStrategy, settings domainStrategy, sockopt.
+export function freedomDomainStrategyFromWire(outbound: {
+  targetStrategy?: unknown;
+  settings?: unknown;
+  streamSettings?: unknown;
+}): OutboundDomainStrategy | '' {
+  const settings = asObject(outbound.settings);
+  const sockopt = asObject(asObject(outbound.streamSettings).sockopt);
+  const root = targetStrategyFromWire(outbound.targetStrategy);
+  const settingsKey = asString(settings.targetStrategy)
+    ? settings.targetStrategy
+    : settings.domainStrategy;
+  const legacy = root && root !== 'AsIs' ? root : targetStrategyFromWire(settingsKey);
+  if (legacy && legacy !== 'AsIs') return legacy;
+  return targetStrategyFromWire(sockopt.domainStrategy);
 }
 
 const SNIFFING_DEST_VALUES: readonly SniffingDest[] = ['http', 'tls', 'quic', 'fakedns'];
@@ -131,14 +152,12 @@ function vlessFromWire(raw: Raw): VlessOutboundFormSettings {
   }
   const reverse = asObject(raw.reverse);
   const reverseTag = asString(reverse.tag);
-  const reverseSniffing = reverseTag
-    ? sniffingFromWire(reverse.sniffing)
-    : SNIFFING_DEFAULT;
+  const reverseSniffing = reverseTag ? sniffingFromWire(reverse.sniffing) : SNIFFING_DEFAULT;
   const savedSeed = asArray(raw.testseed);
-  const testseed = savedSeed.length === 4
-    && savedSeed.every((n) => Number.isInteger(n) && (n as number) > 0)
-    ? (savedSeed as number[])
-    : [900, 500, 900, 256];
+  const testseed =
+    savedSeed.length === 4 && savedSeed.every((n) => Number.isInteger(n) && (n as number) > 0)
+      ? (savedSeed as number[])
+      : [900, 500, 900, 256];
   return {
     address,
     port,
@@ -167,7 +186,10 @@ function shadowsocksFromWire(raw: Raw): ShadowsocksOutboundFormSettings {
     address: asString(s.address),
     port: asPort(s.port, 443),
     password: asString(s.password),
-    method: asString(s.method, '2022-blake3-aes-128-gcm') as ShadowsocksOutboundFormSettings['method'],
+    method: asString(
+      s.method,
+      '2022-blake3-aes-128-gcm',
+    ) as ShadowsocksOutboundFormSettings['method'],
     uot: asBool(s.uot),
     UoTVersion: asNumber(s.UoTVersion, 1),
   };
@@ -213,9 +235,7 @@ function httpFromWire(raw: Raw): HttpOutboundFormSettings {
 
 function wireguardFromWire(raw: Raw): WireguardOutboundFormSettings {
   const secretKey = asString(raw.secretKey);
-  const pubKey = secretKey.length > 0
-    ? Wireguard.generateKeypair(secretKey).publicKey
-    : '';
+  const pubKey = secretKey.length > 0 ? Wireguard.generateKeypair(secretKey).publicKey : '';
   const addressArr = asArray(raw.address).map((x) =>
     typeof x === 'number' ? String(x) : asString(x),
   );
@@ -244,6 +264,9 @@ function wireguardFromWire(raw: Raw): WireguardOutboundFormSettings {
       return (allowed.includes(s) ? s : '') as WireguardOutboundFormSettings['domainStrategy'];
     })(),
     reserved: reservedArr.join(','),
+    remoteDNS: asArray(raw.remoteDNS)
+      .map((x) => asString(x))
+      .join(','),
     peers,
     noKernelTun: asBool(raw.noKernelTun),
   };
@@ -257,15 +280,21 @@ function hysteriaFromWire(raw: Raw): HysteriaOutboundFormSettings {
   };
 }
 
-function freedomFromWire(raw: Raw): FreedomOutboundFormSettings {
+function freedomFromWire(
+  raw: Raw,
+  domainStrategy: OutboundDomainStrategy | '',
+): FreedomOutboundFormSettings {
   const fragment = asObject(raw.fragment);
   const noises = asArray(raw.noises).map((n) => {
     const nn = asObject(n);
     return {
-      type: (asString(nn.type, 'rand') as FreedomOutboundFormSettings['noises'][number]['type']),
+      type: asString(nn.type, 'rand') as FreedomOutboundFormSettings['noises'][number]['type'],
       packet: asString(nn.packet, '10-20'),
       delay: asString(nn.delay, '10-16'),
-      applyTo: (asString(nn.applyTo, 'ip') as FreedomOutboundFormSettings['noises'][number]['applyTo']),
+      applyTo: asString(
+        nn.applyTo,
+        'ip',
+      ) as FreedomOutboundFormSettings['noises'][number]['applyTo'],
     };
   });
   const finalRulesRaw = asArray(raw.finalRules);
@@ -275,7 +304,9 @@ function freedomFromWire(raw: Raw): FreedomOutboundFormSettings {
       ? rr.network.map((x) => asString(x)).join(',')
       : asString(rr.network);
     return {
-      action: (asString(rr.action, 'block') === 'allow' ? 'allow' : 'block') as FreedomFinalRuleForm['action'],
+      action: (asString(rr.action, 'block') === 'allow'
+        ? 'allow'
+        : 'block') as FreedomFinalRuleForm['action'],
       network,
       port: asString(rr.port),
       ip: asArray(rr.ip).map((x) => asString(x)),
@@ -293,18 +324,15 @@ function freedomFromWire(raw: Raw): FreedomOutboundFormSettings {
   // legacy behavior: when the wire omits fragment, leave all four fields
   // empty so the modal's "Fragment" Switch starts off. When present,
   // surface whatever the wire holds verbatim.
-  const wireHasFragment = raw.fragment != null
-    && typeof raw.fragment === 'object'
-    && Object.keys(fragment).length > 0;
+  const wireHasFragment =
+    raw.fragment != null && typeof raw.fragment === 'object' && Object.keys(fragment).length > 0;
   return {
-    domainStrategy: targetStrategyFromWire(
-      asString(raw.targetStrategy) || asString(raw.domainStrategy),
-    ),
+    domainStrategy,
     redirect: asString(raw.redirect),
     userLevel: asNumber(raw.userLevel, 0),
     proxyProtocol: ((): FreedomOutboundFormSettings['proxyProtocol'] => {
       const n = asNumber(raw.proxyProtocol, 0);
-      return (n === 1 || n === 2) ? n : 0;
+      return n === 1 || n === 2 ? n : 0;
     })(),
     fragment: wireHasFragment
       ? {
@@ -319,10 +347,13 @@ function freedomFromWire(raw: Raw): FreedomOutboundFormSettings {
   };
 }
 
-function blackholeFromWire(raw: Raw) {
+function blackholeFromWire(raw: Raw): BlackholeOutboundFormSettings {
   const response = asObject(raw.response);
   const t = asString(response.type);
-  return { type: (t === 'none' || t === 'http' ? t : '') as '' | 'none' | 'http' };
+  return {
+    type: t === 'none' || t === 'http' || t === 'custom' ? t : '',
+    customResponseData: asString(response.customResponseData),
+  };
 }
 
 function dnsRuleFromWire(raw: unknown): DnsRuleForm {
@@ -337,10 +368,13 @@ function dnsRuleFromWire(raw: unknown): DnsRuleForm {
     ? r.domain.map((x) => asString(x)).join(',')
     : asString(r.domain);
   const action = asString(r.action, 'direct');
-  const validAction = ['direct', 'drop', 'return', 'hijack'].includes(action)
-    ? action
-    : 'direct';
-  return { action: validAction as DnsRuleForm['action'], qType, domain, rCode: asNumber(r.rCode, 0) };
+  const validAction = ['direct', 'drop', 'return', 'hijack'].includes(action) ? action : 'direct';
+  return {
+    action: validAction as DnsRuleForm['action'],
+    qType,
+    domain,
+    rCode: asNumber(r.rCode, 0),
+  };
 }
 
 function dnsFromWire(raw: Raw): DnsOutboundFormSettings {
@@ -348,7 +382,7 @@ function dnsFromWire(raw: Raw): DnsOutboundFormSettings {
   return {
     rewriteNetwork: ((): DnsOutboundFormSettings['rewriteNetwork'] => {
       const s = asString(raw.rewriteNetwork ?? raw.network);
-      return (s === 'udp' || s === 'tcp') ? s : '';
+      return s === 'udp' || s === 'tcp' ? s : '';
     })(),
     rewriteAddress: asString(raw.rewriteAddress ?? raw.address),
     rewritePort: asPort(raw.rewritePort ?? raw.port, 53),
@@ -362,6 +396,104 @@ function loopbackFromWire(raw: Raw): LoopbackOutboundFormSettings {
     inboundTag: asString(raw.inboundTag),
     sniffing: sniffingFromWire(raw.sniffing),
   };
+}
+
+function amneziawgPeerFromWire(p: unknown): AmneziaWGOutboundFormSettings['peers'][number] {
+  const pp = asObject(p);
+  const allowed = asArray(pp.allowedIPs).map((x) => asString(x));
+  return {
+    publicKey: asString(pp.publicKey),
+    presharedKey: asString(pp.presharedKey),
+    allowedIPs: allowed.length > 0 ? allowed : ['0.0.0.0/0', '::/0'],
+    endpoint: asString(pp.endpoint),
+    keepAlive: asNumber(pp.keepAlive, 0),
+  };
+}
+
+// The form state IS the wire shape; hydrate only to apply defaults for keys
+// an older template may omit.
+function amneziawgFromWire(raw: Raw): AmneziaWGOutboundFormSettings {
+  return AmneziaWGOutboundSettingsSchema.parse({
+    mtu: asNumber(raw.mtu, 0),
+    secretKey: asString(raw.secretKey),
+    address: asArray(raw.address).map((x) => asString(x)),
+    listenPort: asNumber(raw.listenPort, 0),
+    dns: asString(raw.dns),
+    jc: asNumber(raw.jc, 0),
+    jmin: asNumber(raw.jmin, 40),
+    jmax: asNumber(raw.jmax, 100),
+    s1: asNumber(raw.s1, 15),
+    s2: asNumber(raw.s2, 80),
+    s3: asNumber(raw.s3, 12),
+    s4: asNumber(raw.s4, 12),
+    h1: asString(raw.h1),
+    h2: asString(raw.h2),
+    h3: asString(raw.h3),
+    h4: asString(raw.h4),
+    i1: asString(raw.i1),
+    i2: asString(raw.i2),
+    i3: asString(raw.i3),
+    i4: asString(raw.i4),
+    i5: asString(raw.i5),
+    headerProtectionKey: asString(raw.headerProtectionKey),
+    contentPaddingAddition: asString(raw.contentPaddingAddition),
+    rekeyAfterTime: asString(raw.rekeyAfterTime),
+    rekeyTimeout: asString(raw.rekeyTimeout),
+    rejectAfterTime: asString(raw.rejectAfterTime),
+    keepaliveTimeout: asString(raw.keepaliveTimeout),
+    maxHandshakeAttempts: asString(raw.maxHandshakeAttempts),
+    randomTrailers: raw.randomTrailers === undefined ? false : asBool(raw.randomTrailers),
+    disableCookies: raw.disableCookies === undefined ? true : asBool(raw.disableCookies),
+    peers: asArray(raw.peers).map(amneziawgPeerFromWire),
+  });
+}
+
+function amneziawgToWire(s: AmneziaWGOutboundFormSettings): Raw {
+  const out: Raw = {
+    mtu: s.mtu || undefined,
+    secretKey: s.secretKey,
+    address: s.address,
+    jc: s.jc,
+    jmin: s.jmin,
+    jmax: s.jmax,
+    s1: s.s1,
+    s2: s.s2,
+    s3: s.s3,
+    s4: s.s4,
+    h1: s.h1,
+    h2: s.h2,
+    h3: s.h3,
+    h4: s.h4,
+    randomTrailers: s.randomTrailers,
+    disableCookies: s.disableCookies,
+    peers: s.peers.map((p) => ({
+      publicKey: p.publicKey,
+      presharedKey: p.presharedKey.length > 0 ? p.presharedKey : undefined,
+      allowedIPs: p.allowedIPs.length > 0 ? p.allowedIPs : undefined,
+      endpoint: p.endpoint,
+      keepAlive: p.keepAlive || undefined,
+    })),
+  };
+  if (s.listenPort > 0) out.listenPort = s.listenPort;
+  if (s.dns && s.dns.length > 0) out.dns = s.dns;
+  const optionalStrings = [
+    'i1',
+    'i2',
+    'i3',
+    'i4',
+    'i5',
+    'headerProtectionKey',
+    'contentPaddingAddition',
+    'rekeyAfterTime',
+    'rekeyTimeout',
+    'rejectAfterTime',
+    'keepaliveTimeout',
+    'maxHandshakeAttempts',
+  ] as const;
+  for (const k of optionalStrings) {
+    if (s[k].length > 0) out[k] = s[k];
+  }
+  return out;
 }
 
 function muxFromWire(raw: unknown): MuxForm {
@@ -409,41 +541,76 @@ function hydrateStreamForm(stream: Raw): OutboundStreamFormValues {
 }
 
 export function rawOutboundToFormValues(raw: RawOutboundRow): OutboundFormValues {
-  const protocol = asString(raw.protocol, 'vless');
+  // The core lowercases a protocol id before it looks the handler up, so a
+  // template pasted as "Freedom" must not fall through to the vless default.
+  const protocol = asString(raw.protocol, 'vless').toLowerCase();
   const settings = asObject(raw.settings);
   const tag = asString(raw.tag);
   const sendThrough = asString(raw.sendThrough);
   const targetStrategy = targetStrategyFromWire(raw.targetStrategy);
+  const freedomStrategy = freedomDomainStrategyFromWire(raw);
   const mux = muxFromWire(raw.mux);
-  const hasStream = raw.streamSettings
-    && typeof raw.streamSettings === 'object'
-    && Object.keys(raw.streamSettings as Raw).length > 0;
-  const streamSettings = hasStream
-    ? hydrateStreamForm(raw.streamSettings as Raw)
-    : undefined;
+  const hasStream =
+    raw.streamSettings &&
+    typeof raw.streamSettings === 'object' &&
+    Object.keys(raw.streamSettings as Raw).length > 0;
+  const streamSettings = hasStream ? hydrateStreamForm(raw.streamSettings as Raw) : undefined;
 
   let typed: OutboundFormSettings;
   switch (protocol) {
-    case 'vmess':       typed = { protocol: 'vmess',       settings: vmessFromWire(settings) }; break;
-    case 'vless':       typed = { protocol: 'vless',       settings: vlessFromWire(settings) }; break;
-    case 'trojan':      typed = { protocol: 'trojan',      settings: trojanFromWire(settings) }; break;
-    case 'shadowsocks': typed = { protocol: 'shadowsocks', settings: shadowsocksFromWire(settings) }; break;
-    case 'socks':       typed = { protocol: 'socks',       settings: simpleAuthFromWire(settings, 1080) }; break;
-    case 'http':        typed = { protocol: 'http',        settings: httpFromWire(settings) }; break;
-    case 'wireguard':   typed = { protocol: 'wireguard',   settings: wireguardFromWire(settings) }; break;
-    case 'hysteria':    typed = { protocol: 'hysteria',    settings: hysteriaFromWire(settings) }; break;
-    case 'freedom':     typed = { protocol: 'freedom',     settings: freedomFromWire(settings) }; break;
-    case 'blackhole':   typed = { protocol: 'blackhole',   settings: blackholeFromWire(settings) }; break;
-    case 'dns':         typed = { protocol: 'dns',         settings: dnsFromWire(settings) }; break;
-    case 'loopback':    typed = { protocol: 'loopback',    settings: loopbackFromWire(settings) }; break;
-    default:            typed = { protocol: 'vless',       settings: vlessFromWire(settings) };
+    case 'vmess':
+      typed = { protocol: 'vmess', settings: vmessFromWire(settings) };
+      break;
+    case 'vless':
+      typed = { protocol: 'vless', settings: vlessFromWire(settings) };
+      break;
+    case 'trojan':
+      typed = { protocol: 'trojan', settings: trojanFromWire(settings) };
+      break;
+    case 'shadowsocks':
+      typed = { protocol: 'shadowsocks', settings: shadowsocksFromWire(settings) };
+      break;
+    case 'socks':
+      typed = { protocol: 'socks', settings: simpleAuthFromWire(settings, 1080) };
+      break;
+    case 'http':
+      typed = { protocol: 'http', settings: httpFromWire(settings) };
+      break;
+    case 'wireguard':
+      typed = { protocol: 'wireguard', settings: wireguardFromWire(settings) };
+      break;
+    case 'amneziawg':
+      typed = { protocol: 'amneziawg', settings: amneziawgFromWire(settings) };
+      break;
+    case 'hysteria':
+      typed = { protocol: 'hysteria', settings: hysteriaFromWire(settings) };
+      break;
+    case 'freedom':
+      typed = {
+        protocol: 'freedom',
+        settings: freedomFromWire(settings, freedomStrategy),
+      };
+      break;
+    case 'blackhole':
+      typed = { protocol: 'blackhole', settings: blackholeFromWire(settings) };
+      break;
+    case 'dns':
+      typed = { protocol: 'dns', settings: dnsFromWire(settings) };
+      break;
+    case 'loopback':
+      typed = { protocol: 'loopback', settings: loopbackFromWire(settings) };
+      break;
+    default:
+      typed = { protocol: 'vless', settings: vlessFromWire(settings) };
   }
 
   return {
     ...typed,
     tag,
     sendThrough,
-    targetStrategy,
+    // The freedom card owns the strategy for freedom, so the shared root field
+    // stays empty and cannot disagree with what the card is showing.
+    targetStrategy: protocol === 'freedom' ? '' : targetStrategy,
     mux,
     streamSettings,
   };
@@ -453,11 +620,13 @@ export function rawOutboundToFormValues(raw: RawOutboundRow): OutboundFormValues
 
 function vmessToWire(s: VmessOutboundFormSettings) {
   return {
-    vnext: [{
-      address: s.address,
-      port: s.port,
-      users: [{ id: s.id, security: s.security }],
-    }],
+    vnext: [
+      {
+        address: s.address,
+        port: s.port,
+        users: [{ id: s.id, security: s.security }],
+      },
+    ],
   };
 }
 
@@ -503,24 +672,28 @@ function trojanToWire(s: TrojanOutboundFormSettings) {
 
 function shadowsocksToWire(s: ShadowsocksOutboundFormSettings) {
   return {
-    servers: [{
-      address: s.address,
-      port: s.port,
-      password: s.password,
-      method: s.method,
-      uot: s.uot,
-      UoTVersion: s.UoTVersion,
-    }],
+    servers: [
+      {
+        address: s.address,
+        port: s.port,
+        password: s.password,
+        method: s.method,
+        uot: s.uot,
+        UoTVersion: s.UoTVersion,
+      },
+    ],
   };
 }
 
 function simpleAuthToWire(s: SimpleAuthFormSettings) {
   return {
-    servers: [{
-      address: s.address,
-      port: s.port,
-      users: s.user ? [{ user: s.user, pass: s.pass }] : [],
-    }],
+    servers: [
+      {
+        address: s.address,
+        port: s.port,
+        users: s.user ? [{ user: s.user, pass: s.pass }] : [],
+      },
+    ],
   };
 }
 
@@ -536,10 +709,24 @@ function wireguardToWire(s: WireguardOutboundFormSettings) {
   return {
     mtu: s.mtu || undefined,
     secretKey: s.secretKey,
-    address: s.address ? s.address.split(',').map((x) => x.trim()).filter(Boolean) : [],
+    address: s.address
+      ? s.address
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean)
+      : [],
     domainStrategy: s.domainStrategy || undefined,
     reserved: s.reserved
-      ? s.reserved.split(',').map((x) => Number(x.trim())).filter((n) => Number.isFinite(n))
+      ? s.reserved
+          .split(',')
+          .map((x) => Number(x.trim()))
+          .filter((n) => Number.isFinite(n))
+      : undefined,
+    remoteDNS: s.remoteDNS
+      ? s.remoteDNS
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean)
       : undefined,
     peers: s.peers.map((p) => ({
       publicKey: p.publicKey,
@@ -557,8 +744,6 @@ function hysteriaToWire(s: HysteriaOutboundFormSettings) {
 }
 
 function freedomToWire(s: FreedomOutboundFormSettings) {
-  // The strategy is emitted under the legacy domainStrategy key: new cores
-  // fall back to it when targetStrategy is absent, old cores only know it.
   // Legacy semantics: emit fragment only when the user actually populated
   // at least one of the four sub-fields. Defaults like packets='1-3' alone
   // are not enough — the modal's Fragment Switch sets all four together.
@@ -567,39 +752,47 @@ function freedomToWire(s: FreedomOutboundFormSettings) {
   const fragment: Partial<FreedomOutboundFormSettings['fragment']> = s.fragment ?? {};
   const fragmentEntries = Object.entries(fragment).filter(([, v]) => v !== '' && v != null);
   const fragmentEnabled = !!fragment.length || !!fragment.interval || !!fragment.maxSplit;
+  // domainStrategy is absent here on purpose: formValuesToWirePayload hoists it
+  // into streamSettings.sockopt, the only placement freedom resolves with.
   return {
-    domainStrategy: s.domainStrategy || undefined,
     redirect: s.redirect || undefined,
     userLevel: s.userLevel || undefined,
     proxyProtocol: s.proxyProtocol || undefined,
     fragment: fragmentEnabled ? Object.fromEntries(fragmentEntries) : undefined,
     noises: s.noises && s.noises.length > 0 ? s.noises : undefined,
-    finalRules: s.finalRules && s.finalRules.length > 0
-      ? s.finalRules.map((r) => ({
-          action: r.action,
-          network: r.network || undefined,
-          port: r.port || undefined,
-          ip: r.ip.length > 0 ? r.ip : undefined,
-          blockDelay: r.action === 'block' && r.blockDelay ? r.blockDelay : undefined,
-        }))
-      : undefined,
+    finalRules:
+      s.finalRules && s.finalRules.length > 0
+        ? s.finalRules.map((r) => ({
+            action: r.action,
+            network: r.network || undefined,
+            port: r.port || undefined,
+            ip: r.ip.length > 0 ? r.ip : undefined,
+            blockDelay: r.action === 'block' && r.blockDelay ? r.blockDelay : undefined,
+          }))
+        : undefined,
   };
 }
 
-function blackholeToWire(s: { type: '' | 'none' | 'http' }) {
-  return { response: s.type ? { type: s.type } : undefined };
+function blackholeToWire(s: BlackholeOutboundFormSettings) {
+  if (!s.type) return { response: undefined };
+  if (s.type === 'custom') {
+    return { response: { type: s.type, customResponseData: s.customResponseData } };
+  }
+  return { response: { type: s.type } };
 }
 
 function dnsRuleToWire(r: DnsRuleForm) {
-  const action = ['direct', 'drop', 'return', 'hijack'].includes(r.action)
-    ? r.action
-    : 'direct';
+  const action = ['direct', 'drop', 'return', 'hijack'].includes(r.action) ? r.action : 'direct';
   const result: Raw = { action };
   const qType = r.qType.trim();
   if (qType) {
-    result.qType = /^\d+$/.test(qType) ? Number(qType) : qType;
+    // The core reads a numeric 0 as no qType at all, which matches every query.
+    result.qType = /^\d+$/.test(qType) && Number(qType) > 0 ? Number(qType) : qType;
   }
-  const domains = r.domain.split(',').map((d) => d.trim()).filter(Boolean);
+  const domains = r.domain
+    .split(',')
+    .map((d) => d.trim())
+    .filter(Boolean);
   if (domains.length > 0) result.domain = domains;
   if (r.rCode > 0) result.rCode = r.rCode;
   return result;
@@ -653,13 +846,13 @@ function stripUiOnlyStreamFields(stream: unknown): Raw {
 
 function muxAllowed(values: OutboundFormValues): boolean {
   if (!MUX_PROTOCOLS.has(values.protocol)) return false;
-  const flow = values.protocol === 'vless'
-    ? (values.settings as VlessOutboundFormSettings).flow
-    : '';
+  const flow =
+    values.protocol === 'vless' ? (values.settings as VlessOutboundFormSettings).flow : '';
   if (flow) return false;
-  const network = values.streamSettings && 'network' in values.streamSettings
-    ? values.streamSettings.network
-    : undefined;
+  const network =
+    values.streamSettings && 'network' in values.streamSettings
+      ? values.streamSettings.network
+      : undefined;
   if (network === 'xhttp') return false;
   return true;
 }
@@ -669,18 +862,45 @@ export type WireOutboundPayload = Raw;
 export function formValuesToWirePayload(values: OutboundFormValues): WireOutboundPayload {
   let settings: Raw;
   switch (values.protocol) {
-    case 'vmess':       settings = vmessToWire(values.settings); break;
-    case 'vless':       settings = vlessToWire(values.settings); break;
-    case 'trojan':      settings = trojanToWire(values.settings); break;
-    case 'shadowsocks': settings = shadowsocksToWire(values.settings); break;
-    case 'socks':       settings = simpleAuthToWire(values.settings); break;
-    case 'http':        settings = httpToWire(values.settings); break;
-    case 'wireguard':   settings = wireguardToWire(values.settings); break;
-    case 'hysteria':    settings = hysteriaToWire(values.settings); break;
-    case 'freedom':     settings = freedomToWire(values.settings); break;
-    case 'blackhole':   settings = blackholeToWire(values.settings); break;
-    case 'dns':         settings = dnsToWire(values.settings); break;
-    case 'loopback':    settings = loopbackToWire(values.settings); break;
+    case 'vmess':
+      settings = vmessToWire(values.settings);
+      break;
+    case 'vless':
+      settings = vlessToWire(values.settings);
+      break;
+    case 'trojan':
+      settings = trojanToWire(values.settings);
+      break;
+    case 'shadowsocks':
+      settings = shadowsocksToWire(values.settings);
+      break;
+    case 'socks':
+      settings = simpleAuthToWire(values.settings);
+      break;
+    case 'http':
+      settings = httpToWire(values.settings);
+      break;
+    case 'wireguard':
+      settings = wireguardToWire(values.settings);
+      break;
+    case 'amneziawg':
+      settings = amneziawgToWire(values.settings);
+      break;
+    case 'hysteria':
+      settings = hysteriaToWire(values.settings);
+      break;
+    case 'freedom':
+      settings = freedomToWire(values.settings);
+      break;
+    case 'blackhole':
+      settings = blackholeToWire(values.settings);
+      break;
+    case 'dns':
+      settings = dnsToWire(values.settings);
+      break;
+    case 'loopback':
+      settings = loopbackToWire(values.settings);
+      break;
   }
 
   const result: Raw = {
@@ -688,7 +908,9 @@ export function formValuesToWirePayload(values: OutboundFormValues): WireOutboun
     settings,
   };
   if (values.tag) result.tag = values.tag;
-  if (values.targetStrategy) result.targetStrategy = values.targetStrategy;
+  if (values.targetStrategy && values.protocol !== 'freedom') {
+    result.targetStrategy = values.targetStrategy;
+  }
 
   // streamSettings emission gates on canEnableStream — non-stream protocols
   // still emit just `sockopt` if that key is present (legacy behavior).
@@ -699,6 +921,20 @@ export function formValuesToWirePayload(values: OutboundFormValues): WireOutboun
       const sockopt = (values.streamSettings as { sockopt?: unknown }).sockopt;
       if (sockopt) result.streamSettings = { sockopt };
     }
+  }
+
+  // Freedom only honours sockopt.domainStrategy; the root and settings keys are
+  // legacy aliases the loader warns about on every start (infra/conf/xray.go).
+  if (values.protocol === 'freedom') {
+    const stream = (result.streamSettings ?? {}) as Raw;
+    const sockopt = asObject(stream.sockopt);
+    const strategy = values.settings.domainStrategy || values.targetStrategy;
+    if (strategy && strategy !== 'AsIs') sockopt.domainStrategy = strategy;
+    else delete sockopt.domainStrategy;
+    if (Object.keys(sockopt).length > 0) stream.sockopt = sockopt;
+    else delete stream.sockopt;
+    if (Object.keys(stream).length > 0) result.streamSettings = stream;
+    else delete result.streamSettings;
   }
 
   if (values.sendThrough) result.sendThrough = values.sendThrough;

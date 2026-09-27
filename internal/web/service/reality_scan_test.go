@@ -78,13 +78,13 @@ func TestSplitRealityTarget(t *testing.T) {
 }
 
 func TestScanRealityTargetInputValidation(t *testing.T) {
-	if _, err := (&ServerService{}).ScanRealityTarget("", 0); err == nil {
+	if _, err := (&ServerService{}).ScanRealityTarget("", "", 0, false); err == nil {
 		t.Error("ScanRealityTarget(empty) expected error, got nil")
 	}
 }
 
 func TestScanRealityTargetBlocksPrivate(t *testing.T) {
-	res, err := (&ServerService{}).ScanRealityTarget("127.0.0.1:443", 0)
+	res, err := (&ServerService{}).ScanRealityTarget("127.0.0.1:443", "", 0, false)
 	if err != nil {
 		t.Fatalf("ScanRealityTarget(loopback) unexpected error: %v", err)
 	}
@@ -162,5 +162,21 @@ func TestWriteProxyProtocolV2Signature(t *testing.T) {
 	}
 	if hdr[13] != 0x11 {
 		t.Fatalf("v2 family/protocol byte = 0x%02x, want 0x11 (TCP over IPv4)", hdr[13])
+	}
+}
+
+func TestParseRealityScanCandidateCSV(t *testing.T) {
+	got := parseRealityScanCandidateCSV(" a.com:443 , ,b.com:8443 ")
+	want := []string{"a.com:443", "b.com:8443"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("got %v, want %v", got, want)
+		}
+	}
+	if tokens := parseRealityScanCandidateCSV("  , "); len(tokens) != 0 {
+		t.Fatalf("empty CSV should yield no tokens, got %v", tokens)
 	}
 }

@@ -243,7 +243,7 @@ func shadowsocksKeyBytes(method string) int {
 	return 0
 }
 
-func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model.Client, inboundFilter ...int) (bool, error) {
+func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model.Client, limitHwid int, inboundFilter ...int) (bool, error) {
 	existing, err := s.GetByID(id)
 	if err != nil {
 		return false, err
@@ -382,6 +382,7 @@ func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model
 	merged.AdTag = updated.AdTag
 	merged.Reverse = incoming.Reverse
 	merged.Enable = updated.Enable
+	merged.LimitHwid = limitHwid
 	merged.UpdatedAt = updated.UpdatedAt
 	if err := database.GetDB().Save(&merged).Error; err != nil {
 		return needRestart, err
@@ -592,7 +593,7 @@ func (s *ClientService) DeleteByEmail(inboundSvc *InboundService, email string, 
 	return false, common.NewError(fmt.Sprintf("client %q not found in normalized client records", email))
 }
 
-func (s *ClientService) UpdateByEmail(inboundSvc *InboundService, email string, updated model.Client, inboundFilter ...int) (bool, error) {
+func (s *ClientService) UpdateByEmail(inboundSvc *InboundService, email string, updated model.Client, limitHwid int, inboundFilter ...int) (bool, error) {
 	if email == "" {
 		return false, common.NewError("client email is required")
 	}
@@ -600,7 +601,7 @@ func (s *ClientService) UpdateByEmail(inboundSvc *InboundService, email string, 
 	if err != nil {
 		return false, err
 	}
-	return s.Update(inboundSvc, rec.Id, updated, inboundFilter...)
+	return s.Update(inboundSvc, rec.Id, updated, limitHwid, inboundFilter...)
 }
 
 func (s *ClientService) Detach(inboundSvc *InboundService, id int, inboundIds []int) (bool, error) {

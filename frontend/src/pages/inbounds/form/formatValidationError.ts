@@ -18,6 +18,12 @@ export function formatInboundIssue(issue: IssueLike, values: unknown, t: TFuncti
   const path = Array.isArray(issue?.path) ? issue.path : [];
   const reason = t(issue?.message, { defaultValue: issue?.message });
 
+  if (path[0] === 'streamSettings' && path[1] === 'tlsSettings' && path[2] === 'certificates') {
+    return typeof path[3] === 'number'
+      ? t('pages.inbounds.toasts.invalidCertificate', { index: path[3] + 1, reason })
+      : reason;
+  }
+
   if (path[0] === 'settings' && path[1] === 'clients' && typeof path[2] === 'number') {
     const index = path[2];
     const clients = (values as { settings?: { clients?: ClientLike[] } })?.settings?.clients;
@@ -36,7 +42,11 @@ export function formatInboundIssue(issue: IssueLike, values: unknown, t: TFuncti
  * Builds the single-line toast for a failed inbound save: the first issue,
  * fully described, plus a "(+N more)" tail when several fields failed.
  */
-export function formatInboundValidation(issues: IssueLike[], values: unknown, t: TFunction): string {
+export function formatInboundValidation(
+  issues: IssueLike[],
+  values: unknown,
+  t: TFunction,
+): string {
   const first = formatInboundIssue(issues[0], values, t);
   if (issues.length <= 1) return first;
   return t('pages.inbounds.toasts.moreIssues', { message: first, count: issues.length - 1 });

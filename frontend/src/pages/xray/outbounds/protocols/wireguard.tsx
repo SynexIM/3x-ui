@@ -56,7 +56,10 @@ export default function WireguardFields() {
       <Form.Item label={t('pages.inbounds.privatekey')}>
         <Space.Compact block>
           <FormField name={['settings', 'secretKey']} noStyle>
-            <Input aria-label={t('pages.inbounds.privatekey')} style={{ width: 'calc(100% - 32px)' }} />
+            <Input
+              aria-label={t('pages.inbounds.privatekey')}
+              style={{ width: 'calc(100% - 32px)' }}
+            />
           </FormField>
           <Button
             icon={<ReloadOutlined />}
@@ -72,7 +75,10 @@ export default function WireguardFields() {
       <FormField label={t('pages.inbounds.publicKey')} name={['settings', 'pubKey']}>
         <Input disabled />
       </FormField>
-      <FormField label={t('pages.xray.wireguard.domainStrategy')} name={['settings', 'domainStrategy']}>
+      <FormField
+        label={t('pages.xray.wireguard.domainStrategy')}
+        name={['settings', 'domainStrategy']}
+      >
         <Select
           options={[
             { value: '', label: `(${t('none')})` },
@@ -92,6 +98,9 @@ export default function WireguardFields() {
       </FormField>
       <FormField label={t('pages.xray.outboundForm.reserved')} name={['settings', 'reserved']}>
         <Input placeholder="comma-separated bytes, e.g. 1,2,3" />
+      </FormField>
+      <FormField label={t('pages.xray.outboundForm.remoteDNS')} name={['settings', 'remoteDNS']}>
+        <Input placeholder="comma-separated, e.g. 1.1.1.1,2606:4700:4700::1111" />
       </FormField>
       <Form.Item label={t('pages.inbounds.form.peers')}>
         <Button
@@ -127,10 +136,16 @@ export default function WireguardFields() {
               )}
             </div>
           </Form.Item>
-          <FormField label={t('pages.xray.wireguard.endpoint')} name={['settings', 'peers', index, 'endpoint']}>
+          <FormField
+            label={t('pages.xray.wireguard.endpoint')}
+            name={['settings', 'peers', index, 'endpoint']}
+          >
             <Input />
           </FormField>
-          <FormField label={t('pages.inbounds.publicKey')} name={['settings', 'peers', index, 'publicKey']}>
+          <FormField
+            label={t('pages.inbounds.publicKey')}
+            name={['settings', 'peers', index, 'publicKey']}
+          >
             <Input />
           </FormField>
           <FormField label="PSK" name={['settings', 'peers', index, 'psk']}>
@@ -139,7 +154,10 @@ export default function WireguardFields() {
           <Form.Item label={t('pages.xray.wireguard.allowedIPs')}>
             <AllowedIPsList peerIndex={index} />
           </Form.Item>
-          <FormField label={t('pages.inbounds.info.keepAlive')} name={['settings', 'peers', index, 'keepAlive']}>
+          <FormField
+            label={t('pages.inbounds.info.keepAlive')}
+            name={['settings', 'peers', index, 'keepAlive']}
+          >
             <InputNumber min={0} />
           </FormField>
         </div>

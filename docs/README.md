@@ -43,7 +43,7 @@ The documentation walks you through 3x-ui from first install to day-to-day opera
 
 - **Getting Started** — installation, first login, and updating or uninstalling the panel.
 - **Configuration** — the panel, inbounds, REALITY, transports, clients, subscriptions, and share links.
-- **Operations** — reverse proxy, multi-node setups, outbounds & routing, backup/restore, the Telegram bot, and security.
+- **Operations** — reverse proxy, multi-node setups, outbounds & routing, backup/restore, Telegram and Discord bots, and security.
 - **Reference** — environment variables, the database, ports & firewall, and the HTTP API.
 - **Help** — troubleshooting, FAQ, migration, and how to contribute.
 
@@ -63,15 +63,15 @@ ever leaves your browser**:
 
 ## Tech stack
 
-| Layer      | Technology                                                  |
-| ---------- | ---------------------------------------------------------- |
-| Framework  | [Next.js 16](https://nextjs.org) (App Router) · React 19   |
-| Docs       | [Fumadocs](https://fumadocs.dev) (`-ui` / `-core` / `-mdx`) |
-| Styling    | [Tailwind CSS v4](https://tailwindcss.com)                 |
-| Search     | [Orama](https://orama.com) static index                    |
-| Language   | TypeScript (strict)                                         |
-| Tests      | [Vitest](https://vitest.dev) for the pure `lib/xray` logic  |
-| Tooling    | pnpm · ESLint 9 · Prettier                                  |
+| Layer     | Technology                                                  |
+| --------- | ----------------------------------------------------------- |
+| Framework | [Next.js 16](https://nextjs.org) (App Router) · React 19    |
+| Docs      | [Fumadocs](https://fumadocs.dev) (`-ui` / `-core` / `-mdx`) |
+| Styling   | [Tailwind CSS v4](https://tailwindcss.com)                  |
+| Search    | [Orama](https://orama.com) static index                     |
+| Language  | TypeScript (strict)                                         |
+| Tests     | [Vitest](https://vitest.dev) for the pure `lib/xray` logic  |
+| Tooling   | pnpm · oxlint · oxfmt                                       |
 
 ## Quick start
 
@@ -86,13 +86,13 @@ pnpm dev        # http://localhost:3000
 
 Useful scripts:
 
-| Script           | Description                                  |
-| ---------------- | -------------------------------------------- |
-| `pnpm dev`       | Start the dev server                         |
-| `pnpm build`     | Production build (also typechecks)           |
-| `pnpm typecheck` | Generate MDX/route types and `tsc --noEmit`  |
-| `pnpm lint`      | Run ESLint                                    |
-| `pnpm test`      | Run unit tests (Vitest)                       |
+| Script           | Description                                 |
+| ---------------- | ------------------------------------------- |
+| `pnpm dev`       | Start the dev server                        |
+| `pnpm build`     | Production build (also typechecks)          |
+| `pnpm typecheck` | Generate MDX/route types and `tsc --noEmit` |
+| `pnpm lint`      | Run oxlint (`.oxlintrc.json`)               |
+| `pnpm test`      | Run unit tests (Vitest)                     |
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full list and project conventions.
 

@@ -19,14 +19,12 @@ backup/
 bin/
 x-ui/
 dist/
-!internal/web/dist/
-internal/web/dist/*
-!internal/web/dist/.gitkeep
 release/
 node_modules/
 
 # Ignore compiled binaries
 main
+3x-ui
 
 # Ignore OS specific files
 .DS_Store

@@ -54,6 +54,37 @@ func TestRemoteDo_AcceptsNormalResponse(t *testing.T) {
 	}
 }
 
+func TestRemoteSetInboundSubSortIndexSendsOnlyNarrowField(t *testing.T) {
+	var posted url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch req.URL.Path {
+		case "/panel/api/inbounds/list":
+			_, _ = w.Write([]byte(`{"success":true,"obj":[{"id":42,"tag":"remote-tag"}]}`))
+		case "/panel/api/inbounds/42/subSortIndex":
+			if err := req.ParseForm(); err != nil {
+				t.Fatalf("ParseForm: %v", err)
+			}
+			posted = req.PostForm
+			_, _ = w.Write([]byte(`{"success":true}`))
+		default:
+			http.NotFound(w, req)
+		}
+	}))
+	defer srv.Close()
+	r := NewRemote(nodeForPlainServer(t, srv, "verify", "tok"), nil)
+	ib := &model.Inbound{Tag: "remote-tag", Settings: `{"clients":[{"email":"newer"}]}`}
+	if err := r.SetInboundSubSortIndex(context.Background(), ib, 7); err != nil {
+		t.Fatalf("SetInboundSubSortIndex: %v", err)
+	}
+	if got := posted.Get("subSortIndex"); got != "7" {
+		t.Fatalf("subSortIndex = %q, want 7", got)
+	}
+	if len(posted) != 1 {
+		t.Fatalf("posted fields = %v, want only subSortIndex", posted)
+	}
+}
+
 // TestReadCappedBody_Boundary pins the cap+1 contract cheaply (no large allocs):
 // a body of exactly limit is accepted; limit+1 and beyond are rejected.
 func TestReadCappedBody_Boundary(t *testing.T) {
@@ -151,6 +182,17 @@ func TestWireInboundIncludesShareAddressFields(t *testing.T) {
 	}
 	if got := values.Get("shareAddr"); got != "edge.example.com" {
 		t.Fatalf("shareAddr = %q, want edge.example.com", got)
+	}
+}
+
+// A node that does not mirror DisableFlow re-injects Vision into its own xray
+// config and share links, undoing the opt-out on every multi-node deployment.
+func TestWireInboundCarriesDisableFlow(t *testing.T) {
+	if got := wireInbound(&model.Inbound{DisableFlow: true}, 0).Get("disableFlow"); got != "true" {
+		t.Fatalf("disableFlow = %q, want true", got)
+	}
+	if got := wireInbound(&model.Inbound{}, 0).Get("disableFlow"); got != "false" {
+		t.Fatalf("disableFlow = %q, want false", got)
 	}
 }
 
@@ -396,5 +438,66 @@ func TestSanitizeStreamSettingsForRemote(t *testing.T) {
 				t.Errorf("keyFile present=%v, want %v", hasKeyFile, tc.wantKeyFile)
 			}
 		})
+	}
+}
+
+// refreshRemoteIDs rebuilds the cache from node-reported tags only, so an
+// adopted alias must be re-applied or every later op on that inbound misses.
+func TestRemoteAdoptedAliasSurvivesRefresh(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if req.URL.Path == "/panel/api/inbounds/list" {
+			_, _ = w.Write([]byte(`{"success":true,"obj":[{"id":5,"tag":"legacy-in"},{"id":6,"tag":"in-2"}]}`))
+			return
+		}
+		http.NotFound(w, req)
+	}))
+	defer srv.Close()
+
+	r := NewRemote(nodeForPlainServer(t, srv, "verify", "tok"), nil)
+	central := &model.Inbound{Tag: "central-in", Settings: `{"clients":[]}`}
+	r.AdoptInboundAlias(central, RemoteInboundOption{Id: 5, Tag: "legacy-in"})
+
+	// Resolving a different tag misses the cache and forces a full refresh.
+	if _, err := r.resolveRemoteID(context.Background(), "in-2"); err != nil {
+		t.Fatalf("resolveRemoteID(in-2): %v", err)
+	}
+
+	id, err := r.resolveRemoteID(context.Background(), central.Tag)
+	if err != nil {
+		t.Fatalf("resolveRemoteID(%s) after refresh: %v", central.Tag, err)
+	}
+	if id != 5 {
+		t.Fatalf("adopted alias resolved to %d, want 5", id)
+	}
+}
+
+// A stale alias must never outrank the node's own report: once the node lists
+// an inbound under the central tag itself, that id is the authoritative one.
+func TestRemoteAdoptedAliasYieldsToNodeReportedTag(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if req.URL.Path == "/panel/api/inbounds/list" {
+			_, _ = w.Write([]byte(`{"success":true,"obj":[{"id":5,"tag":"central-in"},{"id":7,"tag":"legacy-in"},{"id":9,"tag":"in-2"}]}`))
+			return
+		}
+		http.NotFound(w, req)
+	}))
+	defer srv.Close()
+
+	r := NewRemote(nodeForPlainServer(t, srv, "verify", "tok"), nil)
+	central := &model.Inbound{Tag: "central-in", Settings: `{"clients":[]}`}
+	r.AdoptInboundAlias(central, RemoteInboundOption{Id: 7, Tag: "legacy-in"})
+
+	if _, err := r.resolveRemoteID(context.Background(), "in-2"); err != nil {
+		t.Fatalf("resolveRemoteID(in-2): %v", err)
+	}
+
+	id, err := r.resolveRemoteID(context.Background(), central.Tag)
+	if err != nil {
+		t.Fatalf("resolveRemoteID(%s): %v", central.Tag, err)
+	}
+	if id != 5 {
+		t.Fatalf("central tag resolved to %d via a stale alias, want 5 (the id the node reports)", id)
 	}
 }

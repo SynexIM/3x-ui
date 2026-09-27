@@ -39,6 +39,7 @@ func run(root, outDir string) error {
 				"ClientInbound",
 				"InboundFallback",
 				"Host",
+				"SubBalancer",
 			),
 			AliasAllow: setOf("Protocol"),
 			Overrides: map[string][]walkOverride{
@@ -74,7 +75,19 @@ func run(root, outDir string) error {
 				"ClientTraffic",
 				"RuntimeOutbound",
 				"RuntimeRule",
+				"Traffic",
 			),
+		},
+		{
+			Path: resolveRel(root, "internal/xray/geodata"),
+			StructAllow: setOf(
+				"GeoFile",
+				"GeoCategory",
+				"GeoEntry",
+				"GeoCategoryPage",
+				"GeoEntryPage",
+			),
+			AliasAllow: setOf("GeoKind"),
 		},
 		{
 			Path: resolveRel(root, "internal/web/service"),
@@ -88,6 +101,15 @@ func run(root, outDir string) error {
 				"FairSharePolicyView",
 				"FairShareStatusView",
 				"InboundOption",
+				"HappLinkResult",
+				"ClientSlim",
+				"ClientPageResponse",
+				"ClientsSummary",
+				"InboundTrafficSummary",
+				"LogEntry",
+				"NewUUIDResponse",
+				"MLDSA65Response",
+				"MLKEM768Response",
 				"NodeMutationRequest",
 				"NodeView",
 				"ObjectApplyResult",
@@ -97,6 +119,10 @@ func run(root, outDir string) error {
 				"RealityScanResult",
 				"RoutingRuleListView",
 				"XrayRuntimeView",
+				"GeodataTokenIssue",
+				"AmneziaWGLogs",
+				"PeerActivity",
+				"HwidSlotStatus",
 			),
 			Overrides: map[string][]walkOverride{
 				"OutboundListView": {
@@ -110,6 +136,14 @@ func run(root, outDir string) error {
 		{
 			Path:        resolveRel(root, "internal/web/service/panel"),
 			StructAllow: setOf("ApiTokenView", "PanelUpdateStatus"),
+		},
+		{
+			Path:        resolveRel(root, "internal/amneziawg"),
+			StructAllow: setOf("ServerSettings"),
+		},
+		{
+			Path:        resolveRel(root, "internal/tuic"),
+			StructAllow: setOf("TuicServerSettings", "TuicClientSettings"),
 		},
 	}
 

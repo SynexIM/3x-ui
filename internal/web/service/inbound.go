@@ -32,6 +32,9 @@ type InboundService struct {
 	xrayApi         xray.XrayAPI
 	clientService   ClientService
 	fallbackService FallbackService
+	// FromNodeSync marks a master push: the row was validated where the operator
+	// acted, and a node that refuses it only falls out of sync.
+	FromNodeSync bool
 }
 
 func normalizeTrafficResetDay(day int) int {

@@ -111,3 +111,21 @@ func injectNormalizedClients(settings map[string]any, protocol model.Protocol, c
 	}
 	return nil
 }
+
+// settingsEntriesToClients decodes the wire entries a caller has already
+// stamped, so a delta carries the persisted created_at / updated_at / subId
+// rather than the pre-stamp values the request was parsed into.
+func settingsEntriesToClients(entries []any) ([]model.Client, error) {
+	if len(entries) == 0 {
+		return nil, nil
+	}
+	raw, err := json.Marshal(entries)
+	if err != nil {
+		return nil, err
+	}
+	var clients []model.Client
+	if err := json.Unmarshal(raw, &clients); err != nil {
+		return nil, err
+	}
+	return clients, nil
+}

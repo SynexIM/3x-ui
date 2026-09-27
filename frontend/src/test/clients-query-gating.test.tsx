@@ -58,6 +58,18 @@ function wrapperFor() {
 }
 
 describe('useClients query gating', () => {
+  it.each([
+    ['missing', {}, false],
+    ['false', { happLinkEnable: false }, false],
+    ['true', { happLinkEnable: true }, true],
+  ])('maps a %s Happ gate to a fail-closed client setting', async (_name, defaults, want) => {
+    mockPanel(defaults);
+    const { result } = renderHook(() => useClients(), { wrapper: wrapperFor() });
+
+    await waitFor(() => expect(result.current.settingsReady).toBe(true));
+    expect(result.current.subSettings.happLinkEnable).toBe(want);
+  });
+
   it('does not fetch the list until the page supplies a query', async () => {
     const pagedUrls = mockPanel({ pageSize: 25 });
     const { result } = renderHook(() => useClients(), { wrapper: wrapperFor() });
@@ -99,11 +111,9 @@ describe('useClients query gating', () => {
   });
 
   it('reports settingsReady even when the settings request fails, so the page can still render', async () => {
-    vi.spyOn(HttpUtil, 'get').mockImplementation(async (url: string) => new Msg(
-      true,
-      '',
-      url.includes('/inbounds/options') ? [] : emptyPage,
-    ));
+    vi.spyOn(HttpUtil, 'get').mockImplementation(
+      async (url: string) => new Msg(true, '', url.includes('/inbounds/options') ? [] : emptyPage),
+    );
     vi.spyOn(HttpUtil, 'post').mockResolvedValue(new Msg(false, 'boom', null));
     const { result } = renderHook(() => useClients(), { wrapper: wrapperFor() });
 

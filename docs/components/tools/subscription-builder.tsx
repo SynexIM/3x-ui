@@ -69,8 +69,8 @@ export function SubscriptionBuilder() {
   const [scheme, setScheme] = useState<'http' | 'https'>('https');
   const [host, setHost] = useState('sub.example.com');
   const [port, setPort] = useState('2096');
-  const [subPath, setSubPath] = useState('/sub/');
-  const [jsonPath, setJsonPath] = useState('/json/');
+  const [subPath, setSubPath] = useState('/your-sub-path/');
+  const [jsonPath, setJsonPath] = useState('/your-json-path/');
   const [subId, setSubId] = useState('user-1');
   const [behindProxy, setBehindProxy] = useState(false);
   const [clients, setClients] = useState<ClientRow[]>(DEFAULT_CLIENTS);
@@ -79,7 +79,15 @@ export function SubscriptionBuilder() {
     setClients((prev) => prev.map((c, j) => (i === j ? { ...c, ...p } : c)));
   }
 
-  const urlInput: SubUrlInput = { scheme, host, port: Number(port), subPath, jsonPath, subId, behindProxy };
+  const urlInput: SubUrlInput = {
+    scheme,
+    host,
+    port: Number(port),
+    subPath,
+    jsonPath,
+    subId,
+    behindProxy,
+  };
   const urls = buildSubscriptionUrls(urlInput);
   const subClients = clients.filter((c) => c.address.trim()).map(toClient);
 
@@ -87,8 +95,8 @@ export function SubscriptionBuilder() {
     setScheme('https');
     setHost('sub.example.com');
     setPort('2096');
-    setSubPath('/sub/');
-    setJsonPath('/json/');
+    setSubPath('/your-sub-path/');
+    setJsonPath('/your-json-path/');
     setSubId('user-1');
     setBehindProxy(false);
     setClients(DEFAULT_CLIENTS);
@@ -159,16 +167,33 @@ export function SubscriptionBuilder() {
                 onChange={(v) => patch(i, { protocol: v as ClientProtocol })}
                 options={PROTOCOLS}
               />
-              <TextField label="Remark" value={c.remark} onChange={(v) => patch(i, { remark: v })} />
-              <TextField label="Address" value={c.address} onChange={(v) => patch(i, { address: v })} />
-              <TextField label="Port" value={c.port} onChange={(v) => patch(i, { port: v })} inputMode="numeric" />
+              <TextField
+                label="Remark"
+                value={c.remark}
+                onChange={(v) => patch(i, { remark: v })}
+              />
+              <TextField
+                label="Address"
+                value={c.address}
+                onChange={(v) => patch(i, { address: v })}
+              />
+              <TextField
+                label="Port"
+                value={c.port}
+                onChange={(v) => patch(i, { port: v })}
+                inputMode="numeric"
+              />
               <TextField
                 label={c.protocol === 'vless' || c.protocol === 'vmess' ? 'UUID (id)' : 'Password'}
                 value={c.credential}
                 onChange={(v) => patch(i, { credential: v })}
               />
               {c.protocol === 'ss' ? (
-                <TextField label="Method" value={c.method} onChange={(v) => patch(i, { method: v })} />
+                <TextField
+                  label="Method"
+                  value={c.method}
+                  onChange={(v) => patch(i, { method: v })}
+                />
               ) : null}
               <SelectField
                 label="Transport"
@@ -200,9 +225,15 @@ export function SubscriptionBuilder() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4">
-        <OutputBlock label="Subscription links (decoded body)" value={buildShareLinks(subClients).join('\n')} />
+        <OutputBlock
+          label="Subscription links (decoded body)"
+          value={buildShareLinks(subClients).join('\n')}
+        />
         <OutputBlock label="Base64 body" value={buildBase64Subscription(subClients)} />
-        <OutputBlock label="JSON subscription (preview)" value={buildJsonSubscription(subClients)} />
+        <OutputBlock
+          label="JSON subscription (preview)"
+          value={buildJsonSubscription(subClients)}
+        />
       </div>
     </ToolFrame>
   );

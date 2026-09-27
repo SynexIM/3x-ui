@@ -17,6 +17,12 @@ function defaultCertificate(): Record<string, unknown> {
 export function createTlsSettingsWithDefaultCert(): Record<string, unknown> {
   const tls = TlsStreamSettingsSchema.parse({}) as Record<string, unknown>;
   tls.certificates = [defaultCertificate()];
+  const settings =
+    tls.settings && typeof tls.settings === 'object' && !Array.isArray(tls.settings)
+      ? { ...(tls.settings as Record<string, unknown>) }
+      : {};
+  settings.fingerprint = 'chrome';
+  tls.settings = settings;
   return tls;
 }
 
@@ -24,9 +30,10 @@ export function createHysteriaTlsSettingsWithDefaultCert(): Record<string, unkno
   const tls = createTlsSettingsWithDefaultCert();
   tls.alpn = ['h3'];
 
-  const settings = tls.settings && typeof tls.settings === 'object' && !Array.isArray(tls.settings)
-    ? { ...(tls.settings as Record<string, unknown>) }
-    : {};
+  const settings =
+    tls.settings && typeof tls.settings === 'object' && !Array.isArray(tls.settings)
+      ? { ...(tls.settings as Record<string, unknown>) }
+      : {};
   settings.fingerprint = '';
   tls.settings = settings;
 

@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  formValuesToWirePayload,
-  rawOutboundToFormValues,
-} from '@/lib/xray/outbound-form-adapter';
+import { formValuesToWirePayload, rawOutboundToFormValues } from '@/lib/xray/outbound-form-adapter';
 
 // Round-trip parity: wire → form → wire should preserve the legacy
 // Outbound.fromJson(...).toJson() output shape for each protocol's quirks.
@@ -17,11 +14,13 @@ describe('outbound-form-adapter: round-trip', () => {
       protocol: 'vmess',
       tag: 'outbound-vmess',
       settings: {
-        vnext: [{
-          address: '1.2.3.4',
-          port: 443,
-          users: [{ id: '11111111-2222-4333-8444-555555555555', security: 'auto' }],
-        }],
+        vnext: [
+          {
+            address: '1.2.3.4',
+            port: 443,
+            users: [{ id: '11111111-2222-4333-8444-555555555555', security: 'auto' }],
+          },
+        ],
       },
     };
     const form = rawOutboundToFormValues(wire);
@@ -37,11 +36,13 @@ describe('outbound-form-adapter: round-trip', () => {
       protocol: 'vmess',
       tag: 'outbound-vmess',
       settings: {
-        vnext: [{
-          address: '1.2.3.4',
-          port: 443,
-          users: [{ id: '11111111-2222-4333-8444-555555555555', security: 'auto' }],
-        }],
+        vnext: [
+          {
+            address: '1.2.3.4',
+            port: 443,
+            users: [{ id: '11111111-2222-4333-8444-555555555555', security: 'auto' }],
+          },
+        ],
       },
     });
   });
@@ -90,7 +91,9 @@ describe('outbound-form-adapter: round-trip', () => {
     if (form.protocol === 'vless') {
       expect(form.settings.encryption).toBe(enc);
     }
-    expect((formValuesToWirePayload(form).settings as Record<string, unknown>).encryption).toBe(enc);
+    expect((formValuesToWirePayload(form).settings as Record<string, unknown>).encryption).toBe(
+      enc,
+    );
   });
 
   it('vless emits reverse + sniffing when reverseTag is set', () => {
@@ -120,8 +123,13 @@ describe('outbound-form-adapter: round-trip', () => {
     const wire = {
       protocol: 'vless',
       settings: {
-        address: 'srv', port: 443, id: '11111111-2222-4333-8444-555555555555',
-        flow: '', encryption: 'none', testpre: 5, testseed: [1, 2, 3, 4],
+        address: 'srv',
+        port: 443,
+        id: '11111111-2222-4333-8444-555555555555',
+        flow: '',
+        encryption: 'none',
+        testpre: 5,
+        testseed: [1, 2, 3, 4],
       },
     };
     const back = formValuesToWirePayload(rawOutboundToFormValues(wire));
@@ -147,10 +155,16 @@ describe('outbound-form-adapter: round-trip', () => {
     const wire = {
       protocol: 'shadowsocks',
       settings: {
-        servers: [{
-          address: 's', port: 443, password: 'pw',
-          method: '2022-blake3-aes-128-gcm', uot: true, UoTVersion: 2,
-        }],
+        servers: [
+          {
+            address: 's',
+            port: 443,
+            password: 'pw',
+            method: '2022-blake3-aes-128-gcm',
+            uot: true,
+            UoTVersion: 2,
+          },
+        ],
       },
     };
     const back = formValuesToWirePayload(rawOutboundToFormValues(wire));
@@ -160,16 +174,20 @@ describe('outbound-form-adapter: round-trip', () => {
   });
 
   it('socks emits users:[] when user is empty, users:[{...}] when set', () => {
-    const noUser = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'socks',
-      settings: { servers: [{ address: 's', port: 1080 }] },
-    }));
+    const noUser = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'socks',
+        settings: { servers: [{ address: 's', port: 1080 }] },
+      }),
+    );
     expect(noUser.settings).toMatchObject({ servers: [{ users: [] }] });
 
-    const withUser = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'socks',
-      settings: { servers: [{ address: 's', port: 1080, users: [{ user: 'u', pass: 'p' }] }] },
-    }));
+    const withUser = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'socks',
+        settings: { servers: [{ address: 's', port: 1080, users: [{ user: 'u', pass: 'p' }] }] },
+      }),
+    );
     expect(withUser.settings).toMatchObject({
       servers: [{ users: [{ user: 'u', pass: 'p' }] }],
     });
@@ -191,10 +209,12 @@ describe('outbound-form-adapter: round-trip', () => {
   });
 
   it('http omits headers when empty', () => {
-    const back = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'http',
-      settings: { servers: [{ address: 'a', port: 8080, users: [] }] },
-    }));
+    const back = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'http',
+        settings: { servers: [{ address: 'a', port: 8080, users: [] }] },
+      }),
+    );
     expect(back.settings).not.toHaveProperty('headers');
   });
 
@@ -205,7 +225,9 @@ describe('outbound-form-adapter: round-trip', () => {
         mtu: 1420,
         secretKey: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
         address: ['10.0.0.1', 'fd00::1'],
-        peers: [{ publicKey: 'pk', allowedIPs: ['0.0.0.0/0'], endpoint: 'e:51820', preSharedKey: 'psk' }],
+        peers: [
+          { publicKey: 'pk', allowedIPs: ['0.0.0.0/0'], endpoint: 'e:51820', preSharedKey: 'psk' },
+        ],
         reserved: [1, 2, 3],
         noKernelTun: false,
       },
@@ -225,17 +247,69 @@ describe('outbound-form-adapter: round-trip', () => {
   });
 
   it('blackhole wraps type into {response:{type}} and omits when empty', () => {
-    const empty = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'blackhole',
-      settings: {},
-    }));
+    const empty = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'blackhole',
+        settings: {},
+      }),
+    );
     expect(empty.settings).toEqual({ response: undefined });
 
-    const withType = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'blackhole',
-      settings: { response: { type: 'http' } },
-    }));
+    const withType = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'blackhole',
+        settings: { response: { type: 'http' } },
+      }),
+    );
     expect(withType.settings).toEqual({ response: { type: 'http' } });
+  });
+
+  it('blackhole carries customResponseData only for the custom response type', () => {
+    const custom = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'blackhole',
+        settings: { response: { type: 'custom', customResponseData: 'SFRUUC8xLjEgNDAz' } },
+      }),
+    );
+    expect(custom.settings).toEqual({
+      response: { type: 'custom', customResponseData: 'SFRUUC8xLjEgNDAz' },
+    });
+
+    const http = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'blackhole',
+        settings: { response: { type: 'http', customResponseData: 'ignored' } },
+      }),
+    );
+    expect(http.settings).toEqual({ response: { type: 'http' } });
+  });
+
+  it('wireguard csv-joins remoteDNS on read and splits it on write', () => {
+    const wire = {
+      protocol: 'wireguard',
+      settings: {
+        secretKey: 'YFVmTVCBsLxXJCe4i+jK8PgD3S6vUqfZ4Zl0JVNDfHA=',
+        remoteDNS: ['1.1.1.1', '2606:4700:4700::1111'],
+        peers: [{ publicKey: 'pk', endpoint: 'wg.example.com:51820' }],
+      },
+    };
+    const form = rawOutboundToFormValues(wire);
+    if (form.protocol === 'wireguard') {
+      expect(form.settings.remoteDNS).toBe('1.1.1.1,2606:4700:4700::1111');
+    }
+    const back = formValuesToWirePayload(form);
+    expect((back.settings as { remoteDNS?: string[] }).remoteDNS).toEqual([
+      '1.1.1.1',
+      '2606:4700:4700::1111',
+    ]);
+
+    const unset = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'wireguard',
+        settings: { secretKey: wire.settings.secretKey, peers: wire.settings.peers },
+      }),
+    );
+    expect((unset.settings as { remoteDNS?: string[] }).remoteDNS).toBeUndefined();
   });
 
   it('dns rules normalize qType numeric strings, split domains, carry rCode', () => {
@@ -254,8 +328,25 @@ describe('outbound-form-adapter: round-trip', () => {
     const back = formValuesToWirePayload(rawOutboundToFormValues(wire));
     const settings = back.settings as Record<string, unknown>;
     const rules = settings.rules as Array<Record<string, unknown>>;
-    expect(rules[0]).toEqual({ action: 'direct', qType: 'A,AAAA', domain: ['example.com', 'ext.org'] });
+    expect(rules[0]).toEqual({
+      action: 'direct',
+      qType: 'A,AAAA',
+      domain: ['example.com', 'ext.org'],
+    });
     expect(rules[1]).toEqual({ action: 'return', qType: 28, domain: ['blocked.com'], rCode: 3 });
+  });
+
+  it('dns rules keep qType 0 a string, since the core reads a numeric 0 as every query', () => {
+    const back = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'dns',
+        settings: { rules: [{ action: 'drop', qType: 0 }] },
+      }),
+    );
+    const rules = (back.settings as Record<string, unknown>).rules as Array<
+      Record<string, unknown>
+    >;
+    expect(rules[0]).toEqual({ action: 'drop', qType: '0' });
   });
 
   it('dns rules read the legacy qtype wire key for back-compat', () => {
@@ -264,15 +355,19 @@ describe('outbound-form-adapter: round-trip', () => {
       settings: { rules: [{ action: 'direct', qtype: 'TXT' }] },
     };
     const back = formValuesToWirePayload(rawOutboundToFormValues(wire));
-    const rules = (back.settings as Record<string, unknown>).rules as Array<Record<string, unknown>>;
+    const rules = (back.settings as Record<string, unknown>).rules as Array<
+      Record<string, unknown>
+    >;
     expect(rules[0]).toEqual({ action: 'direct', qType: 'TXT' });
   });
 
   it('freedom emits domainStrategy/redirect/fragment conditionally', () => {
-    const empty = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'freedom',
-      settings: {},
-    }));
+    const empty = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'freedom',
+        settings: {},
+      }),
+    );
     expect(empty.settings).toEqual({
       domainStrategy: undefined,
       redirect: undefined,
@@ -281,19 +376,22 @@ describe('outbound-form-adapter: round-trip', () => {
       finalRules: undefined,
     });
 
-    const filled = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'freedom',
-      settings: {
-        domainStrategy: 'UseIPv4',
-        redirect: '1.1.1.1',
-        userLevel: 3,
-        proxyProtocol: 2,
-        fragment: { packets: 'tlshello', length: '100-200' },
-        noises: [{ type: 'rand', packet: '10-20', delay: '10-16', applyTo: 'ipv4' }],
-      },
-    }));
+    const filled = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'freedom',
+        settings: {
+          domainStrategy: 'UseIPv4',
+          redirect: '1.1.1.1',
+          userLevel: 3,
+          proxyProtocol: 2,
+          fragment: { packets: 'tlshello', length: '100-200' },
+          noises: [{ type: 'rand', packet: '10-20', delay: '10-16', applyTo: 'ipv4' }],
+        },
+      }),
+    );
+    // The strategy no longer rides in settings; see freedom-strategy-placement.test.ts.
+    expect(filled.streamSettings).toEqual({ sockopt: { domainStrategy: 'UseIPv4' } });
     expect(filled.settings).toMatchObject({
-      domainStrategy: 'UseIPv4',
       redirect: '1.1.1.1',
       userLevel: 3,
       proxyProtocol: 2,
@@ -324,60 +422,92 @@ describe('outbound-form-adapter: round-trip', () => {
   });
 
   it('freedom omits proxyProtocol when disabled (0)', () => {
-    const round = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'freedom',
-      settings: { proxyProtocol: 0 },
-    }));
+    const round = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'freedom',
+        settings: { proxyProtocol: 0 },
+      }),
+    );
     expect((round.settings as { proxyProtocol?: number }).proxyProtocol).toBeUndefined();
   });
 
   it('mux is only emitted when enabled AND protocol/network/flow allow it', () => {
     // Disabled mux: omitted
-    const disabled = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'vless',
-      settings: { address: 's', port: 443, id: '11111111-2222-4333-8444-555555555555', flow: '', encryption: 'none' },
-      mux: { enabled: false },
-    }));
+    const disabled = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'vless',
+        settings: {
+          address: 's',
+          port: 443,
+          id: '11111111-2222-4333-8444-555555555555',
+          flow: '',
+          encryption: 'none',
+        },
+        mux: { enabled: false },
+      }),
+    );
     expect(disabled).not.toHaveProperty('mux');
 
     // Enabled mux on vless without flow: emitted
-    const enabled = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'vless',
-      settings: { address: 's', port: 443, id: '11111111-2222-4333-8444-555555555555', flow: '', encryption: 'none' },
-      mux: { enabled: true, concurrency: 8, xudpConcurrency: 16, xudpProxyUDP443: 'reject' },
-    }));
+    const enabled = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'vless',
+        settings: {
+          address: 's',
+          port: 443,
+          id: '11111111-2222-4333-8444-555555555555',
+          flow: '',
+          encryption: 'none',
+        },
+        mux: { enabled: true, concurrency: 8, xudpConcurrency: 16, xudpProxyUDP443: 'reject' },
+      }),
+    );
     expect(enabled.mux).toMatchObject({ enabled: true });
 
     // Enabled mux on vless with vision flow: gated out
-    const withFlow = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'vless',
-      settings: { address: 's', port: 443, id: '11111111-2222-4333-8444-555555555555', flow: 'xtls-rprx-vision', encryption: 'none' },
-      mux: { enabled: true },
-    }));
+    const withFlow = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'vless',
+        settings: {
+          address: 's',
+          port: 443,
+          id: '11111111-2222-4333-8444-555555555555',
+          flow: 'xtls-rprx-vision',
+          encryption: 'none',
+        },
+        mux: { enabled: true },
+      }),
+    );
     expect(withFlow).not.toHaveProperty('mux');
 
     // Freedom (non-mux protocol): gated out even if enabled
-    const freedom = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'freedom',
-      settings: {},
-      mux: { enabled: true },
-    }));
+    const freedom = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'freedom',
+        settings: {},
+        mux: { enabled: true },
+      }),
+    );
     expect(freedom).not.toHaveProperty('mux');
   });
 
   it('hysteria preserves address/port/version literal 2', () => {
-    const back = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'hysteria',
-      settings: { address: 'h.example', port: 8443, version: 2 },
-    }));
+    const back = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'hysteria',
+        settings: { address: 'h.example', port: 8443, version: 2 },
+      }),
+    );
     expect(back.settings).toEqual({ address: 'h.example', port: 8443, version: 2 });
   });
 
   it('loopback inboundTag round-trips', () => {
-    const back = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'loopback',
-      settings: { inboundTag: 'tagged-inbound' },
-    }));
+    const back = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'loopback',
+        settings: { inboundTag: 'tagged-inbound' },
+      }),
+    );
     expect(back.settings).toEqual({ inboundTag: 'tagged-inbound' });
   });
 
@@ -418,21 +548,55 @@ describe('outbound-form-adapter: round-trip', () => {
     const form = rawOutboundToFormValues({ protocol: 'mysterious', settings: {} });
     expect(form.protocol).toBe('vless');
   });
+
+  it('reads a protocol id the way the core does, whatever its case', () => {
+    const freedom = rawOutboundToFormValues({
+      protocol: 'Freedom',
+      tag: 'direct',
+      settings: { redirect: '1.1.1.1' },
+      streamSettings: { sockopt: { domainStrategy: 'UseIPv4' } },
+    });
+    expect(freedom.protocol).toBe('freedom');
+    if (freedom.protocol === 'freedom') {
+      expect(freedom.settings.redirect).toBe('1.1.1.1');
+    }
+    const back = formValuesToWirePayload(freedom);
+    expect(back.protocol).toBe('freedom');
+    expect(back.tag).toBe('direct');
+    expect((back.settings as Record<string, unknown>).redirect).toBe('1.1.1.1');
+
+    const vless = rawOutboundToFormValues({
+      protocol: 'VLESS',
+      settings: { address: 'srv', port: 443, id: '11111111-2222-4333-8444-555555555555' },
+    });
+    expect(vless.protocol).toBe('vless');
+    if (vless.protocol === 'vless') {
+      expect(vless.settings.address).toBe('srv');
+    }
+  });
 });
 
 describe('outbound-form-adapter: targetStrategy', () => {
   it('round-trips a top-level targetStrategy', () => {
-    const back = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'vless',
-      settings: { address: 's', port: 443, id: '11111111-2222-4333-8444-555555555555', flow: '', encryption: 'none' },
-      targetStrategy: 'ForceIPv6v4',
-    }));
+    const back = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'vless',
+        settings: {
+          address: 's',
+          port: 443,
+          id: '11111111-2222-4333-8444-555555555555',
+          flow: '',
+          encryption: 'none',
+        },
+        targetStrategy: 'ForceIPv6v4',
+      }),
+    );
     expect(back.targetStrategy).toBe('ForceIPv6v4');
   });
 
   it('normalizes wire case to the canonical spelling (core matches case-insensitively)', () => {
     const form = rawOutboundToFormValues({
-      protocol: 'freedom',
+      protocol: 'vless',
       settings: {},
       targetStrategy: 'useipv4v6',
     });
@@ -440,21 +604,25 @@ describe('outbound-form-adapter: targetStrategy', () => {
   });
 
   it('omits targetStrategy when unset and drops unknown values', () => {
-    const unset = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'freedom',
-      settings: {},
-    }));
+    const unset = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'freedom',
+        settings: {},
+      }),
+    );
     expect(unset).not.toHaveProperty('targetStrategy');
 
-    const invalid = formValuesToWirePayload(rawOutboundToFormValues({
-      protocol: 'freedom',
-      settings: {},
-      targetStrategy: 'UseIPv5',
-    }));
+    const invalid = formValuesToWirePayload(
+      rawOutboundToFormValues({
+        protocol: 'freedom',
+        settings: {},
+        targetStrategy: 'UseIPv5',
+      }),
+    );
     expect(invalid).not.toHaveProperty('targetStrategy');
   });
 
-  it('freedom prefers settings.targetStrategy over domainStrategy and emits the legacy key', () => {
+  it('freedom prefers settings.targetStrategy over domainStrategy and moves it to sockopt', () => {
     const form = rawOutboundToFormValues({
       protocol: 'freedom',
       settings: { targetStrategy: 'UseIPv6', domainStrategy: 'UseIPv4' },
@@ -463,8 +631,11 @@ describe('outbound-form-adapter: targetStrategy', () => {
       expect(form.settings.domainStrategy).toBe('UseIPv6');
     }
     const back = formValuesToWirePayload(form);
-    expect(back.settings).toMatchObject({ domainStrategy: 'UseIPv6' });
+    // Neither legacy key may survive: the core warns about both, and sockopt is
+    // the only placement freedom resolves with.
+    expect(back.settings).not.toHaveProperty('domainStrategy');
     expect(back.settings).not.toHaveProperty('targetStrategy');
+    expect(back.streamSettings).toEqual({ sockopt: { domainStrategy: 'UseIPv6' } });
   });
 });
 
@@ -473,16 +644,27 @@ describe('outbound-form-adapter: xhttp xmux toggle', () => {
     protocol: 'vless',
     tag: 'out-xhttp',
     settings: {
-      address: 's', port: 443, id: '11111111-2222-4333-8444-555555555555',
-      flow: '', encryption: 'none',
+      address: 's',
+      port: 443,
+      id: '11111111-2222-4333-8444-555555555555',
+      flow: '',
+      encryption: 'none',
     },
     streamSettings: {
       network: 'xhttp',
       security: 'none',
       xhttpSettings: {
-        path: '/', host: '', mode: '',
-        xPaddingBytes: '100-1000', scMaxEachPostBytes: '1000000',
-        xmux: { maxConcurrency: '11', maxConnections: '1', hMaxRequestTimes: '1', hMaxReusableSecs: '1' },
+        path: '/',
+        host: '',
+        mode: '',
+        xPaddingBytes: '100-1000',
+        scMaxEachPostBytes: '1000000',
+        xmux: {
+          maxConcurrency: '11',
+          maxConnections: '1',
+          hMaxRequestTimes: '1',
+          hMaxReusableSecs: '1',
+        },
       },
     },
   };
@@ -504,21 +686,34 @@ describe('outbound-form-adapter: xhttp xmux toggle', () => {
 
   it('round-trips xmux on save, strips enableXmux, and enforces xmux exclusivity', () => {
     const back = formValuesToWirePayload(rawOutboundToFormValues(xmuxWire));
-    const xhttp = (back.streamSettings as Record<string, unknown>).xhttpSettings as Record<string, unknown>;
+    const xhttp = (back.streamSettings as Record<string, unknown>).xhttpSettings as Record<
+      string,
+      unknown
+    >;
     expect(xhttp).not.toHaveProperty('enableXmux');
     const xmux = xhttp.xmux as Record<string, unknown>;
     // xray-core rejects maxConnections + maxConcurrency together; the
     // explicit maxConnections wins and maxConcurrency is dropped.
     expect(xmux).not.toHaveProperty('maxConcurrency');
-    expect(xmux).toMatchObject({ maxConnections: '1', hMaxRequestTimes: '1', hMaxReusableSecs: '1' });
+    expect(xmux).toMatchObject({
+      maxConnections: '1',
+      hMaxRequestTimes: '1',
+      hMaxReusableSecs: '1',
+    });
   });
 
   it('drops xmux on save when the toggle is off', () => {
     const form = rawOutboundToFormValues(xmuxWire);
-    const xhttp = (form.streamSettings as Record<string, unknown>).xhttpSettings as Record<string, unknown>;
+    const xhttp = (form.streamSettings as Record<string, unknown>).xhttpSettings as Record<
+      string,
+      unknown
+    >;
     xhttp.enableXmux = false;
     const back = formValuesToWirePayload(form);
-    const wireXhttp = (back.streamSettings as Record<string, unknown>).xhttpSettings as Record<string, unknown>;
+    const wireXhttp = (back.streamSettings as Record<string, unknown>).xhttpSettings as Record<
+      string,
+      unknown
+    >;
     expect(wireXhttp).not.toHaveProperty('xmux');
   });
 
@@ -534,13 +729,19 @@ describe('outbound-form-adapter: xhttp xmux toggle', () => {
       },
     };
     const form = rawOutboundToFormValues(wire);
-    const xhttp = (form.streamSettings as Record<string, unknown>).xhttpSettings as Record<string, unknown>;
+    const xhttp = (form.streamSettings as Record<string, unknown>).xhttpSettings as Record<
+      string,
+      unknown
+    >;
     const xmux = xhttp.xmux as Record<string, unknown>;
     expect(xmux.maxConcurrency).toBe('1-2');
     expect(xmux.maxConnections).toBe(0);
 
     const back = formValuesToWirePayload(form);
-    const wireXhttp = (back.streamSettings as Record<string, unknown>).xhttpSettings as Record<string, unknown>;
+    const wireXhttp = (back.streamSettings as Record<string, unknown>).xhttpSettings as Record<
+      string,
+      unknown
+    >;
     const wireXmux = wireXhttp.xmux as Record<string, unknown>;
     expect(wireXmux.maxConcurrency).toBe('1-2');
   });
@@ -550,7 +751,11 @@ describe('outbound-form-adapter: full optional-block round-trip', () => {
   const wire = {
     protocol: 'vless',
     settings: {
-      address: '1', port: 443, id: '1', flow: '', encryption: 'none',
+      address: '1',
+      port: 443,
+      id: '1',
+      flow: '',
+      encryption: 'none',
       reverse: {
         tag: '1',
         sniffing: {
@@ -566,10 +771,26 @@ describe('outbound-form-adapter: full optional-block round-trip', () => {
     tag: '1',
     streamSettings: {
       network: 'tcp',
-      tcpSettings: { header: { type: 'http', request: { version: '1.1', method: 'GET', path: ['/'], headers: { '1': ['1'] } }, response: { version: '1.1', status: '200', reason: 'OK', headers: { '1': ['1'] } } } },
+      tcpSettings: {
+        header: {
+          type: 'http',
+          request: { version: '1.1', method: 'GET', path: ['/'], headers: { '1': ['1'] } },
+          response: { version: '1.1', status: '200', reason: 'OK', headers: { '1': ['1'] } },
+        },
+      },
       security: 'none',
-      sockopt: { tcpFastOpen: true, customSockopt: [{ type: 'int', level: '6', opt: '1', value: '1' }] },
-      finalmask: { tcp: [{ type: 'fragment', settings: { packets: '1-3', length: '1', delay: '1', maxSplit: '1' } }] },
+      sockopt: {
+        tcpFastOpen: true,
+        customSockopt: [{ type: 'int', level: '6', opt: '1', value: '1' }],
+      },
+      finalmask: {
+        tcp: [
+          {
+            type: 'fragment',
+            settings: { packets: '1-3', length: '1', delay: '1', maxSplit: '1' },
+          },
+        ],
+      },
     },
     sendThrough: '1',
     mux: { enabled: true, concurrency: 8, xudpConcurrency: 16, xudpProxyUDP443: 'reject' },
@@ -578,7 +799,10 @@ describe('outbound-form-adapter: full optional-block round-trip', () => {
   it('preserves sockopt, finalmask, mux, and reverse excludes', () => {
     const back = formValuesToWirePayload(rawOutboundToFormValues(wire));
     const settings = back.settings as Record<string, unknown>;
-    const sniffing = (settings.reverse as Record<string, unknown>).sniffing as Record<string, unknown>;
+    const sniffing = (settings.reverse as Record<string, unknown>).sniffing as Record<
+      string,
+      unknown
+    >;
     expect(sniffing.ipsExcluded).toEqual(['1']);
     expect(sniffing.domainsExcluded).toEqual(['1']);
 

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Dropdown, Switch, Tag } from 'antd';
+import { Button, Dropdown, Switch, Tag, Tooltip } from 'antd';
 
 import { ManagedTag, useManagedNamespaces } from '@/lib/namespaces';
 import {
@@ -17,7 +17,12 @@ import type { ColumnsType } from 'antd/es/table';
 
 import { useInboundOptions } from '@/api/queries/useInboundOptions';
 import CriterionRow from './CriterionRow';
-import { buildRemarkByTag, formatInboundTagList, inboundTagsDisplayTitle, isApiRule } from './helpers';
+import {
+  buildRemarkByTag,
+  formatInboundTagList,
+  inboundTagsDisplayTitle,
+  isApiRule,
+} from './helpers';
 import type { RuleRow } from './types';
 
 interface RoutingColumnsParams {
@@ -75,25 +80,66 @@ export function useRoutingColumns({
         width: 80,
         key: 'action',
         render: (_v, _r, index) => (
-          <div className={!isMobile ? 'action-buttons' : ''} style={{ justifyContent: 'center', margin: 0 }}>
+          <div
+            className={!isMobile ? 'action-buttons' : ''}
+            style={{ justifyContent: 'center', margin: 0 }}
+          >
             {!isMobile && (
-              <Button shape="circle" size="small" icon={<EditOutlined />} aria-label={t('edit')} onClick={() => openEdit(index)} />
+              <Button
+                shape="circle"
+                size="small"
+                icon={<EditOutlined />}
+                aria-label={t('edit')}
+                onClick={() => openEdit(index)}
+              />
             )}
             <Dropdown
               trigger={['click']}
               menu={{
                 items: [
                   ...(isMobile
-                    ? [{ key: 'edit', label: <><EditOutlined /> {t('edit')}</>, onClick: () => openEdit(index) }]
+                    ? [
+                        {
+                          key: 'edit',
+                          label: (
+                            <>
+                              <EditOutlined /> {t('edit')}
+                            </>
+                          ),
+                          onClick: () => openEdit(index),
+                        },
+                      ]
                     : []),
-                  { key: 'up', label: <><ArrowUpOutlined /> {t('pages.inbounds.form.moveUp')}</>, disabled: index === 0, onClick: () => moveUp(index) },
+                  {
+                    key: 'up',
+                    label: (
+                      <>
+                        <ArrowUpOutlined /> {t('pages.inbounds.form.moveUp')}
+                      </>
+                    ),
+                    disabled: index === 0,
+                    onClick: () => moveUp(index),
+                  },
                   {
                     key: 'down',
-                    label: <><ArrowDownOutlined /> {t('pages.inbounds.form.moveDown')}</>,
+                    label: (
+                      <>
+                        <ArrowDownOutlined /> {t('pages.inbounds.form.moveDown')}
+                      </>
+                    ),
                     disabled: index === rowsLength - 1,
                     onClick: () => moveDown(index),
                   },
-                  { key: 'del', danger: true, label: <><DeleteOutlined /> {t('delete')}</>, onClick: () => confirmDelete(index) },
+                  {
+                    key: 'del',
+                    danger: true,
+                    label: (
+                      <>
+                        <DeleteOutlined /> {t('delete')}
+                      </>
+                    ),
+                    onClick: () => confirmDelete(index),
+                  },
                 ],
               }}
             >
@@ -124,12 +170,46 @@ export function useRoutingColumns({
         hidden: !showSource,
         render: (_v, record) => (
           <div className="criterion-flow">
-            {record.sourceIP && <CriterionRow label="IP" value={record.sourceIP} title={`Source IP: ${record.sourceIP}`} />}
-            {record.sourcePort && <CriterionRow label="Port" value={record.sourcePort} title={`Source port: ${record.sourcePort}`} />}
-            {record.vlessRoute && <CriterionRow label="VLESS" value={record.vlessRoute} title={`VLESS route: ${record.vlessRoute}`} />}
-            {!record.sourceIP && !record.sourcePort && !record.vlessRoute && <span className="criterion-empty">—</span>}
+            {record.sourceIP && (
+              <CriterionRow
+                label="IP"
+                value={record.sourceIP}
+                title={`Source IP: ${record.sourceIP}`}
+              />
+            )}
+            {record.sourcePort && (
+              <CriterionRow
+                label="Port"
+                value={record.sourcePort}
+                title={`Source port: ${record.sourcePort}`}
+              />
+            )}
+            {record.vlessRoute && (
+              <CriterionRow
+                label="VLESS"
+                value={record.vlessRoute}
+                title={`VLESS route: ${record.vlessRoute}`}
+              />
+            )}
+            {!record.sourceIP && !record.sourcePort && !record.vlessRoute && (
+              <span className="criterion-empty">—</span>
+            )}
           </div>
         ),
+      },
+      {
+        title: t('comment'),
+        align: 'left',
+        width: 150,
+        key: 'comment',
+        render: (_v, record) =>
+          record.comment ? (
+            <Tooltip title={record.comment}>
+              <span className="rule-comment-cell">{record.comment}</span>
+            </Tooltip>
+          ) : (
+            <span className="criterion-empty">—</span>
+          ),
       },
       {
         title: t('pages.inbounds.network'),
@@ -138,10 +218,26 @@ export function useRoutingColumns({
         key: 'network',
         render: (_v, record) => (
           <div className="criterion-flow">
-            {record.network && <CriterionRow label="L4" value={record.network.toUpperCase()} title={`L4: ${record.network.toUpperCase()}`} />}
-            {record.protocol && <CriterionRow label="Protocol" value={record.protocol} title={`Protocol: ${record.protocol}`} />}
-            {record.attrs && <CriterionRow label="Attrs" value={record.attrs} title={`Attrs: ${record.attrs}`} />}
-            {!record.network && !record.protocol && !record.attrs && <span className="criterion-empty">—</span>}
+            {record.network && (
+              <CriterionRow
+                label="L4"
+                value={record.network.toUpperCase()}
+                title={`L4: ${record.network.toUpperCase()}`}
+              />
+            )}
+            {record.protocol && (
+              <CriterionRow
+                label="Protocol"
+                value={record.protocol}
+                title={`Protocol: ${record.protocol}`}
+              />
+            )}
+            {record.attrs && (
+              <CriterionRow label="Attrs" value={record.attrs} title={`Attrs: ${record.attrs}`} />
+            )}
+            {!record.network && !record.protocol && !record.attrs && (
+              <span className="criterion-empty">—</span>
+            )}
           </div>
         ),
       },
@@ -152,10 +248,26 @@ export function useRoutingColumns({
         key: 'destination',
         render: (_v, record) => (
           <div className="criterion-flow">
-            {record.ip && <CriterionRow label="IP" value={record.ip} title={`Destination IP: ${record.ip}`} />}
-            {record.domain && <CriterionRow label="Domain" value={record.domain} title={`Domain: ${record.domain}`} />}
-            {record.port && <CriterionRow label="Port" value={record.port} title={`Destination port: ${record.port}`} />}
-            {!record.ip && !record.domain && !record.port && <span className="criterion-empty">—</span>}
+            {record.ip && (
+              <CriterionRow label="IP" value={record.ip} title={`Destination IP: ${record.ip}`} />
+            )}
+            {record.domain && (
+              <CriterionRow
+                label="Domain"
+                value={record.domain}
+                title={`Domain: ${record.domain}`}
+              />
+            )}
+            {record.port && (
+              <CriterionRow
+                label="Port"
+                value={record.port}
+                title={`Destination port: ${record.port}`}
+              />
+            )}
+            {!record.ip && !record.domain && !record.port && (
+              <span className="criterion-empty">—</span>
+            )}
           </div>
         ),
       },
@@ -175,8 +287,12 @@ export function useRoutingColumns({
                   title={`Inbound tag: ${inboundTagsDisplayTitle(record.inboundTag, remarkByTag) ?? inboundParts.join(', ')}`}
                 />
               )}
-              {record.user && <CriterionRow label="User" value={record.user} title={`User: ${record.user}`} />}
-              {inboundParts.length === 0 && !record.user && <span className="criterion-empty">—</span>}
+              {record.user && (
+                <CriterionRow label="User" value={record.user} title={`User: ${record.user}`} />
+              )}
+              {inboundParts.length === 0 && !record.user && (
+                <span className="criterion-empty">—</span>
+              )}
             </div>
           );
         },
@@ -213,6 +329,20 @@ export function useRoutingColumns({
           ),
       },
     ],
-    [t, isMobile, rowsLength, showSource, showBalancer, remarkByTag, managedNamespaces, onHandlePointerDown, openEdit, moveUp, moveDown, confirmDelete, toggleRule],
+    [
+      t,
+      isMobile,
+      rowsLength,
+      showSource,
+      showBalancer,
+      remarkByTag,
+      managedNamespaces,
+      onHandlePointerDown,
+      openEdit,
+      moveUp,
+      moveDown,
+      confirmDelete,
+      toggleRule,
+    ],
   );
 }

@@ -2,10 +2,13 @@ package controller
 
 import (
 	"encoding/json"
+	"errors"
+	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/websocket"
 
@@ -36,6 +39,7 @@ type ClientController struct {
 	inboundService service.InboundService
 	xrayService    service.XrayService
 	settingService service.SettingService
+	happGenerator  service.HappLinkGenerator
 }
 
 // requireClientMutationHotApply is the dedicated-line availability redline.
@@ -53,6 +57,7 @@ func requireClientMutationHotApply(c *gin.Context, xrayService *service.XrayServ
 
 func NewClientController(g *gin.RouterGroup) *ClientController {
 	a := &ClientController{}
+	a.happGenerator = service.NewHappService(&a.clientService, &a.settingService)
 	a.initRouter(g)
 	return a
 }
@@ -65,6 +70,7 @@ func (a *ClientController) initRouter(g *gin.RouterGroup) {
 	g.GET("/traffic/:email", a.getTrafficByEmail)
 	g.GET("/subLinks/:subId", a.getSubLinks)
 	g.GET("/links/:email", a.getClientLinks)
+	g.POST("/happLink/:id", a.generateHappLink)
 
 	g.POST("/add", a.create)
 	g.POST("/update/:email", a.update)
@@ -90,6 +96,9 @@ func (a *ClientController) initRouter(g *gin.RouterGroup) {
 	g.POST("/updateTraffic/:email", a.updateTrafficByEmail)
 	g.POST("/ips/:email", a.getIps)
 	g.POST("/clearIps/:email", a.clearIps)
+	g.POST("/hwids/:email", a.getHwids)
+	g.DELETE("/hwids/:email", a.clearHwids)
+	g.DELETE("/hwids/:email/:id", a.deleteHwid)
 	g.POST("/onlines", a.onlines)
 	g.POST("/onlinesByGuid", a.onlinesByGuid)
 	g.POST("/clientIpsByGuid", a.clientIpsByGuid)
@@ -138,11 +147,16 @@ func (a *ClientController) buildClientPayload(rec *model.ClientRecord) (gin.H, e
 	if t, tErr := a.inboundService.GetClientTrafficByEmail(rec.Email); tErr == nil && t != nil {
 		usedTraffic = t.Up + t.Down
 	}
+	tunnelAllowedIPs, err := a.clientService.TunnelAllowedIPsByInbound(&a.inboundService, rec.Email, inboundIds)
+	if err != nil {
+		return nil, err
+	}
 	return gin.H{
-		"client":        rec,
-		"inboundIds":    inboundIds,
-		"externalLinks": externalLinks,
-		"usedTraffic":   usedTraffic,
+		"client":           rec,
+		"inboundIds":       inboundIds,
+		"externalLinks":    externalLinks,
+		"usedTraffic":      usedTraffic,
+		"tunnelAllowedIPs": tunnelAllowedIPs,
 	}, nil
 }
 
@@ -205,13 +219,17 @@ func (a *ClientController) create(c *gin.Context) {
 
 func (a *ClientController) update(c *gin.Context) {
 	email := c.Param("email")
-	var updated model.Client
-	if err := c.ShouldBindJSON(&updated); err != nil {
+	var req struct {
+		model.Client
+		LimitHwid int `json:"limitHwid"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
 	inboundFilter := parseInboundIdsQuery(c.Query("inboundIds"))
-	_, err := a.clientService.UpdateByEmail(&a.inboundService, email, updated, inboundFilter...)
+	updated := req.Client
+	_, err := a.clientService.UpdateByEmail(&a.inboundService, email, updated, req.LimitHwid, inboundFilter...)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
@@ -322,10 +340,12 @@ func (a *ClientController) resetAllTraffics(c *gin.Context) {
 }
 
 type bulkAdjustRequest struct {
-	Emails   []string `json:"emails"`
-	AddDays  int      `json:"addDays"`
-	AddBytes int64    `json:"addBytes"`
-	Flow     string   `json:"flow"`
+	Emails    []string `json:"emails"`
+	AddDays   int      `json:"addDays"`
+	AddBytes  int64    `json:"addBytes"`
+	Flow      string   `json:"flow"`
+	LimitHwid *int     `json:"limitHwid"`
+	AdTag     string   `json:"adTag"`
 }
 
 func (a *ClientController) bulkAdjust(c *gin.Context) {
@@ -334,7 +354,7 @@ func (a *ClientController) bulkAdjust(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
-	result, needRestart, err := a.clientService.BulkAdjust(&a.inboundService, req.Emails, req.AddDays, req.AddBytes, req.Flow)
+	result, needRestart, err := a.clientService.BulkAdjust(&a.inboundService, req.Emails, req.AddDays, req.AddBytes, req.Flow, req.LimitHwid, req.AdTag)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
@@ -582,6 +602,32 @@ func (a *ClientController) clearIps(c *gin.Context) {
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.logCleanSuccess"), nil)
 }
 
+func (a *ClientController) getHwids(c *gin.Context) {
+	infos, err := a.clientService.ListClientHwids(c.Param("email"))
+	jsonObj(c, infos, err)
+}
+
+func (a *ClientController) clearHwids(c *gin.Context) {
+	if err := a.clientService.ClearClientHwids(c.Param("email")); err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.updateSuccess"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.logCleanSuccess"), nil)
+}
+
+func (a *ClientController) deleteHwid(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	if err := a.clientService.DeleteClientHwid(c.Param("email"), id); err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.clients.hwidDeleted"), nil)
+}
+
 func (a *ClientController) onlines(c *gin.Context) {
 	jsonObj(c, a.inboundService.GetOnlineClients(), nil)
 }
@@ -652,6 +698,26 @@ func (a *ClientController) getClientLinks(c *gin.Context) {
 		return
 	}
 	jsonObj(c, links, nil)
+}
+
+func (a *ClientController) generateHappLink(c *gin.Context) {
+	c.Header("Cache-Control", "no-store")
+	clientID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || clientID < 1 {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), service.ErrHappLinkUnavailable)
+		return
+	}
+	result, err := a.happGenerator.Generate(c.Request.Context(), clientID, c.Request.Host)
+	if err != nil {
+		if errors.Is(err, service.ErrHappSourceTooLong) {
+			// Keep the code exact so clients can localize it without exposing internal error details.
+			c.JSON(http.StatusOK, entity.Msg{Success: false, Msg: "happ_source_too_long", Obj: nil})
+			return
+		}
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), service.ErrHappLinkUnavailable)
+		return
+	}
+	jsonObj(c, result, nil)
 }
 
 func (a *ClientController) detach(c *gin.Context) {

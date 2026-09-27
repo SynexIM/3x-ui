@@ -52,11 +52,13 @@ func TestGetFactoryDefaultsOmitsSensitiveMaterial(t *testing.T) {
 		"nodeMtlsCaKeyPem",
 		"nodeMtlsClientCertPem",
 		"nodeMtlsClientKeyPem",
+		"nodeMtlsClientCertSha256",
 		"xrayTemplateConfig",
 		"tgBotToken",
 		"twoFactorToken",
 		"ldapPassword",
 		"smtpPassword",
+		"discordBotToken",
 	} {
 		t.Run(key, func(t *testing.T) {
 			if _, ok := defaults[key]; ok {

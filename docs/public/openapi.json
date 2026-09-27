@@ -31,6 +31,40 @@
           "datepicker": {
             "type": "string"
           },
+          "discordAdminIds": {
+            "type": "string"
+          },
+          "discordBotBackup": {
+            "type": "boolean"
+          },
+          "discordBotEnable": {
+            "type": "boolean"
+          },
+          "discordBotToken": {
+            "type": "string"
+          },
+          "discordChannelId": {
+            "type": "string"
+          },
+          "discordCpu": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "discordEnabledEvents": {
+            "type": "string"
+          },
+          "discordLang": {
+            "type": "string"
+          },
+          "discordMemory": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "discordRunTime": {
+            "type": "string"
+          },
           "expireDiff": {
             "minimum": 0,
             "type": "integer"
@@ -39,6 +73,12 @@
             "type": "boolean"
           },
           "externalTrafficInformURI": {
+            "type": "string"
+          },
+          "happLinkEnable": {
+            "type": "boolean"
+          },
+          "ipLimitAllowlist": {
             "type": "string"
           },
           "ldapAutoCreate": {
@@ -122,6 +162,9 @@
           "panelOutbound": {
             "type": "string"
           },
+          "realityScanCandidates": {
+            "type": "string"
+          },
           "remarkTemplate": {
             "type": "string"
           },
@@ -178,6 +221,9 @@
           "subAnnounce": {
             "type": "string"
           },
+          "subCalendarExpireInclusive": {
+            "type": "boolean"
+          },
           "subCertFile": {
             "type": "string"
           },
@@ -214,6 +260,79 @@
           "subEncrypt": {
             "type": "boolean"
           },
+          "subExpiredTemplate": {
+            "type": "string"
+          },
+          "subHappAlwaysHwid": {
+            "type": "boolean"
+          },
+          "subHappAutoConnect": {
+            "type": "boolean"
+          },
+          "subHappAutoConnectType": {
+            "type": "string"
+          },
+          "subHappAutoDetect": {
+            "description": "Happ client customization settings (app-management / routing / UX).",
+            "type": "boolean"
+          },
+          "subHappColorProfile": {
+            "type": "string"
+          },
+          "subHappExcludeApns": {
+            "type": "boolean"
+          },
+          "subHappExcludeRoutes": {
+            "type": "string"
+          },
+          "subHappFallbackUrl": {
+            "type": "string"
+          },
+          "subHappNewUrl": {
+            "type": "string"
+          },
+          "subHappNoLimit": {
+            "type": "boolean"
+          },
+          "subHappNotificationExpire": {
+            "type": "boolean"
+          },
+          "subHappPerAppList": {
+            "type": "string"
+          },
+          "subHappPerAppMode": {
+            "type": "string"
+          },
+          "subHappPingType": {
+            "type": "string"
+          },
+          "subHappProviderId": {
+            "type": "string"
+          },
+          "subHappSubExpire": {
+            "type": "boolean"
+          },
+          "subHappSubExpireButtonLink": {
+            "type": "string"
+          },
+          "subHappSubInfoButtonLink": {
+            "type": "string"
+          },
+          "subHappSubInfoButtonText": {
+            "type": "string"
+          },
+          "subHappSubInfoColor": {
+            "type": "string"
+          },
+          "subHappSubInfoText": {
+            "type": "string"
+          },
+          "subHappTunMode": {
+            "type": "string"
+          },
+          "subHappTunType": {
+            "type": "string"
+          },
           "subHideSettings": {
             "type": "boolean"
           },
@@ -223,11 +342,17 @@
           "subIncyRoutingRules": {
             "type": "string"
           },
+          "subInfoNodeEnable": {
+            "type": "boolean"
+          },
           "subJsonAlwaysArray": {
             "type": "boolean"
           },
           "subJsonAutoDetect": {
             "type": "boolean"
+          },
+          "subJsonDns": {
+            "type": "string"
           },
           "subJsonEnable": {
             "type": "boolean"
@@ -238,7 +363,13 @@
           "subJsonMux": {
             "type": "string"
           },
+          "subJsonObservatory": {
+            "type": "string"
+          },
           "subJsonPath": {
+            "type": "string"
+          },
+          "subJsonRoutingRules": {
             "type": "string"
           },
           "subJsonRules": {
@@ -264,6 +395,9 @@
             "minimum": 1,
             "type": "integer"
           },
+          "subProfileMode": {
+            "type": "string"
+          },
           "subProfileUrl": {
             "type": "string"
           },
@@ -280,6 +414,9 @@
             "type": "string"
           },
           "subTitle": {
+            "type": "string"
+          },
+          "subTrafficDepletedTemplate": {
             "type": "string"
           },
           "subURI": {
@@ -371,9 +508,21 @@
         },
         "required": [
           "datepicker",
+          "discordAdminIds",
+          "discordBotBackup",
+          "discordBotEnable",
+          "discordBotToken",
+          "discordChannelId",
+          "discordCpu",
+          "discordEnabledEvents",
+          "discordLang",
+          "discordMemory",
+          "discordRunTime",
           "expireDiff",
           "externalTrafficInformEnable",
           "externalTrafficInformURI",
+          "happLinkEnable",
+          "ipLimitAllowlist",
           "ldapAutoCreate",
           "ldapAutoDelete",
           "ldapBaseDN",
@@ -398,6 +547,7 @@
           "outboundDownThreshold",
           "pageSize",
           "panelOutbound",
+          "realityScanCandidates",
           "remarkTemplate",
           "restartXrayOnClientDisable",
           "sessionMaxAge",
@@ -414,6 +564,7 @@
           "smtpTo",
           "smtpUsername",
           "subAnnounce",
+          "subCalendarExpireInclusive",
           "subCertFile",
           "subClashAutoDetect",
           "subClashEnable",
@@ -426,15 +577,43 @@
           "subEnable",
           "subEnableRouting",
           "subEncrypt",
+          "subExpiredTemplate",
+          "subHappAlwaysHwid",
+          "subHappAutoConnect",
+          "subHappAutoConnectType",
+          "subHappAutoDetect",
+          "subHappColorProfile",
+          "subHappExcludeApns",
+          "subHappExcludeRoutes",
+          "subHappFallbackUrl",
+          "subHappNewUrl",
+          "subHappNoLimit",
+          "subHappNotificationExpire",
+          "subHappPerAppList",
+          "subHappPerAppMode",
+          "subHappPingType",
+          "subHappProviderId",
+          "subHappSubExpire",
+          "subHappSubExpireButtonLink",
+          "subHappSubInfoButtonLink",
+          "subHappSubInfoButtonText",
+          "subHappSubInfoColor",
+          "subHappSubInfoText",
+          "subHappTunMode",
+          "subHappTunType",
           "subHideSettings",
           "subIncyEnableRouting",
           "subIncyRoutingRules",
+          "subInfoNodeEnable",
           "subJsonAlwaysArray",
           "subJsonAutoDetect",
+          "subJsonDns",
           "subJsonEnable",
           "subJsonFinalMask",
           "subJsonMux",
+          "subJsonObservatory",
           "subJsonPath",
+          "subJsonRoutingRules",
           "subJsonRules",
           "subJsonURI",
           "subJsonUserAgentRegex",
@@ -442,12 +621,14 @@
           "subListen",
           "subPath",
           "subPort",
+          "subProfileMode",
           "subProfileUrl",
           "subRoutingRules",
           "subShowIdentityOnAllLinks",
           "subSupportUrl",
           "subThemeDir",
           "subTitle",
+          "subTrafficDepletedTemplate",
           "subURI",
           "subUpdates",
           "tgBotAPIServer",
@@ -481,6 +662,40 @@
           "datepicker": {
             "type": "string"
           },
+          "discordAdminIds": {
+            "type": "string"
+          },
+          "discordBotBackup": {
+            "type": "boolean"
+          },
+          "discordBotEnable": {
+            "type": "boolean"
+          },
+          "discordBotToken": {
+            "type": "string"
+          },
+          "discordChannelId": {
+            "type": "string"
+          },
+          "discordCpu": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "discordEnabledEvents": {
+            "type": "string"
+          },
+          "discordLang": {
+            "type": "string"
+          },
+          "discordMemory": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "discordRunTime": {
+            "type": "string"
+          },
           "expireDiff": {
             "minimum": 0,
             "type": "integer"
@@ -491,7 +706,13 @@
           "externalTrafficInformURI": {
             "type": "string"
           },
+          "happLinkEnable": {
+            "type": "boolean"
+          },
           "hasApiToken": {
+            "type": "boolean"
+          },
+          "hasDiscordBotToken": {
             "type": "boolean"
           },
           "hasLdapPassword": {
@@ -511,6 +732,9 @@
           },
           "hasWarpSecret": {
             "type": "boolean"
+          },
+          "ipLimitAllowlist": {
+            "type": "string"
           },
           "ldapAutoCreate": {
             "type": "boolean"
@@ -593,6 +817,9 @@
           "panelOutbound": {
             "type": "string"
           },
+          "realityScanCandidates": {
+            "type": "string"
+          },
           "remarkTemplate": {
             "type": "string"
           },
@@ -649,6 +876,9 @@
           "subAnnounce": {
             "type": "string"
           },
+          "subCalendarExpireInclusive": {
+            "type": "boolean"
+          },
           "subCertFile": {
             "type": "string"
           },
@@ -685,6 +915,79 @@
           "subEncrypt": {
             "type": "boolean"
           },
+          "subExpiredTemplate": {
+            "type": "string"
+          },
+          "subHappAlwaysHwid": {
+            "type": "boolean"
+          },
+          "subHappAutoConnect": {
+            "type": "boolean"
+          },
+          "subHappAutoConnectType": {
+            "type": "string"
+          },
+          "subHappAutoDetect": {
+            "description": "Happ client customization settings (app-management / routing / UX).",
+            "type": "boolean"
+          },
+          "subHappColorProfile": {
+            "type": "string"
+          },
+          "subHappExcludeApns": {
+            "type": "boolean"
+          },
+          "subHappExcludeRoutes": {
+            "type": "string"
+          },
+          "subHappFallbackUrl": {
+            "type": "string"
+          },
+          "subHappNewUrl": {
+            "type": "string"
+          },
+          "subHappNoLimit": {
+            "type": "boolean"
+          },
+          "subHappNotificationExpire": {
+            "type": "boolean"
+          },
+          "subHappPerAppList": {
+            "type": "string"
+          },
+          "subHappPerAppMode": {
+            "type": "string"
+          },
+          "subHappPingType": {
+            "type": "string"
+          },
+          "subHappProviderId": {
+            "type": "string"
+          },
+          "subHappSubExpire": {
+            "type": "boolean"
+          },
+          "subHappSubExpireButtonLink": {
+            "type": "string"
+          },
+          "subHappSubInfoButtonLink": {
+            "type": "string"
+          },
+          "subHappSubInfoButtonText": {
+            "type": "string"
+          },
+          "subHappSubInfoColor": {
+            "type": "string"
+          },
+          "subHappSubInfoText": {
+            "type": "string"
+          },
+          "subHappTunMode": {
+            "type": "string"
+          },
+          "subHappTunType": {
+            "type": "string"
+          },
           "subHideSettings": {
             "type": "boolean"
           },
@@ -694,11 +997,17 @@
           "subIncyRoutingRules": {
             "type": "string"
           },
+          "subInfoNodeEnable": {
+            "type": "boolean"
+          },
           "subJsonAlwaysArray": {
             "type": "boolean"
           },
           "subJsonAutoDetect": {
             "type": "boolean"
+          },
+          "subJsonDns": {
+            "type": "string"
           },
           "subJsonEnable": {
             "type": "boolean"
@@ -709,7 +1018,13 @@
           "subJsonMux": {
             "type": "string"
           },
+          "subJsonObservatory": {
+            "type": "string"
+          },
           "subJsonPath": {
+            "type": "string"
+          },
+          "subJsonRoutingRules": {
             "type": "string"
           },
           "subJsonRules": {
@@ -735,6 +1050,9 @@
             "minimum": 1,
             "type": "integer"
           },
+          "subProfileMode": {
+            "type": "string"
+          },
           "subProfileUrl": {
             "type": "string"
           },
@@ -751,6 +1069,9 @@
             "type": "string"
           },
           "subTitle": {
+            "type": "string"
+          },
+          "subTrafficDepletedTemplate": {
             "type": "string"
           },
           "subURI": {
@@ -842,16 +1163,29 @@
         },
         "required": [
           "datepicker",
+          "discordAdminIds",
+          "discordBotBackup",
+          "discordBotEnable",
+          "discordBotToken",
+          "discordChannelId",
+          "discordCpu",
+          "discordEnabledEvents",
+          "discordLang",
+          "discordMemory",
+          "discordRunTime",
           "expireDiff",
           "externalTrafficInformEnable",
           "externalTrafficInformURI",
+          "happLinkEnable",
           "hasApiToken",
+          "hasDiscordBotToken",
           "hasLdapPassword",
           "hasNordSecret",
           "hasSmtpPassword",
           "hasTgBotToken",
           "hasTwoFactorToken",
           "hasWarpSecret",
+          "ipLimitAllowlist",
           "ldapAutoCreate",
           "ldapAutoDelete",
           "ldapBaseDN",
@@ -876,6 +1210,7 @@
           "outboundDownThreshold",
           "pageSize",
           "panelOutbound",
+          "realityScanCandidates",
           "remarkTemplate",
           "restartXrayOnClientDisable",
           "sessionMaxAge",
@@ -892,6 +1227,7 @@
           "smtpTo",
           "smtpUsername",
           "subAnnounce",
+          "subCalendarExpireInclusive",
           "subCertFile",
           "subClashAutoDetect",
           "subClashEnable",
@@ -904,15 +1240,43 @@
           "subEnable",
           "subEnableRouting",
           "subEncrypt",
+          "subExpiredTemplate",
+          "subHappAlwaysHwid",
+          "subHappAutoConnect",
+          "subHappAutoConnectType",
+          "subHappAutoDetect",
+          "subHappColorProfile",
+          "subHappExcludeApns",
+          "subHappExcludeRoutes",
+          "subHappFallbackUrl",
+          "subHappNewUrl",
+          "subHappNoLimit",
+          "subHappNotificationExpire",
+          "subHappPerAppList",
+          "subHappPerAppMode",
+          "subHappPingType",
+          "subHappProviderId",
+          "subHappSubExpire",
+          "subHappSubExpireButtonLink",
+          "subHappSubInfoButtonLink",
+          "subHappSubInfoButtonText",
+          "subHappSubInfoColor",
+          "subHappSubInfoText",
+          "subHappTunMode",
+          "subHappTunType",
           "subHideSettings",
           "subIncyEnableRouting",
           "subIncyRoutingRules",
+          "subInfoNodeEnable",
           "subJsonAlwaysArray",
           "subJsonAutoDetect",
+          "subJsonDns",
           "subJsonEnable",
           "subJsonFinalMask",
           "subJsonMux",
+          "subJsonObservatory",
           "subJsonPath",
+          "subJsonRoutingRules",
           "subJsonRules",
           "subJsonURI",
           "subJsonUserAgentRegex",
@@ -920,12 +1284,14 @@
           "subListen",
           "subPath",
           "subPort",
+          "subProfileMode",
           "subProfileUrl",
           "subRoutingRules",
           "subShowIdentityOnAllLinks",
           "subSupportUrl",
           "subThemeDir",
           "subTitle",
+          "subTrafficDepletedTemplate",
           "subURI",
           "subUpdates",
           "tgBotAPIServer",
@@ -954,6 +1320,36 @@
         ],
         "type": "object"
       },
+      "AmneziaWGLogs": {
+        "description": "AmneziaWGLogs is what the overview's AmneziaWG log view renders: the live\nper-peer activity of every running embedded interface, plus the panel's\nown recent AmneziaWG lifecycle log lines that explain a peer being absent\nfrom Peers at all.",
+        "properties": {
+          "events": {
+            "example": [
+              "2025/01/01 12:00:00 amneziawg: started interface awg1 for inbound 1"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "peers": {
+            "items": {
+              "$ref": "#/components/schemas/PeerActivity"
+            },
+            "type": "array"
+          },
+          "running": {
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "events",
+          "peers",
+          "running"
+        ],
+        "type": "object"
+      },
       "ApiToken": {
         "properties": {
           "createdAt": {
@@ -962,6 +1358,10 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "expiresAt": {
+            "format": "int64",
+            "type": "integer"
           },
           "id": {
             "type": "integer"
@@ -973,6 +1373,9 @@
             "description": "Namespaces is a comma-separated list of tag/email prefixes this token owns.\nEmpty means unrestricted, which is what every token created before this\ncolumn existed keeps being.",
             "type": "string"
           },
+          "scope": {
+            "type": "string"
+          },
           "token": {
             "description": "SHA-256 hash; the plaintext is shown only once at creation",
             "type": "string"
@@ -981,9 +1384,11 @@
         "required": [
           "createdAt",
           "enabled",
+          "expiresAt",
           "id",
           "name",
           "namespaces",
+          "scope",
           "token"
         ],
         "type": "object"
@@ -999,6 +1404,11 @@
             "example": true,
             "type": "boolean"
           },
+          "expiresAt": {
+            "example": 0,
+            "format": "int64",
+            "type": "integer"
+          },
           "id": {
             "example": 2,
             "type": "integer"
@@ -1008,11 +1418,15 @@
             "type": "string"
           },
           "namespaces": {
-            "description": "Namespaces are the tag/email prefixes this token may write. Empty means\nunrestricted; a non-empty list means every object the token creates,\nedits or deletes must carry one of these prefixes.",
+            "description": "Namespaces are the tag/email prefixes this token may write; empty means\nunrestricted, otherwise every object it writes must carry one of them.",
             "items": {
               "type": "string"
             },
             "type": "array"
+          },
+          "scope": {
+            "example": "admin",
+            "type": "string"
           },
           "token": {
             "example": "new-token-string",
@@ -1022,9 +1436,11 @@
         "required": [
           "createdAt",
           "enabled",
+          "expiresAt",
           "id",
           "name",
-          "namespaces"
+          "namespaces",
+          "scope"
         ],
         "type": "object"
       },
@@ -1040,6 +1456,16 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "allowedIPsByInbound": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "description": "AllowedIPsByInbound optionally overrides AllowedIPs on a per-inbound\nbasis, keyed by inbound id. Lets one identity attached to both\nWireGuard and AmneziaWG carry two genuinely different addresses in a\nsingle Create/Update call instead of the shared AllowedIPs field\nbeing broadcast to every attached tunnel inbound. Absent/unset for a\ngiven inbound id falls back to the shared AllowedIPs exactly as\nbefore -- fully backward compatible for callers that never set this.",
+            "type": "object"
           },
           "auth": {
             "description": "Auth password (Hysteria)",
@@ -1106,6 +1532,10 @@
             "description": "Flow control (XTLS)",
             "type": "string"
           },
+          "forwardedPorts": {
+            "description": "AmneziaWG per-client port-forwarding spec, e.g. \"80,443,8000-8100\"",
+            "type": "string"
+          },
           "group": {
             "description": "Logical grouping label",
             "type": "string"
@@ -1115,6 +1545,8 @@
             "type": "string"
           },
           "keepAlive": {
+            "description": "Seconds between PersistentKeepalive packets; 0 sends none, omit to keep the stored value",
+            "nullable": true,
             "type": "integer"
           },
           "limitIp": {
@@ -1140,6 +1572,14 @@
           },
           "reset": {
             "description": "Reset period in days",
+            "type": "integer"
+          },
+          "resetDay": {
+            "description": "Calendar renewal day 1-31, 0 = interval mode",
+            "type": "integer"
+          },
+          "resetMax": {
+            "description": "Max auto-renew count, 0 = unlimited",
             "type": "integer"
           },
           "reverse": {
@@ -1173,6 +1613,22 @@
             "format": "int64",
             "type": "integer"
           },
+          "trafficReset": {
+            "description": "Per-client traffic reset cycle, independent of the inbound's own (#5497).",
+            "enum": [
+              "never",
+              "hourly",
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "type": "string"
+          },
+          "trafficResetDay": {
+            "maximum": 31,
+            "minimum": 1,
+            "type": "integer"
+          },
           "updated_at": {
             "description": "Last update timestamp",
             "format": "int64",
@@ -1198,6 +1654,8 @@
           "expiryTime",
           "limitIp",
           "reset",
+          "resetDay",
+          "resetMax",
           "security",
           "subId",
           "tgId",
@@ -1226,6 +1684,57 @@
           "createdAt",
           "flowOverride",
           "inboundId"
+        ],
+        "type": "object"
+      },
+      "ClientPageResponse": {
+        "description": "ClientPageResponse is the shape returned by ListPaged. `Total` is the\nrow count in the DB; `Filtered` is the count after Search/Filter/Protocol\nwere applied, before pagination. The page contains at most PageSize items.\nSummary is computed across the full DB row set so dashboard counters\non the clients page stay stable as the user paginates/filters.",
+        "properties": {
+          "filtered": {
+            "type": "integer"
+          },
+          "filteredContentHash": {
+            "type": "string"
+          },
+          "filteredRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientSlim"
+            },
+            "type": "array"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ClientsSummary"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "filtered",
+          "filteredContentHash",
+          "filteredRevision",
+          "groups",
+          "items",
+          "page",
+          "pageSize",
+          "summary",
+          "total"
         ],
         "type": "object"
       },
@@ -1294,6 +1803,9 @@
           "flow": {
             "type": "string"
           },
+          "forwardedPorts": {
+            "type": "string"
+          },
           "group": {
             "type": "string"
           },
@@ -1301,6 +1813,9 @@
             "type": "integer"
           },
           "keepAlive": {
+            "type": "integer"
+          },
+          "limitHwid": {
             "type": "integer"
           },
           "limitIp": {
@@ -1324,6 +1839,12 @@
           "reset": {
             "type": "integer"
           },
+          "resetDay": {
+            "type": "integer"
+          },
+          "resetMax": {
+            "type": "integer"
+          },
           "reverse": {},
           "secret": {
             "type": "string"
@@ -1340,6 +1861,12 @@
           },
           "totalGB": {
             "format": "int64",
+            "type": "integer"
+          },
+          "trafficReset": {
+            "type": "string"
+          },
+          "trafficResetDay": {
             "type": "integer"
           },
           "updatedAt": {
@@ -1381,9 +1908,11 @@
           "enable",
           "expiryTime",
           "flow",
+          "forwardedPorts",
           "group",
           "id",
           "keepAlive",
+          "limitHwid",
           "limitIp",
           "password",
           "preSharedKey",
@@ -1391,12 +1920,16 @@
           "publicKey",
           "rateUnit",
           "reset",
+          "resetDay",
+          "resetMax",
           "reverse",
           "secret",
           "security",
           "subId",
           "tgId",
           "totalGB",
+          "trafficReset",
+          "trafficResetDay",
           "updatedAt",
           "upload_bandwidth_bps",
           "upload_burst_bytes",
@@ -1497,6 +2030,118 @@
         ],
         "type": "object"
       },
+      "ClientSlim": {
+        "description": "ClientSlim is the row-shape used by the clients page. It drops fields the\ntable never reads (UUID, password, auth, flow, security, reverse, tgId)\nso the list payload stays compact even when the panel manages thousands\nof clients. Modals that need the full record still call /get/:email.",
+        "properties": {
+          "bandwidth_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "conn_limit": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "download_bandwidth_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "download_burst_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "download_peak_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "egress_tag": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "enable": {
+            "type": "boolean"
+          },
+          "expiryTime": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "group": {
+            "type": "string"
+          },
+          "inboundIds": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "limitIp": {
+            "type": "integer"
+          },
+          "reset": {
+            "type": "integer"
+          },
+          "subId": {
+            "type": "string"
+          },
+          "totalGB": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "traffic": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientTraffic"
+              }
+            ],
+            "nullable": true
+          },
+          "updatedAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "upload_bandwidth_bps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "upload_burst_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "upload_peak_bps": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bandwidth_bps",
+          "conn_limit",
+          "createdAt",
+          "download_bandwidth_bps",
+          "download_burst_bytes",
+          "download_peak_bps",
+          "egress_tag",
+          "email",
+          "enable",
+          "expiryTime",
+          "inboundIds",
+          "limitIp",
+          "reset",
+          "subId",
+          "totalGB",
+          "updatedAt",
+          "upload_bandwidth_bps",
+          "upload_burst_bytes",
+          "upload_peak_bps"
+        ],
+        "type": "object"
+      },
       "ClientTraffic": {
         "description": "ClientTraffic represents traffic statistics and limits for a specific client.\nIt tracks upload/download usage, expiry times, and online status for inbound clients.",
         "properties": {
@@ -1531,7 +2176,27 @@
             "format": "int64",
             "type": "integer"
           },
+          "lastSubFetch": {
+            "example": 1735680000000,
+            "format": "int64",
+            "type": "integer"
+          },
           "reset": {
+            "example": 0,
+            "type": "integer"
+          },
+          "resetCount": {
+            "description": "ResetCount is how many have fired, so a prepaid plan stops on its own.",
+            "example": 0,
+            "type": "integer"
+          },
+          "resetDay": {
+            "description": "ResetDay renews on that day of each calendar month instead of every\nReset days; 0 keeps the interval behaviour.",
+            "example": 0,
+            "type": "integer"
+          },
+          "resetMax": {
+            "description": "ResetMax caps how many times auto-renew may fire; 0 means no cap.",
             "example": 0,
             "type": "integer"
           },
@@ -1562,11 +2227,75 @@
           "id",
           "inboundId",
           "lastOnline",
+          "lastSubFetch",
           "reset",
+          "resetCount",
+          "resetDay",
+          "resetMax",
           "subId",
           "total",
           "up",
           "uuid"
+        ],
+        "type": "object"
+      },
+      "ClientsSummary": {
+        "description": "ClientsSummary collects per-bucket counts plus the matching email lists so\nthe clients page can render the dashboard stat cards and their hover\npopovers without shipping the full client array. The counters are exact;\nthe lists stop at clientSummaryEmailCap entries and only back the popovers.",
+        "properties": {
+          "active": {
+            "type": "integer"
+          },
+          "deactive": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "deactiveCount": {
+            "type": "integer"
+          },
+          "depleted": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "depletedCount": {
+            "type": "integer"
+          },
+          "expiring": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "expiringCount": {
+            "type": "integer"
+          },
+          "online": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "onlineCount": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active",
+          "deactive",
+          "deactiveCount",
+          "depleted",
+          "depletedCount",
+          "expiring",
+          "expiringCount",
+          "online",
+          "onlineCount",
+          "total"
         ],
         "type": "object"
       },
@@ -1744,6 +2473,169 @@
         },
         "required": [
           "masterId"
+        ],
+        "type": "object"
+      },
+      "GeoCategory": {
+        "description": "GeoCategory is one code inside a database, such as geosite's \"google\".",
+        "properties": {
+          "attributes": {
+            "example": [
+              "ads",
+              "cn"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "code": {
+            "example": "google",
+            "type": "string"
+          },
+          "entries": {
+            "example": 1284,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "attributes",
+          "code",
+          "entries"
+        ],
+        "type": "object"
+      },
+      "GeoCategoryPage": {
+        "description": "GeoCategoryPage is one page of categories plus the unpaged total.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GeoCategory"
+            },
+            "type": "array"
+          },
+          "total": {
+            "example": 1043,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "type": "object"
+      },
+      "GeoEntry": {
+        "description": "GeoEntry is a single rule inside a category: a domain rule for geosite\ndatabases, a CIDR for geoip ones.",
+        "properties": {
+          "kind": {
+            "example": "domain",
+            "type": "string"
+          },
+          "value": {
+            "example": "google.com",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ],
+        "type": "object"
+      },
+      "GeoEntryPage": {
+        "description": "GeoEntryPage is one page of category entries plus the unpaged total.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GeoEntry"
+            },
+            "type": "array"
+          },
+          "total": {
+            "example": 1284,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "type": "object"
+      },
+      "GeoFile": {
+        "description": "GeoFile describes one .dat database found in the asset directory.",
+        "properties": {
+          "categories": {
+            "example": 1043,
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "kind": {
+            "example": "site",
+            "type": "string"
+          },
+          "modifiedAt": {
+            "example": 1769558400000,
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "example": "geosite.dat",
+            "type": "string"
+          },
+          "size": {
+            "example": 1467392,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "categories",
+          "kind",
+          "modifiedAt",
+          "name",
+          "size"
+        ],
+        "type": "object"
+      },
+      "GeodataTokenIssue": {
+        "description": "GeodataTokenIssue reports a routing token the running core would reject,\nor would silently match nothing against.",
+        "properties": {
+          "code": {
+            "example": "blabla",
+            "type": "string"
+          },
+          "file": {
+            "example": "geosite.dat",
+            "type": "string"
+          },
+          "reason": {
+            "example": "categoryMissing",
+            "type": "string"
+          },
+          "token": {
+            "example": "geosite:blabla",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "token"
+        ],
+        "type": "object"
+      },
+      "HappLinkResult": {
+        "properties": {
+          "encryptedLink": {
+            "example": "happ://crypt5/example",
+            "type": "string"
+          }
+        },
+        "required": [
+          "encryptedLink"
         ],
         "type": "object"
       },
@@ -2113,6 +3005,39 @@
         ],
         "type": "object"
       },
+      "HwidSlotStatus": {
+        "description": "HwidSlotStatus is the aggregate device-slot view exposed to subscribers:\ncounters only, no hwid value or hash, no email, no device metadata.",
+        "properties": {
+          "active": {
+            "example": true,
+            "type": "boolean"
+          },
+          "full": {
+            "example": false,
+            "type": "boolean"
+          },
+          "limit": {
+            "example": 2,
+            "type": "integer"
+          },
+          "registered": {
+            "example": 1,
+            "type": "integer"
+          },
+          "remaining": {
+            "example": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active",
+          "full",
+          "limit",
+          "registered",
+          "remaining"
+        ],
+        "type": "object"
+      },
       "Inbound": {
         "description": "Inbound represents an Xray inbound configuration with traffic statistics and settings.",
         "properties": {
@@ -2122,6 +3047,10 @@
               "$ref": "#/components/schemas/ClientTraffic"
             },
             "type": "array"
+          },
+          "disableFlow": {
+            "example": false,
+            "type": "boolean"
           },
           "down": {
             "description": "Download traffic in bytes",
@@ -2187,7 +3116,9 @@
               "mixed",
               "tunnel",
               "tun",
-              "mtproto"
+              "mtproto",
+              "amneziawg",
+              "tuic"
             ],
             "example": "vless",
             "type": "string"
@@ -2212,9 +3143,8 @@
           "sniffing": {},
           "streamSettings": {},
           "subSortIndex": {
-            "description": "1-based sort order of this inbound's links in subscription output only (lower first; ties by id)",
+            "description": "Sort order of this inbound's links in subscription output only (lower first; negatives allowed; 0/omitted → 1; ties by id)",
             "example": 1,
-            "minimum": 1,
             "type": "integer"
           },
           "tag": {
@@ -2252,6 +3182,7 @@
         },
         "required": [
           "clientStats",
+          "disableFlow",
           "down",
           "enable",
           "expiryTime",
@@ -2412,6 +3343,36 @@
         ],
         "type": "object"
       },
+      "InboundTrafficSummary": {
+        "properties": {
+          "down": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "enable": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "up": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "down",
+          "enable",
+          "id",
+          "total",
+          "up"
+        ],
+        "type": "object"
+      },
       "IngressProbeRequest": {
         "properties": {
           "address": {
@@ -2464,6 +3425,83 @@
         ],
         "type": "object"
       },
+      "LogEntry": {
+        "properties": {
+          "DateTime": {
+            "example": "2025-01-01T12:00:00Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "Email": {
+            "example": "alice@example.com",
+            "type": "string"
+          },
+          "Event": {
+            "example": 0,
+            "type": "integer"
+          },
+          "FromAddress": {
+            "example": "192.0.2.10:54321",
+            "type": "string"
+          },
+          "Inbound": {
+            "example": "inbound-443",
+            "type": "string"
+          },
+          "Outbound": {
+            "example": "direct",
+            "type": "string"
+          },
+          "ToAddress": {
+            "example": "example.com:443",
+            "type": "string"
+          }
+        },
+        "required": [
+          "DateTime",
+          "Email",
+          "Event",
+          "FromAddress",
+          "Inbound",
+          "Outbound",
+          "ToAddress"
+        ],
+        "type": "object"
+      },
+      "MLDSA65Response": {
+        "properties": {
+          "seed": {
+            "example": "mldsa65-seed",
+            "type": "string"
+          },
+          "verify": {
+            "example": "mldsa65-verify",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seed",
+          "verify"
+        ],
+        "type": "object"
+      },
+      "MLKEM768Response": {
+        "properties": {
+          "client": {
+            "example": "mlkem768-client",
+            "type": "string"
+          },
+          "seed": {
+            "example": "mlkem768-seed",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client",
+          "seed"
+        ],
+        "type": "object"
+      },
       "Msg": {
         "properties": {
           "msg": {
@@ -2478,6 +3516,18 @@
           "msg",
           "obj",
           "success"
+        ],
+        "type": "object"
+      },
+      "NewUUIDResponse": {
+        "properties": {
+          "uuid": {
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid"
         ],
         "type": "object"
       },
@@ -3130,6 +4180,68 @@
         ],
         "type": "object"
       },
+      "PeerActivity": {
+        "description": "PeerActivity is one peer's live embedded-Device-reported state, the\ncounterpart of an Xray access-log entry: a tunnel logs no requests, only\nhandshakes and bytes.",
+        "properties": {
+          "allowedIPs": {
+            "example": "10.8.1.2/32",
+            "type": "string"
+          },
+          "down": {
+            "example": 4194304,
+            "format": "int64",
+            "type": "integer"
+          },
+          "email": {
+            "example": "peer@example.com",
+            "type": "string"
+          },
+          "endpoint": {
+            "example": "203.0.113.9:51820",
+            "type": "string"
+          },
+          "handshake": {
+            "description": "Handshake is unix milliseconds, 0 when the peer has never connected.",
+            "example": 1735732800000,
+            "format": "int64",
+            "type": "integer"
+          },
+          "inboundId": {
+            "example": 1,
+            "type": "integer"
+          },
+          "interface": {
+            "example": "awg1",
+            "type": "string"
+          },
+          "online": {
+            "example": true,
+            "type": "boolean"
+          },
+          "tag": {
+            "example": "inbound-51820",
+            "type": "string"
+          },
+          "up": {
+            "example": 1048576,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "allowedIPs",
+          "down",
+          "email",
+          "endpoint",
+          "handshake",
+          "inboundId",
+          "interface",
+          "online",
+          "tag",
+          "up"
+        ],
+        "type": "object"
+      },
       "ProbeResultUI": {
         "properties": {
           "cpuPct": {
@@ -3192,12 +4304,22 @@
             "example": "h2",
             "type": "string"
           },
+          "certChainBytes": {
+            "description": "CertChainBytes is the sum of DER lengths of the presented peer chain.\nxray-core ML-DSA-65 REALITY needs >= 3500 bytes (constant lives in xray-core).",
+            "example": 3427,
+            "type": "integer"
+          },
+          "certChainValid": {
+            "description": "CertChainValid ignores the name: a trusted chain presented for other names\nstill has serverNames the panel can offer instead of the failing SNI.",
+            "example": true,
+            "type": "boolean"
+          },
           "certIssuer": {
             "example": "Google Trust Services",
             "type": "string"
           },
           "certRecordBytes": {
-            "description": "CertRecordBytes estimates the size of this target's Certificate record on\nthe wire. REALITY reads the target's handshake into a fixed buffer and\nabandons the borrowed handshake when one record exceeds it. The failure\nmode is the worst kind: the client authenticates, then dies before the\ninner protocol starts, while every status page stays green.",
+            "description": "CertRecordBytes estimates this target's Certificate record on the wire; REALITY\nabandons a borrowed handshake whose record exceeds its fixed read buffer.",
             "example": 4200,
             "type": "integer"
           },
@@ -3245,6 +4367,11 @@
             "example": 443,
             "type": "integer"
           },
+          "privateTarget": {
+            "description": "PrivateTarget marks a target that resolves to a loopback/private/link-local\naddress: blocked before the probe unless the caller opted in, then flagged.",
+            "example": false,
+            "type": "boolean"
+          },
           "reason": {
             "type": "string"
           },
@@ -3273,6 +4400,8 @@
         },
         "required": [
           "alpn",
+          "certChainBytes",
+          "certChainValid",
           "certIssuer",
           "certRecordBytes",
           "certRecordRisk",
@@ -3286,6 +4415,7 @@
           "latencyMs",
           "notAfter",
           "port",
+          "privateTarget",
           "reason",
           "serverNames",
           "target",
@@ -3407,6 +4537,150 @@
         ],
         "type": "object"
       },
+      "ServerSettings": {
+        "description": "ServerSettings is the \"server\" block of an AmneziaWG inbound's Settings\nJSON: the interface-level configuration shared by every client/peer. The\nlisten port is deliberately not duplicated here — it lives on the inbound\nrow itself (Inbound.Port), like every other protocol.",
+        "properties": {
+          "contentPaddingAddition": {
+            "type": "string"
+          },
+          "disableCookies": {
+            "type": "boolean"
+          },
+          "externalInterface": {
+            "description": "ExternalInterface, IPv6Enabled, and IPv6ExternalInterface are live\nagain as of Phase 3.5 -- see the matching fields on Instance for what\nthey gate (internal/amneziawgnet's IPv6-address-alias mechanism).\nIPv6Subnet was never actually vestigial either: InstanceFromInbound\nalready consumes it (via serverAddressV6) to build the server's own\ntunnel address, same as always. Only RouteThroughXray, below, remains\ngenuinely vestigial as of the hard cutover to the embedded path\n(internal/amneziawgnet) -- read from existing stored settings for\nbackward compatibility, but not acted on by anything.",
+            "type": "string"
+          },
+          "h1": {
+            "type": "string"
+          },
+          "h2": {
+            "type": "string"
+          },
+          "h3": {
+            "type": "string"
+          },
+          "h4": {
+            "type": "string"
+          },
+          "headerProtectionKey": {
+            "description": "HeaderProtectionKey and ContentPaddingAddition are AmneziaWG 3.0\nfields, flat and top-level for the same tools/openapigen reason as\nthe block above; Obfuscation() below folds them back into\nObfuscation31's own identically named fields.\nHeaderProtectionKey is a base64 32-byte key; empty (the default)\ndisables AWG 3.0 header protection. A non-empty value requires\nevery one of S1-S4 above to be >= 12 -- ValidateObfuscation\nenforces this at save time, not just at IpcSet time.\nContentPaddingAddition is a \"low-high\" range or bare integer, the\nsame grammar and uint32 cap as H1-H4.",
+            "type": "string"
+          },
+          "i1": {
+            "type": "string"
+          },
+          "i2": {
+            "type": "string"
+          },
+          "i3": {
+            "type": "string"
+          },
+          "i4": {
+            "type": "string"
+          },
+          "i5": {
+            "type": "string"
+          },
+          "ipv6Enabled": {
+            "type": "boolean"
+          },
+          "ipv6ExternalInterface": {
+            "type": "string"
+          },
+          "ipv6Subnet": {
+            "type": "string"
+          },
+          "jc": {
+            "description": "Obfuscation31's fields, repeated flat (not embedded) rather than\nnested under their own key: encoding/json would happily inline an\nembedded Obfuscation31 the same way, but the frontend's Go->Zod/TS\ngenerator (tools/openapigen) does not — it emits a genuinely nested\n`obfuscation31` object, which would silently diverge from the real\nwire JSON. See Obfuscation() below for the manager-facing conversion.",
+            "type": "integer"
+          },
+          "jmax": {
+            "type": "integer"
+          },
+          "jmin": {
+            "type": "integer"
+          },
+          "keepaliveTimeout": {
+            "type": "string"
+          },
+          "maxHandshakeAttempts": {
+            "type": "string"
+          },
+          "mtu": {
+            "type": "integer"
+          },
+          "primaryDns": {
+            "description": "PrimaryDNS/SecondaryDNS seed client configs' DNS line. Blank is\nmeaningful, so no omitempty: a dropped key resurrects frontend defaults.",
+            "type": "string"
+          },
+          "privateKey": {
+            "type": "string"
+          },
+          "publicKey": {
+            "type": "string"
+          },
+          "randomTrailers": {
+            "description": "RandomTrailers/DisableCookies mirror Instance's identically named\nAmneziaWG 3.1 fields -- see that type's own doc comment for the real\nprotocol/interop details. Both real bool fields (not omitempty):\nbuildUAPIConfig always emits both lines explicitly so the\nreconfigure-in-place diff correctly notices a true->false edit, not\njust false->true.",
+            "type": "boolean"
+          },
+          "rejectAfterTime": {
+            "type": "string"
+          },
+          "rekeyAfterTime": {
+            "description": "RekeyAfterTime/RekeyTimeout/RejectAfterTime/KeepaliveTimeout/\nMaxHandshakeAttempts mirror Instance's identically named fields --\nsee that type's own doc comment for the grammar/width/real-default\ndetails. Flat and top-level for the same tools/openapigen reason as\nthe rest of this struct.",
+            "type": "string"
+          },
+          "rekeyTimeout": {
+            "type": "string"
+          },
+          "routeThroughXray": {
+            "type": "boolean"
+          },
+          "s1": {
+            "type": "integer"
+          },
+          "s2": {
+            "type": "integer"
+          },
+          "s3": {
+            "type": "integer"
+          },
+          "s4": {
+            "type": "integer"
+          },
+          "secondaryDns": {
+            "type": "string"
+          },
+          "subnetCidr": {
+            "type": "integer"
+          },
+          "subnetIp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "disableCookies",
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "jc",
+          "jmax",
+          "jmin",
+          "primaryDns",
+          "privateKey",
+          "publicKey",
+          "randomTrailers",
+          "s1",
+          "s2",
+          "s3",
+          "s4",
+          "secondaryDns",
+          "subnetCidr",
+          "subnetIp"
+        ],
+        "type": "object"
+      },
       "Setting": {
         "description": "Setting stores key-value configuration settings for the 3x-ui panel.",
         "properties": {
@@ -3424,6 +4698,185 @@
           "id",
           "key",
           "value"
+        ],
+        "type": "object"
+      },
+      "SubBalancer": {
+        "description": "SubBalancer is one extra JSON-subscription config document whose members are\nthe selected inbounds' proxy outbounds. SortOrder shares SubSortIndex semantics.",
+        "properties": {
+          "createdAt": {
+            "example": 1710000000000,
+            "format": "int64",
+            "type": "integer"
+          },
+          "enabled": {
+            "description": "No gorm default:true — a bool default makes an explicit false at insert\ncollapse back to the column default (zero value is skipped).",
+            "example": true,
+            "type": "boolean"
+          },
+          "id": {
+            "example": 1,
+            "type": "integer"
+          },
+          "inboundIds": {
+            "example": [
+              1,
+              3
+            ],
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "memberWeights": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "inboundId -> leastLoad weight; absent entries mean 1.0. Only meaningful\nwith Strategy \"leastLoad\" — xray ignores costs on every other strategy.",
+            "type": "object"
+          },
+          "remark": {
+            "example": "auto-fastest",
+            "maxLength": 256,
+            "type": "string"
+          },
+          "sortOrder": {
+            "example": 1,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "strategy": {
+            "enum": [
+              "leastLoad",
+              "leastPing",
+              "random",
+              "roundRobin"
+            ],
+            "example": "random",
+            "type": "string"
+          },
+          "updatedAt": {
+            "example": 1710000000000,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "createdAt",
+          "enabled",
+          "id",
+          "inboundIds",
+          "remark",
+          "sortOrder",
+          "strategy",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "Traffic": {
+        "description": "Traffic represents network traffic statistics for Xray connections.\nIt tracks upload and download bytes for inbound or outbound traffic.",
+        "properties": {
+          "Down": {
+            "example": 2097152,
+            "format": "int64",
+            "type": "integer"
+          },
+          "IsInbound": {
+            "example": true,
+            "type": "boolean"
+          },
+          "IsOutbound": {
+            "example": false,
+            "type": "boolean"
+          },
+          "Tag": {
+            "example": "inbound-443",
+            "type": "string"
+          },
+          "Up": {
+            "example": 1048576,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Down",
+          "IsInbound",
+          "IsOutbound",
+          "Tag",
+          "Up"
+        ],
+        "type": "object"
+      },
+      "TuicClientSettings": {
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "uuid"
+        ],
+        "type": "object"
+      },
+      "TuicServerSettings": {
+        "properties": {
+          "alpn": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "authentication_timeout": {
+            "type": "integer"
+          },
+          "certificate": {
+            "type": "string"
+          },
+          "congestion_control": {
+            "type": "string"
+          },
+          "log_level": {
+            "type": "string"
+          },
+          "max_idle_time": {
+            "type": "integer"
+          },
+          "max_udp_relay_packet_size": {
+            "type": "integer"
+          },
+          "private_key": {
+            "type": "string"
+          },
+          "sni": {
+            "type": "string"
+          },
+          "udp_relay_mode": {
+            "type": "string"
+          },
+          "zero_rtt_handshake": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "alpn",
+          "authentication_timeout",
+          "certificate",
+          "congestion_control",
+          "log_level",
+          "max_idle_time",
+          "max_udp_relay_packet_size",
+          "private_key",
+          "udp_relay_mode",
+          "zero_rtt_handshake"
         ],
         "type": "object"
       },
@@ -3517,6 +4970,38 @@
           "version"
         ],
         "type": "object"
+      },
+      "WebSocketEnvelope": {
+        "type": "object",
+        "required": [
+          "type",
+          "payload",
+          "time"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "status",
+              "traffic",
+              "client_stats",
+              "inbounds",
+              "outbounds",
+              "nodes",
+              "notification",
+              "xray_state",
+              "invalidate"
+            ]
+          },
+          "payload": {
+            "description": "Shape is selected by type; see x-websocket-events on GET /ws."
+          },
+          "time": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Server emission time in Unix milliseconds."
+          }
+        }
       }
     }
   },
@@ -3563,19 +5048,23 @@
     },
     {
       "name": "API Tokens",
-      "description": "Manage Bearer tokens used for programmatic auth (bots, central panels acting on this node, CI). Each token has a unique name and an enabled flag — disable to revoke without deleting, delete to revoke permanently. Tokens are stored as SHA-256 hashes and the plaintext is returned only once, in the create response — it cannot be retrieved afterwards, so copy it then. Send one as <code>Authorization: Bearer &lt;token&gt;</code> on any /panel/api/* request. A token with no namespaces is a full-admin credential; give it namespaces to confine it to objects whose tag or email starts with one of its prefixes, so an automation and the person at the panel can share a node without overwriting each other."
+      "description": "Manage scoped Bearer tokens for programmatic auth. Tokens grant admin, monitor, or node-sync access, may expire, and are stored as SHA-256 hashes. The plaintext is returned only once at creation. A token may also be confined to namespaces (tag/email prefixes) so several automations share one panel."
     },
     {
       "name": "Xray Settings",
-      "description": "Xray configuration template, outbound management, Warp/Nord integration, and config testing. All endpoints under /panel/api/xray."
+      "description": "Xray configuration template, outbound management, Warp/Nord/PIA integration, and config testing. All endpoints under /panel/api/xray."
     },
     {
       "name": "Outbounds & Routing",
       "description": "Outbounds and routing rules as addressable objects. Each write persists to the stored config template first — that template is the authority, and a core start rebuilds itself from it — and then updates the running core over its gRPC API, so no connection is dropped. The whole-template save (POST /panel/api/xray/update) still works and is still the way to rewrite everything at once; these endpoints exist so that adding one outbound does not mean resending, and revalidating, every other object on the node."
     },
     {
+      "name": "Subscription Balancers",
+      "description": "Client-side balancers for the JSON subscription: each enabled balancer is emitted as one extra config document whose members are the proxy outbounds of the selected inbounds (routing.balancers + burstObservatory). Managed in Settings → Sub Balancers."
+    },
+    {
       "name": "Subscription Server",
-      "description": "A separate HTTP/HTTPS server that serves proxy subscription links (standard, JSON, and Clash) to clients. The server listens on its own port (default 10882) and is configured in Settings → Subscription. Paths are configurable; defaults are shown below. All subscription endpoints set response headers for client apps to read traffic/expiry info."
+      "description": "A separate HTTP/HTTPS server that serves proxy subscription links (standard, JSON, and Clash) to clients. The server listens on its own port (default 2096) and is configured in Settings → Subscription. Fresh panels generate random path prefixes for each format; all paths remain configurable. Every subscription endpoint sets response headers for client apps to read traffic/expiry info."
     },
     {
       "name": "WebSocket",
@@ -3612,8 +5101,7 @@
                 },
                 "required": [
                   "username",
-                  "password",
-                  "twoFactorCode"
+                  "password"
                 ]
               },
               "example": {
@@ -3816,13 +5304,18 @@
                           "id": 14825,
                           "inboundId": 1,
                           "lastOnline": 1735680000000,
+                          "lastSubFetch": 1735680000000,
                           "reset": 0,
+                          "resetCount": 0,
+                          "resetDay": 0,
+                          "resetMax": 0,
                           "subId": "i7tvdpeffi0hvvf1",
                           "total": 10737418240,
                           "up": 1048576,
                           "uuid": "e18c9a96-71bf-48d4-933f-8b9a46d4290c"
                         }
                       ],
+                      "disableFlow": false,
                       "down": 0,
                       "enable": true,
                       "expiryTime": 0,
@@ -3984,7 +5477,13 @@
                     "msg": {
                       "type": "string"
                     },
-                    "obj": {}
+                    "obj": {
+                      "type": "array",
+                      "nullable": true,
+                      "items": {
+                        "type": "string"
+                      }
+                    }
                   }
                 },
                 "example": {
@@ -4255,6 +5754,50 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "enable": true,
+                "remark": "VLESS-443",
+                "listen": "",
+                "port": 443,
+                "protocol": "vless",
+                "expiryTime": 0,
+                "total": 0,
+                "settings": {
+                  "clients": [
+                    {
+                      "id": "...",
+                      "email": "user1"
+                    }
+                  ],
+                  "decryption": "none",
+                  "fallbacks": []
+                },
+                "streamSettings": {
+                  "network": "tcp",
+                  "security": "reality",
+                  "realitySettings": {
+                    "show": false,
+                    "dest": "..."
+                  }
+                },
+                "sniffing": {
+                  "enabled": true,
+                  "destOverride": [
+                    "http",
+                    "tls"
+                  ]
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful response",
@@ -4305,6 +5848,60 @@
               },
               "example": {
                 "enable": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/inbounds/{id}/subSortIndex": {
+      "post": {
+        "tags": [
+          "Inbounds"
+        ],
+        "summary": "Set only the subscription sort order. Reads the stored inbound, so a reorder cannot carry a stale client list over a concurrent edit.",
+        "operationId": "post_panel_api_inbounds_id_subSortIndex",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Inbound ID.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "subSortIndex": 2
               }
             }
           }
@@ -5320,12 +6917,16 @@
                     "msg": {
                       "type": "string"
                     },
-                    "obj": {}
+                    "obj": {
+                      "$ref": "#/components/schemas/NewUUIDResponse"
+                    }
                   }
                 },
                 "example": {
                   "success": true,
-                  "obj": "550e8400-e29b-41d4-a716-446655440000"
+                  "obj": {
+                    "uuid": "550e8400-e29b-41d4-a716-446655440000"
+                  }
                 }
               }
             }
@@ -5454,7 +7055,7 @@
         "tags": [
           "Server"
         ],
-        "summary": "Generate a new ML-DSA-65 keypair (post-quantum signature). Returns {privateKey, publicKey, seed}.",
+        "summary": "Generate a new ML-DSA-65 keypair. Returns {seed, verify}.",
         "operationId": "get_panel_api_server_getNewmldsa65",
         "responses": {
           "200": {
@@ -5470,15 +7071,16 @@
                     "msg": {
                       "type": "string"
                     },
-                    "obj": {}
+                    "obj": {
+                      "$ref": "#/components/schemas/MLDSA65Response"
+                    }
                   }
                 },
                 "example": {
                   "success": true,
                   "obj": {
-                    "privateKey": "mdsa65priv...",
-                    "publicKey": "mdsa65pub...",
-                    "seed": "random-seed..."
+                    "seed": "mldsa65-seed",
+                    "verify": "mldsa65-verify"
                   }
                 }
               }
@@ -5492,7 +7094,7 @@
         "tags": [
           "Server"
         ],
-        "summary": "Generate a new ML-KEM-768 keypair (post-quantum KEM). Returns {clientKey, serverKey}.",
+        "summary": "Generate a new ML-KEM-768 keypair. Returns {seed, client}.",
         "operationId": "get_panel_api_server_getNewmlkem768",
         "responses": {
           "200": {
@@ -5508,14 +7110,16 @@
                     "msg": {
                       "type": "string"
                     },
-                    "obj": {}
+                    "obj": {
+                      "$ref": "#/components/schemas/MLKEM768Response"
+                    }
                   }
                 },
                 "example": {
                   "success": true,
                   "obj": {
-                    "clientKey": "mlkem768-client...",
-                    "serverKey": "mlkem768-server..."
+                    "client": "mlkem768-client",
+                    "seed": "mlkem768-seed"
                   }
                 }
               }
@@ -5719,6 +7323,22 @@
         ],
         "summary": "Self-update the panel to the latest version. The server restarts on success.",
         "operationId": "post_panel_api_server_updatePanel",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "dev": {
+                    "type": "boolean",
+                    "description": "Override this run's channel. Omit to use the panel's configured channel."
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful response",
@@ -5802,27 +7422,8 @@
         "tags": [
           "Server"
         ],
-        "summary": "Refresh the default GeoIP / GeoSite data files. Body can include a fileName, or use the /:fileName variant.",
+        "summary": "Refresh the default GeoIP / GeoSite data files. Use the /:fileName variant to update one file.",
         "operationId": "post_panel_api_server_updateGeofile",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "fileName": {
-                    "type": "string",
-                    "description": "Filename to update (e.g. geoip.dat, geosite.dat). Omit to update all defaults."
-                  }
-                },
-                "required": [
-                  "fileName"
-                ]
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful response",
@@ -5906,15 +7507,21 @@
           }
         ],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
-            "application/json": {
+            "application/x-www-form-urlencoded": {
               "schema": {
-                "type": "object"
-              },
-              "example": {
-                "level": "info",
-                "syslog": false
+                "type": "object",
+                "properties": {
+                  "level": {
+                    "type": "string",
+                    "description": "Minimum log level filter."
+                  },
+                  "syslog": {
+                    "type": "boolean",
+                    "description": "Read system logs instead of the panel log."
+                  }
+                }
               }
             }
           }
@@ -5933,12 +7540,21 @@
                     "msg": {
                       "type": "string"
                     },
-                    "obj": {}
+                    "obj": {
+                      "type": "array",
+                      "nullable": true,
+                      "items": {
+                        "type": "string"
+                      }
+                    }
                   }
                 },
                 "example": {
                   "success": true,
-                  "obj": "2025/01/01 12:00:00 [INFO] Server started\n2025/01/01 12:00:01 [INFO] Xray is running"
+                  "obj": [
+                    "2025/01/01 12:00:00 [INFO] Server started",
+                    "2025/01/01 12:00:01 [INFO] Xray is running"
+                  ]
                 }
               }
             }
@@ -5965,7 +7581,7 @@
           }
         ],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/x-www-form-urlencoded": {
               "schema": {
@@ -5987,13 +7603,7 @@
                     "type": "string",
                     "description": "\"true\" to include proxy traffic lines."
                   }
-                },
-                "required": [
-                  "filter",
-                  "showDirect",
-                  "showBlocked",
-                  "showProxy"
-                ]
+                }
               }
             }
           }
@@ -6012,12 +7622,110 @@
                     "msg": {
                       "type": "string"
                     },
-                    "obj": {}
+                    "obj": {
+                      "type": "array",
+                      "nullable": true,
+                      "items": {
+                        "$ref": "#/components/schemas/LogEntry"
+                      }
+                    }
                   }
                 },
                 "example": {
                   "success": true,
-                  "obj": "2025/01/01 12:00:00 rejected  vless  proxy  example.com  reason: no valid user\n2025/01/01 12:00:01 direct  freedom  ok"
+                  "obj": [
+                    {
+                      "DateTime": "2025-01-01T12:00:00Z",
+                      "Email": "alice@example.com",
+                      "Event": 0,
+                      "FromAddress": "192.0.2.10:54321",
+                      "Inbound": "inbound-443",
+                      "Outbound": "direct",
+                      "ToAddress": "example.com:443"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/server/amneziawglogs/{count}": {
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Return live AmneziaWG peer activity (handshake, endpoint, transfer) plus the panel’s own AmneziaWG event lines.",
+        "operationId": "post_panel_api_server_amneziawglogs_count",
+        "parameters": [
+          {
+            "name": "count",
+            "in": "path",
+            "required": true,
+            "description": "Maximum peer rows and event lines to return.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filter": {
+                    "type": "string",
+                    "description": "Keyword filter — only rows/lines containing this string."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/AmneziaWGLogs"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "events": [
+                      "2025/01/01 12:00:00 amneziawg: started interface awg1 for inbound 1"
+                    ],
+                    "peers": [
+                      {
+                        "allowedIPs": "10.8.1.2/32",
+                        "down": 4194304,
+                        "email": "peer@example.com",
+                        "endpoint": "203.0.113.9:51820",
+                        "handshake": 1735732800000,
+                        "inboundId": 1,
+                        "interface": "awg1",
+                        "online": true,
+                        "tag": "inbound-51820",
+                        "up": 1048576
+                      }
+                    ],
+                    "running": true
+                  }
                 }
               }
             }
@@ -6043,6 +7751,10 @@
                     "type": "string",
                     "format": "binary",
                     "description": "Database backup or migration file to upload."
+                  },
+                  "keepHostSettings": {
+                    "type": "boolean",
+                    "description": "Keep this machine's addresses, certificates and node identity. Default true."
                   }
                 },
                 "required": [
@@ -6132,7 +7844,7 @@
         "summary": "Compute the hex SHA-256 of a certificate (DER) for pinning (pinnedPeerCertSha256). Provide either a server file path or inline PEM/DER content.",
         "operationId": "post_panel_api_server_getCertHash",
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/x-www-form-urlencoded": {
               "schema": {
@@ -6146,11 +7858,7 @@
                     "type": "string",
                     "description": "Inline PEM (or DER) certificate content, used when certFile is empty."
                   }
-                },
-                "required": [
-                  "certFile",
-                  "certContent"
-                ]
+                }
               }
             }
           }
@@ -6244,7 +7952,7 @@
         "tags": [
           "Server"
         ],
-        "summary": "Run a live TLS 1.3 probe against a candidate REALITY target and return a feasibility verdict (TLS 1.3 + h2 + X25519 + trusted certificate) plus the certificate SAN DNS names.",
+        "summary": "Run a live TLS 1.3 probe against a candidate REALITY target and return a feasibility verdict (TLS 1.3 + h2 + X25519 + trusted certificate) plus the certificate SAN DNS names. A target on a private/loopback address is reported with privateTarget=true and probed only when allowPrivate is set.",
         "operationId": "post_panel_api_server_scanRealityTarget",
         "requestBody": {
           "required": true,
@@ -6256,6 +7964,18 @@
                   "target": {
                     "type": "string",
                     "description": "Candidate target as host or host:port (default port 443), e.g. www.cloudflare.com:443."
+                  },
+                  "sni": {
+                    "type": "string",
+                    "description": "SNI the handshake sends and the certificate is verified against (the inbound serverNames). Defaults to the target host, which a fronting proxy answers with its default certificate."
+                  },
+                  "xver": {
+                    "type": "integer",
+                    "description": "PROXY protocol version the target expects (matches the inbound xver). 0 = none."
+                  },
+                  "allowPrivate": {
+                    "type": "boolean",
+                    "description": "Probe a private/internal/loopback target (LAN, Docker service name). Default false (SSRF guard blocks it and the response sets privateTarget=true)."
                   }
                 },
                 "required": [
@@ -6288,6 +8008,8 @@
                   "success": true,
                   "obj": {
                     "alpn": "h2",
+                    "certChainBytes": 3427,
+                    "certChainValid": true,
                     "certIssuer": "Google Trust Services",
                     "certRecordBytes": 4200,
                     "certRecordRisk": "ok",
@@ -6301,6 +8023,7 @@
                     "latencyMs": 180,
                     "notAfter": "2026-08-01T00:00:00Z",
                     "port": 443,
+                    "privateTarget": false,
                     "reason": "",
                     "serverNames": [
                       ""
@@ -6322,7 +8045,7 @@
         "tags": [
           "Server"
         ],
-        "summary": "Probe/discover REALITY targets and return each verdict ranked by feasibility then latency. Each comma-separated token may be a domain (validated with SNI), a bare IP, or a CIDR range (discovered without SNI by reading the certificate domain). When empty, a built-in seed list is probed.",
+        "summary": "Probe/discover REALITY targets and return each verdict ranked by feasibility then latency. Each comma-separated token may be a domain (validated with SNI), a bare IP, or a CIDR range (discovered without SNI by reading the certificate domain). When empty, the realityScanCandidates setting is probed (the built-in seed list if that setting is empty).",
         "operationId": "post_panel_api_server_scanRealityTargets",
         "requestBody": {
           "required": false,
@@ -6333,7 +8056,7 @@
                 "properties": {
                   "targets": {
                     "type": "string",
-                    "description": "Optional comma-separated tokens: domain[:port], IP[:port], or CIDR (e.g. 104.16.0.0/24). When omitted, a built-in seed list is probed."
+                    "description": "Optional comma-separated tokens: domain[:port], IP[:port], or CIDR (e.g. 104.16.0.0/24). When omitted, the realityScanCandidates setting is probed (the built-in seed list if that setting is empty)."
                   }
                 }
               }
@@ -6367,6 +8090,8 @@
                   "obj": [
                     {
                       "alpn": "h2",
+                      "certChainBytes": 3427,
+                      "certChainValid": true,
                       "certIssuer": "Google Trust Services",
                       "certRecordBytes": 4200,
                       "certRecordRisk": "ok",
@@ -6380,6 +8105,7 @@
                       "latencyMs": 180,
                       "notAfter": "2026-08-01T00:00:00Z",
                       "port": 443,
+                      "privateTarget": false,
                       "reason": "",
                       "serverNames": [
                         ""
@@ -6452,19 +8178,38 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "ips": {
-                    "type": "array",
-                    "items": {
-                      "type": "object"
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "clientEmail": {
+                      "type": "string"
                     },
-                    "description": "Array of InboundClientIps to merge."
-                  }
-                },
-                "required": [
-                  "ips"
-                ]
+                    "ips": {
+                      "type": "array",
+                      "nullable": true,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ip": {
+                            "type": "string"
+                          },
+                          "timestamp": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "ip",
+                          "timestamp"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "clientEmail",
+                    "ips"
+                  ]
+                }
               }
             }
           }
@@ -6557,26 +8302,28 @@
           {
             "name": "page",
             "in": "query",
-            "required": true,
+            "required": false,
             "description": "1-indexed page number. Defaults to 1.",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "default": 1
             }
           },
           {
             "name": "pageSize",
             "in": "query",
-            "required": true,
+            "required": false,
             "description": "Rows per page. Defaults to 25, capped at 200.",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "default": 25
             }
           },
           {
             "name": "search",
             "in": "query",
-            "required": true,
-            "description": "Case-insensitive substring match on email / subId / comment.",
+            "required": false,
+            "description": "Case-insensitive substring match on email, subId, comment, UUID, password, auth or Telegram ID.",
             "schema": {
               "type": "string"
             }
@@ -6584,8 +8331,8 @@
           {
             "name": "filter",
             "in": "query",
-            "required": true,
-            "description": "Status bucket: online | active | deactive | depleted | expiring.",
+            "required": false,
+            "description": "CSV status buckets: online, active, deactive, depleted or expiring. Values are ORed.",
             "schema": {
               "type": "string"
             }
@@ -6593,8 +8340,17 @@
           {
             "name": "protocol",
             "in": "query",
-            "required": true,
-            "description": "Match clients attached to at least one inbound of this protocol (vless, vmess, trojan, shadowsocks, ...).",
+            "required": false,
+            "description": "CSV inbound protocols: vmess, vless, trojan, shadowsocks, wireguard, hysteria, http, mixed, tunnel, tun, mtproto or amneziawg. Values are ORed.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "inbound",
+            "in": "query",
+            "required": false,
+            "description": "CSV positive inbound IDs. Values are ORed; invalid or non-positive IDs are ignored.",
             "schema": {
               "type": "string"
             }
@@ -6602,17 +8358,116 @@
           {
             "name": "sort",
             "in": "query",
-            "required": true,
-            "description": "Sort key: enable | email | inboundIds | traffic | remaining | expiryTime.",
+            "required": false,
+            "description": "Sort key. An omitted or unknown value falls back to client ID ascending.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "enable",
+                "email",
+                "inboundIds",
+                "traffic",
+                "remaining",
+                "expiryTime",
+                "createdAt",
+                "updatedAt",
+                "lastOnline"
+              ]
             }
           },
           {
             "name": "order",
             "in": "query",
-            "required": true,
-            "description": "ascend or descend.",
+            "required": false,
+            "description": "Sort direction. Only descend selects descending order; otherwise ascending.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ascend",
+                "descend"
+              ]
+            }
+          },
+          {
+            "name": "expiryFrom",
+            "in": "query",
+            "required": false,
+            "description": "Inclusive minimum expiry time in Unix milliseconds. Zero or negative means unset.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "expiryTo",
+            "in": "query",
+            "required": false,
+            "description": "Inclusive maximum expiry time in Unix milliseconds. Zero or negative means unbounded.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "usageFrom",
+            "in": "query",
+            "required": false,
+            "description": "Inclusive minimum combined upload and download usage in bytes. Zero means unset.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "usageTo",
+            "in": "query",
+            "required": false,
+            "description": "Inclusive maximum combined upload and download usage in bytes. Zero means unbounded.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "autoRenew",
+            "in": "query",
+            "required": false,
+            "description": "on selects clients with an interval or calendar-day reset; off selects clients without either.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "on",
+                "off"
+              ]
+            }
+          },
+          {
+            "name": "hasTgId",
+            "in": "query",
+            "required": false,
+            "description": "yes selects clients with a non-zero Telegram ID; no selects clients without one.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "yes",
+                "no"
+              ]
+            }
+          },
+          {
+            "name": "hasComment",
+            "in": "query",
+            "required": false,
+            "description": "yes selects clients with a non-blank comment; no selects clients without one.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "yes",
+                "no"
+              ]
+            }
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "required": false,
+            "description": "CSV group names, matched case-insensitively after trimming. Values are ORed.",
             "schema": {
               "type": "string"
             }
@@ -6632,54 +8487,71 @@
                     "msg": {
                       "type": "string"
                     },
-                    "obj": {}
+                    "obj": {
+                      "$ref": "#/components/schemas/ClientPageResponse"
+                    }
                   }
                 },
                 "example": {
                   "success": true,
                   "obj": {
+                    "filtered": 0,
+                    "filteredContentHash": "",
+                    "filteredRevision": 0,
+                    "groups": [
+                      ""
+                    ],
                     "items": [
                       {
-                        "email": "alice@example.com",
-                        "subId": "abcd1234",
-                        "enable": true,
-                        "totalGB": 53687091200,
-                        "expiryTime": 1735689600000,
+                        "bandwidth_bps": 0,
+                        "comment": "",
+                        "conn_limit": 0,
+                        "createdAt": 0,
+                        "download_bandwidth_bps": 0,
+                        "download_burst_bytes": 0,
+                        "download_peak_bps": 0,
+                        "egress_tag": "",
+                        "email": "",
+                        "enable": false,
+                        "expiryTime": 0,
+                        "group": "",
+                        "inboundIds": [
+                          0
+                        ],
                         "limitIp": 0,
                         "reset": 0,
-                        "inboundIds": [
-                          3,
-                          5
-                        ],
-                        "traffic": {
-                          "up": 1024,
-                          "down": 4096,
-                          "enable": true
-                        },
-                        "createdAt": 1735000000000,
-                        "updatedAt": 1735100000000
+                        "subId": "",
+                        "totalGB": 0,
+                        "traffic": null,
+                        "updatedAt": 0,
+                        "upload_bandwidth_bps": 0,
+                        "upload_burst_bytes": 0,
+                        "upload_peak_bps": 0
                       }
                     ],
-                    "total": 2000,
-                    "filtered": 47,
-                    "page": 1,
-                    "pageSize": 25,
+                    "page": 0,
+                    "pageSize": 0,
                     "summary": {
-                      "total": 2000,
-                      "active": 1850,
-                      "onlineCount": 1,
-                      "depletedCount": 0,
-                      "expiringCount": 0,
-                      "deactiveCount": 150,
-                      "online": [
-                        "alice@example.com"
-                      ],
-                      "depleted": [],
-                      "expiring": [],
+                      "active": 0,
                       "deactive": [
-                        "bob@example.com"
-                      ]
-                    }
+                        ""
+                      ],
+                      "deactiveCount": 0,
+                      "depleted": [
+                        ""
+                      ],
+                      "depletedCount": 0,
+                      "expiring": [
+                        ""
+                      ],
+                      "expiringCount": 0,
+                      "online": [
+                        ""
+                      ],
+                      "onlineCount": 0,
+                      "total": 0
+                    },
+                    "total": 0
                   }
                 }
               }
@@ -6857,6 +8729,7 @@
         ],
         "summary": "Update an existing client by email. Changes propagate to every attached inbound. Body is the JSON client payload — supply the full set of fields you want to keep (the server replaces the row, it does not patch).",
         "operationId": "post_panel_api_clients_update_email",
+        "description": "The inbounds are applied concurrently and independently: one that fails no longer stops the others. Every inbound error names the inbound it came from (`inbound 7: <message>`), and several failures are reported together, one per line. So a `success:false` response can still have applied the edit to the remaining inbounds. The client record is written after the inbounds, so a failure there is reported without an `inbound <id>:` prefix and leaves the inbound edits in place.",
         "parameters": [
           {
             "name": "email",
@@ -6998,6 +8871,7 @@
         ],
         "summary": "Delete a client by email. Removes it from every attached inbound and drops its traffic record unless keepTraffic=1 is passed.",
         "operationId": "post_panel_api_clients_del_email",
+        "description": "The inbounds are applied concurrently and independently: one that fails no longer stops the others. Every inbound error names the inbound it came from (`inbound 7: <message>`), and several failures are reported together, one per line. So a `success:false` response can still have removed the client from the remaining inbounds; the client record is kept in that case, so re-running the call retries exactly the leftovers. The record and traffic rows are dropped after the inbounds, so a failure there is reported without an `inbound <id>:` prefix and leaves the client already removed from every inbound.",
         "parameters": [
           {
             "name": "email",
@@ -7052,6 +8926,7 @@
         ],
         "summary": "Attach an existing client to one or more additional inbounds. Body is JSON.",
         "operationId": "post_panel_api_clients_email_attach",
+        "description": "A WireGuard client brings its stored `allowedIPs` into the new inbound instead of being given a fresh address, so the call fails with `inbound <id>: wireguard: allowedIPs entry already used by another client: <address>` when a different client of the target inbound already holds it. Free the address on that inbound first — see POST /panel/api/clients/add for the full rule. Inbounds are applied independently, so the remaining ones are still attached and a `success:false` response can be partial.",
         "parameters": [
           {
             "name": "email",
@@ -7124,6 +8999,7 @@
         ],
         "summary": "Detach a client from one or more inbounds without deleting the client.",
         "operationId": "post_panel_api_clients_email_detach",
+        "description": "The inbounds are applied concurrently and independently: one that fails no longer stops the others. Every inbound error names the inbound it came from (`inbound 7: <message>`), and several failures are reported together, one per line. So a `success:false` response can still have detached the remaining inbounds. Detach writes nothing beyond the inbounds, so every error carries the prefix.",
         "parameters": [
           {
             "name": "email",
@@ -7193,7 +9069,7 @@
         "tags": [
           "Clients"
         ],
-        "summary": "Replace a client's external links (per-client share links and remote subscription URLs surfaced in their subscription). Sends the full set; the server replaces all rows.",
+        "summary": "Replace a client's external links and external subscriptions. Sends the full set; the server replaces all rows. Disabled rows stay saved for editing but are not emitted in generated subscriptions. The owning client's disabled or expired state also stops these rows from being emitted on future subscription fetches; credentials already imported by an app remain valid until the external provider revokes them.",
         "operationId": "post_panel_api_clients_email_externalLinks",
         "parameters": [
           {
@@ -7218,7 +9094,7 @@
                     "items": {
                       "type": "object"
                     },
-                    "description": "Rows of { kind: \"link\" | \"subscription\", value, remark }. kind=link must be a share link; kind=subscription must be an http(s) URL."
+                    "description": "Full replacement list; the server replaces all rows. Each row supports { kind, value, remark, enable, expiryTime, namePrefix }. kind=link: value must be a supported share link such as vless://, vmess://, trojan://, ss://, hysteria2://, or wireguard://, and remark overrides the exported node name. kind=subscription: value must be an http(s) subscription URL, and namePrefix is prepended to fetched node names. Omit enable to default true; enable=false or an expired expiryTime keeps the row saved but excludes it from generated subscriptions. expiryTime is a unix millisecond timestamp where 0 means no link-specific expiry; the owning client's enabled state and expiry still apply. A negative value is rejected. Rows are matched by kind+value across saves, so id is ignored on write. lastFetchAt and lastFetchError are read-only status fields returned by GET."
                   }
                 },
                 "required": [
@@ -7230,12 +9106,17 @@
                   {
                     "kind": "link",
                     "value": "vless://uuid@host:443?...#srv",
-                    "remark": "DE"
+                    "remark": "DE",
+                    "enable": true,
+                    "expiryTime": 0
                   },
                   {
                     "kind": "subscription",
                     "value": "https://provider.example/sub/abc",
-                    "remark": "Provider"
+                    "remark": "Provider",
+                    "enable": false,
+                    "expiryTime": 1767225600000,
+                    "namePrefix": "[zjh] "
                   }
                 ]
               }
@@ -7342,7 +9223,7 @@
         "tags": [
           "Clients"
         ],
-        "summary": "Delete every client that is not attached to any inbound, along with its traffic record, IP log, and external links. Useful for clearing clients left unattached after their inbounds were removed. Returns the deleted count. Cannot be undone.",
+        "summary": "Delete every client that is not attached to any inbound, along with its traffic record, IP log, HWID devices, and external links. Useful for clearing clients left unattached after their inbounds were removed. Returns the deleted count. Cannot be undone.",
         "operationId": "post_panel_api_clients_delOrphans",
         "responses": {
           "200": {
@@ -7406,6 +9287,7 @@
                         "id": "...",
                         "totalGB": 53687091200,
                         "expiryTime": 0,
+                        "limitHwid": 2,
                         "enable": true,
                         "subId": "..."
                       },
@@ -7482,7 +9364,7 @@
         "tags": [
           "Clients"
         ],
-        "summary": "Shift expiry and/or traffic quota for many clients in one call. addDays/addBytes may be negative. Clients with unlimited expiry (expiryTime=0) or unlimited traffic (totalGB=0) are skipped for the corresponding field — bulk extend never converts unlimited to limited. A client that was auto-disabled solely because it was depleted (expired or over quota) is automatically re-enabled — locally and on its node — when the adjustment lifts it out of depletion; a manually-disabled or still-depleted client is left disabled. The optional flow directive sets the XTLS flow on every client: \"none\" clears it, \"xtls-rprx-vision\"/\"xtls-rprx-vision-udp443\" set it where the inbound supports it (omit or \"\" to leave it unchanged). Returns the adjusted count and per-email skip reasons.",
+        "summary": "Shift expiry and/or traffic quota for many clients in one call. addDays/addBytes may be negative. Clients with unlimited expiry (expiryTime=0) or unlimited traffic (totalGB=0) are skipped for the corresponding field — bulk extend never converts unlimited to limited. A client that was auto-disabled solely because it was depleted (expired or over quota) is automatically re-enabled — locally and on its node — when the adjustment lifts it out of depletion; a manually-disabled or still-depleted client is left disabled. The optional flow directive sets the XTLS flow on every client: \"none\" clears it, \"xtls-rprx-vision\"/\"xtls-rprx-vision-udp443\" set it where the inbound supports it (omit or \"\" to leave it unchanged). The optional limitHwid sets maximum registered devices (0 = unlimited). The optional adTag sets MTProto Telegram sponsor channel (\"none\" clears). Returns the adjusted count and per-email skip reasons.",
         "operationId": "post_panel_api_clients_bulkAdjust",
         "requestBody": {
           "required": true,
@@ -7498,7 +9380,9 @@
                 ],
                 "addDays": 30,
                 "addBytes": 53687091200,
-                "flow": "xtls-rprx-vision"
+                "flow": "xtls-rprx-vision",
+                "limitHwid": 2,
+                "adTag": "0123456789abcdef0123456789abcdef"
               }
             }
           }
@@ -7916,6 +9800,9 @@
                 "properties": {
                   "emails": {
                     "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
                     "description": "Emails of existing clients to attach."
                   },
                   "inboundIds": {
@@ -7996,6 +9883,9 @@
                 "properties": {
                   "emails": {
                     "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
                     "description": "Emails of existing clients to detach."
                   },
                   "inboundIds": {
@@ -8577,6 +10467,151 @@
         }
       }
     },
+    "/panel/api/clients/hwids/{email}": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "List registered HWID devices for a client with a short fingerprint. Full hashes are not exposed.",
+        "operationId": "post_panel_api_clients_hwids_email",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Client email.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": [
+                    {
+                      "id": 1,
+                      "firstSeen": 1735000000000,
+                      "lastSeen": 1735100000000,
+                      "userAgent": "Happ/1.0",
+                      "deviceOs": "android",
+                      "osVersion": "15",
+                      "deviceModel": "Pixel 9",
+                      "fingerprint": "6ad17c93e821"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Clear all registered HWID devices for a client so new devices can register again.",
+        "operationId": "delete_panel_api_clients_hwids_email",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Client email.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/clients/hwids/{email}/{id}": {
+      "delete": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Remove a single registered HWID device by its id, freeing one slot under the HWID limit.",
+        "operationId": "delete_panel_api_clients_hwids_email_id",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Client email.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Device id, from the list endpoint.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/api/clients/onlines": {
       "post": {
         "tags": [
@@ -8822,7 +10857,11 @@
                     "id": 14825,
                     "inboundId": 1,
                     "lastOnline": 1735680000000,
+                    "lastSubFetch": 1735680000000,
                     "reset": 0,
+                    "resetCount": 0,
+                    "resetDay": 0,
+                    "resetMax": 0,
                     "subId": "i7tvdpeffi0hvvf1",
                     "total": 10737418240,
                     "up": 1048576,
@@ -8876,6 +10915,55 @@
                     "vless://uuid@host:443?security=reality&...#user1",
                     "vmess://eyJ2IjoyLC..."
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/clients/happLink/{id}": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Generate a fresh Happ crypt5 link locally from the current client subscription URL when Happ link generation is enabled. The panel applies a resource limit of 8192 UTF-8 bytes to the source URL; this is not a Happ client maximum. Longer sources return success: false with msg: happ_source_too_long and obj: null. The source URL is not sent to a generation provider, and the result is not stored or reused.",
+        "operationId": "post_panel_api_clients_happLink_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Stable client record ID.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/HappLinkResult"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "encryptedLink": "happ://crypt5/example"
+                  }
                 }
               }
             }
@@ -9098,6 +11186,36 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/nodes/mtls/reloadClient": {
+      "post": {
+        "tags": [
+          "Nodes"
+        ],
+        "summary": "Validate the stored master mTLS client credential and invalidate cached transports. Each transport closes its old idle pool and rebuilds with the rotated certificate before its next request.",
+        "operationId": "post_panel_api_nodes_mtls_reloadClient",
         "responses": {
           "200": {
             "description": "Successful response",
@@ -11339,6 +13457,40 @@
         }
       }
     },
+    "/panel/api/setting/testDiscord": {
+      "post": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Test Discord bot connection by sending a test embed to the configured channel.",
+        "operationId": "post_panel_api_setting_testDiscord",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "msg": "Test notification sent successfully"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/api/setting/getDefaultJsonConfig": {
       "get": {
         "tags": [
@@ -11415,7 +13567,7 @@
         "tags": [
           "API Tokens"
         ],
-        "summary": "Mint a new API token. Name must be unique and 1-64 characters; the token string is server-generated and returned only in this response — it is stored hashed and cannot be retrieved later.",
+        "summary": "Mint a scoped API token. The server-generated plaintext is returned only once and stored as a hash.",
         "operationId": "post_panel_api_setting_apiTokens_create",
         "requestBody": {
           "required": true,
@@ -11428,9 +13580,17 @@
                     "type": "string",
                     "description": "Human-readable label, e.g. \"central-panel-a\"."
                   },
+                  "scope": {
+                    "type": "string",
+                    "description": "admin (default), monitor, or node-sync."
+                  },
+                  "expiresAt": {
+                    "type": "integer",
+                    "description": "Future Unix milliseconds, or 0 for no expiry."
+                  },
                   "namespaces": {
                     "type": "string",
-                    "description": "Comma-separated tag/email prefixes this token owns. Empty means unrestricted; otherwise every object it creates, edits or deletes must carry one of these prefixes, and a write naming no object at all is refused."
+                    "description": "Comma-separated tag/email prefixes this token owns. Empty means unrestricted; otherwise every object it creates, edits or deletes must carry one of them."
                   }
                 },
                 "required": [
@@ -11439,6 +13599,8 @@
               },
               "example": {
                 "name": "central-panel-a",
+                "scope": "admin",
+                "expiresAt": 0,
                 "namespaces": "ipl_"
               }
             }
@@ -11468,11 +13630,13 @@
                   "obj": {
                     "createdAt": 1736000000,
                     "enabled": true,
+                    "expiresAt": 0,
                     "id": 2,
                     "name": "central-panel-a",
                     "namespaces": [
                       ""
                     ],
+                    "scope": "admin",
                     "token": "new-token-string"
                   }
                 }
@@ -11522,6 +13686,28 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedScope": {
+                    "type": "string",
+                    "description": "Stored scope expected by the operator."
+                  }
+                },
+                "required": [
+                  "expectedScope"
+                ]
+              },
+              "example": {
+                "expectedScope": "node-sync"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful response",
@@ -11576,14 +13762,20 @@
                   "enabled": {
                     "type": "boolean",
                     "description": "New enabled state."
+                  },
+                  "expectedScope": {
+                    "type": "string",
+                    "description": "Stored scope expected by the operator."
                   }
                 },
                 "required": [
-                  "enabled"
+                  "enabled",
+                  "expectedScope"
                 ]
               },
               "example": {
-                "enabled": false
+                "enabled": false,
+                "expectedScope": "node-sync"
               }
             }
           }
@@ -12209,14 +14401,14 @@
             "name": "action",
             "in": "path",
             "required": true,
-            "description": "data — return Warp stats (quota, remaining). del — delete Warp data. config — return current Warp config. reg — register a new Warp endpoint (sends privateKey, publicKey). license — set a Warp+ license key (sends license).",
+            "description": "data — return Warp stats. del — delete Warp data. config — return current config. reg — register (sends keys). changeIp — rotate the endpoint. license — set a Warp+ key. interval — set automatic rotation in hours.",
             "schema": {
               "type": "string"
             }
           }
         ],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/x-www-form-urlencoded": {
               "schema": {
@@ -12233,13 +14425,12 @@
                   "license": {
                     "type": "string",
                     "description": "Required when action=license."
+                  },
+                  "interval": {
+                    "type": "integer",
+                    "description": "Non-negative hours between automatic rotations. Required when action=interval; 0 disables rotation."
                   }
-                },
-                "required": [
-                  "privateKey",
-                  "publicKey",
-                  "license"
-                ]
+                }
               }
             }
           }
@@ -12286,7 +14477,7 @@
           }
         ],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/x-www-form-urlencoded": {
               "schema": {
@@ -12304,12 +14495,76 @@
                     "type": "string",
                     "description": "Required when action=setKey."
                   }
-                },
-                "required": [
-                  "countryId",
-                  "token",
-                  "key"
-                ]
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/xray/pia/{action}": {
+      "post": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "Manage PIA WireGuard integration. The action parameter selects the operation.",
+        "operationId": "post_panel_api_xray_pia_action",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "description": "countries — list available countries from the signed PIA server list. servers — list regions and WireGuard servers in a country (sends countryCode). reg — sign in with a PIA username and password (sends username, password). data — return the signed-in account hint. del — delete stored PIA credentials. addKey — register a WireGuard key with the selected server (sends hostname) and return fields to build the outbound.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "Required when action=reg."
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Required when action=reg."
+                  },
+                  "countryCode": {
+                    "type": "string",
+                    "description": "Required when action=servers."
+                  },
+                  "hostname": {
+                    "type": "string",
+                    "description": "Required when action=addKey."
+                  }
+                }
               }
             }
           }
@@ -12414,9 +14669,7 @@
                   }
                 },
                 "required": [
-                  "outbound",
-                  "allOutbounds",
-                  "mode"
+                  "outbound"
                 ]
               }
             }
@@ -12473,9 +14726,7 @@
                   }
                 },
                 "required": [
-                  "outbounds",
-                  "allOutbounds",
-                  "mode"
+                  "outbounds"
                 ]
               }
             }
@@ -12577,8 +14828,7 @@
                   }
                 },
                 "required": [
-                  "tag",
-                  "target"
+                  "tag"
                 ]
               }
             }
@@ -12615,7 +14865,7 @@
         "summary": "Ask the running core which outbound its router would pick for a synthetic connection (RoutingService.TestRoute). No traffic is sent.",
         "operationId": "post_panel_api_xray_routeTest",
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/x-www-form-urlencoded": {
               "schema": {
@@ -12649,15 +14899,234 @@
                     "type": "string",
                     "description": "User attribution for user-based rules (optional)."
                   }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/xray/geodata/files": {
+      "get": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "List the geo databases (.dat files) in the Xray asset folder, with the layout detected from their contents, size, modification time and category count. A database that fails to parse is still listed, with the reason in \"error\".",
+        "operationId": "get_panel_api_xray_geodata_files",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/xray/geodata/categories": {
+      "get": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "One page of a database's categories, each with its entry count and the attributes its domains carry (e.g. \"ads\", \"cn\").",
+        "operationId": "get_panel_api_xray_geodata_categories",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "query",
+            "required": true,
+            "description": "Database file name inside the asset folder, e.g. geosite.dat (required).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Case-insensitive substring filter on the category code.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Rows to skip. Defaults to 0.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Rows to return, capped at 500. Omit it to return every category — the index is small and the panel filters it client-side.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/xray/geodata/entries": {
+      "get": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "One page of the rules inside a category — domain rules typed as domain/full/keyword/regexp for geosite databases, CIDRs for geoip ones.",
+        "operationId": "get_panel_api_xray_geodata_entries",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "query",
+            "required": true,
+            "description": "Database file name inside the asset folder (required).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "description": "Category code, case-insensitive, e.g. google (required).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Case-insensitive substring filter on the rule value.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Rows to skip. Defaults to 0.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Rows to return, capped at 500. Defaults to the cap.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/xray/geodata/validate": {
+      "post": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "Check routing tokens against the databases on disk and return only the ones that do not resolve. Plain domains and CIDRs are ignored. Each issue carries a reason: syntax, fileMissing or categoryMissing.",
+        "operationId": "post_panel_api_xray_geodata_validate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tokens": {
+                    "type": "string",
+                    "description": "Comma-separated routing tokens, e.g. \"geosite:google,geosite:blabla\". Max 500 per request."
+                  },
+                  "kind": {
+                    "type": "string",
+                    "description": "\"ip\" to parse the tokens as IP rules (geoip:, ext-ip:, leading !). Anything else parses them as domain rules (geosite:, ext-site:)."
+                  }
                 },
                 "required": [
-                  "domain",
-                  "ip",
-                  "port",
-                  "network",
-                  "inboundTag",
-                  "protocol",
-                  "email"
+                  "tokens"
                 ]
               }
             }
@@ -12738,7 +15207,11 @@
                   },
                   "tagPrefix": {
                     "type": "string",
-                    "description": "Prefix for generated outbound tags. Defaults to \"sub<id>-\"."
+                    "description": "Prefix for generated outbound tags. Defaults to the lowest free \"sub<N>-\" prefix."
+                  },
+                  "userAgent": {
+                    "type": "string",
+                    "description": "Custom User-Agent sent when fetching this subscription. Defaults to \"3x-ui-outbound-sub/1.0\"."
                   },
                   "updateInterval": {
                     "type": "integer",
@@ -12750,21 +15223,19 @@
                   },
                   "allowPrivate": {
                     "type": "boolean",
-                    "description": "Allow the URL to point at a private/internal/loopback address (localhost/LAN). Default false (SSRF guard blocks private targets)."
+                    "description": "Allow the URL to point at a private/internal/loopback address. Default false."
+                  },
+                  "allowInsecure": {
+                    "type": "boolean",
+                    "description": "Skip TLS certificate verification when fetching the subscription's URL. Default false."
                   },
                   "prepend": {
                     "type": "boolean",
-                    "description": "Place this subscription's outbounds before the manual template outbounds (so one can become the default). Default false."
+                    "description": "Place this subscription's outbounds before the manual template outbounds. Default false."
                   }
                 },
                 "required": [
-                  "remark",
-                  "url",
-                  "tagPrefix",
-                  "updateInterval",
-                  "enabled",
-                  "allowPrivate",
-                  "prepend"
+                  "url"
                 ]
               }
             }
@@ -12811,6 +15282,57 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "remark": {
+                    "type": "string",
+                    "description": "Optional display label."
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "Subscription URL (required). Must be a public http(s) address; private/internal targets are blocked unless allowPrivate is true."
+                  },
+                  "tagPrefix": {
+                    "type": "string",
+                    "description": "Prefix for generated outbound tags. Defaults to the lowest free \"sub<N>-\" prefix."
+                  },
+                  "userAgent": {
+                    "type": "string",
+                    "description": "Custom User-Agent sent when fetching this subscription. Defaults to \"3x-ui-outbound-sub/1.0\"."
+                  },
+                  "updateInterval": {
+                    "type": "integer",
+                    "description": "Seconds between auto-refreshes. Default 600."
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Whether the subscription is active. Default true."
+                  },
+                  "allowPrivate": {
+                    "type": "boolean",
+                    "description": "Allow the URL to point at a private/internal/loopback address. Default false."
+                  },
+                  "allowInsecure": {
+                    "type": "boolean",
+                    "description": "Skip TLS certificate verification when fetching the subscription's URL. Default false."
+                  },
+                  "prepend": {
+                    "type": "boolean",
+                    "description": "Place this subscription's outbounds before the manual template outbounds. Default false."
+                  }
+                },
+                "required": [
+                  "url"
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful response",
@@ -12974,7 +15496,7 @@
           }
         ],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/x-www-form-urlencoded": {
               "schema": {
@@ -12984,10 +15506,7 @@
                     "type": "string",
                     "description": "\"up\" to raise priority, anything else to lower it."
                   }
-                },
-                "required": [
-                  "dir"
-                ]
+                }
               }
             }
           }
@@ -13032,6 +15551,18 @@
                   "url": {
                     "type": "string",
                     "description": "Subscription URL to preview (required)."
+                  },
+                  "userAgent": {
+                    "type": "string",
+                    "description": "Custom User-Agent sent while fetching the preview."
+                  },
+                  "allowPrivate": {
+                    "type": "boolean",
+                    "description": "Allow a private/internal/loopback URL. Default false."
+                  },
+                  "allowInsecure": {
+                    "type": "boolean",
+                    "description": "Skip TLS certificate verification. Default false."
                   }
                 },
                 "required": [
@@ -13591,12 +16122,377 @@
         }
       }
     },
+    "/panel/api/sub-balancers": {
+      "get": {
+        "tags": [
+          "Subscription Balancers"
+        ],
+        "summary": "List all subscription balancers in sort order (sort_order asc, id asc).",
+        "operationId": "get_panel_api_sub_balancers",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SubBalancer"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": [
+                    {
+                      "createdAt": 1710000000000,
+                      "enabled": true,
+                      "id": 1,
+                      "inboundIds": [
+                        1,
+                        3
+                      ],
+                      "memberWeights": {},
+                      "remark": "auto-fastest",
+                      "sortOrder": 1,
+                      "strategy": "random",
+                      "updatedAt": 1710000000000
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Subscription Balancers"
+        ],
+        "summary": "Create a subscription balancer. It appears in the JSON subscription of every client that sits on at least one selected inbound.",
+        "operationId": "post_panel_api_sub_balancers",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "remark": {
+                    "type": "string",
+                    "description": "Display label, used as the config remarks (required)."
+                  },
+                  "strategy": {
+                    "type": "string",
+                    "description": "Balancer strategy: \"leastLoad\", \"leastPing\", \"roundRobin\" or \"random\". Default \"random\"."
+                  },
+                  "inboundIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "Repeated form keys selecting the member inbounds (required, at least one)."
+                  },
+                  "memberWeights": {
+                    "type": "object",
+                    "description": "leastLoad only: JSON object mapping inbound id to a static weight > 0, e.g. {\"3\":0.2}. Lower weight = picked more often; absent ids weigh 1. Rejected for other strategies; entries for unselected inbounds are dropped."
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "description": "1-based position in the subscription list. Default 1."
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Whether the balancer is emitted. Default true on create; unchanged when omitted on update."
+                  }
+                },
+                "required": [
+                  "remark",
+                  "inboundIds"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/SubBalancer"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "createdAt": 1710000000000,
+                    "enabled": true,
+                    "id": 1,
+                    "inboundIds": [
+                      1,
+                      3
+                    ],
+                    "memberWeights": {},
+                    "remark": "auto-fastest",
+                    "sortOrder": 1,
+                    "strategy": "random",
+                    "updatedAt": 1710000000000
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/sub-balancers/{id}": {
+      "post": {
+        "tags": [
+          "Subscription Balancers"
+        ],
+        "summary": "Update a balancer by id. Accepts the same form fields as create (full-row update); omitting memberWeights clears stored weights, while omitting enabled keeps its current value.",
+        "operationId": "post_panel_api_sub_balancers_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Balancer id.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "remark": {
+                    "type": "string",
+                    "description": "Display label, used as the config remarks (required)."
+                  },
+                  "strategy": {
+                    "type": "string",
+                    "description": "Balancer strategy: \"leastLoad\", \"leastPing\", \"roundRobin\" or \"random\". Default \"random\"."
+                  },
+                  "inboundIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "Repeated form keys selecting the member inbounds (required, at least one)."
+                  },
+                  "memberWeights": {
+                    "type": "object",
+                    "description": "leastLoad only: JSON object mapping inbound id to a static weight > 0, e.g. {\"3\":0.2}. Lower weight = picked more often; absent ids weigh 1. Rejected for other strategies; entries for unselected inbounds are dropped."
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "description": "1-based position in the subscription list. Default 1."
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Whether the balancer is emitted. Default true on create; unchanged when omitted on update."
+                  }
+                },
+                "required": [
+                  "remark",
+                  "inboundIds"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/SubBalancer"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "createdAt": 1710000000000,
+                    "enabled": true,
+                    "id": 1,
+                    "inboundIds": [
+                      1,
+                      3
+                    ],
+                    "memberWeights": {},
+                    "remark": "auto-fastest",
+                    "sortOrder": 1,
+                    "strategy": "random",
+                    "updatedAt": 1710000000000
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Subscription Balancers"
+        ],
+        "summary": "Delete a balancer by id.",
+        "operationId": "delete_panel_api_sub_balancers_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Balancer id.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/SubBalancer"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "createdAt": 1710000000000,
+                    "enabled": true,
+                    "id": 1,
+                    "inboundIds": [
+                      1,
+                      3
+                    ],
+                    "memberWeights": {},
+                    "remark": "auto-fastest",
+                    "sortOrder": 1,
+                    "strategy": "random",
+                    "updatedAt": 1710000000000
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/sub-balancers/{id}/del": {
+      "post": {
+        "tags": [
+          "Subscription Balancers"
+        ],
+        "summary": "Delete a balancer by id (POST alias of DELETE for clients that cannot send DELETE).",
+        "operationId": "post_panel_api_sub_balancers_id_del",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Balancer id.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/SubBalancer"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "createdAt": 1710000000000,
+                    "enabled": true,
+                    "id": 1,
+                    "inboundIds": [
+                      1,
+                      3
+                    ],
+                    "memberWeights": {},
+                    "remark": "auto-fastest",
+                    "sortOrder": 1,
+                    "strategy": "random",
+                    "updatedAt": 1710000000000
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/{subPath}{subid}": {
       "get": {
         "tags": [
           "Subscription Server"
         ],
-        "summary": "Return base64-encoded subscription links for all enabled clients matching the subscription ID. When the request has an Accept: text/html header or ?html=1, renders a styled info page instead. With ?format=info, returns the page view-model as JSON (traffic, expiry, online status; no links) for live polling. Default path: /sub/:subid.",
+        "summary": "Return base64-encoded subscription links for all enabled clients matching the subscription ID. When the request has an Accept: text/html header or ?html=1, renders a styled info page instead. With ?format=info, returns the page view-model as JSON (traffic, expiry, online status; no links) for live polling. The path prefix is configured by subPath.",
         "operationId": "get_subPath_subid",
         "parameters": [
           {
@@ -13648,6 +16544,137 @@
             }
           }
         }
+      },
+      "head": {
+        "tags": [
+          "Subscription Server"
+        ],
+        "summary": "Return the same status and subscription metadata headers as GET without a response body.",
+        "operationId": "head_subPath_subid",
+        "parameters": [
+          {
+            "name": "subid",
+            "in": "path",
+            "required": true,
+            "description": "Client subscription ID.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subPath",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscription is available. Headers match GET; no response body."
+          },
+          "404": {
+            "description": "No enabled client matches the subscription ID."
+          },
+          "500": {
+            "description": "Subscription generation failed."
+          }
+        }
+      }
+    },
+    "/{subPath}{subid}/hwid-status": {
+      "get": {
+        "tags": [
+          "Subscription Server"
+        ],
+        "summary": "Return aggregate HWID device-slot usage for the subscription: whether an HWID limit is active, the limit, how many devices are registered and how many slots remain. Read-only — it never registers a device, so asking does not consume a slot. Counters only: no HWID value, email or device metadata. The path prefix is configured by subPath.",
+        "operationId": "get_subPath_subid_hwid_status",
+        "description": "Responds with the bare HwidSlotStatus object, not the <code>{success,msg,obj}</code> panel envelope, like the other subscription-server routes. With no HWID limit configured, <code>active</code> is false and every counter is 0.",
+        "parameters": [
+          {
+            "name": "subid",
+            "in": "path",
+            "required": true,
+            "description": "Client subscription ID.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subPath",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Device-slot counters for the subscription.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "active": true,
+                  "full": false,
+                  "limit": 2,
+                  "registered": 1,
+                  "remaining": 1
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/HwidSlotStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No enabled client matches the subscription ID. Empty body."
+          },
+          "500": {
+            "description": "Database lookup failed. Empty body."
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "Subscription Server"
+        ],
+        "summary": "Return the HWID device-slot status code and headers as GET without a response body.",
+        "operationId": "head_subPath_subid_hwid_status",
+        "parameters": [
+          {
+            "name": "subid",
+            "in": "path",
+            "required": true,
+            "description": "Client subscription ID.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subPath",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Headers match GET; no response body."
+          },
+          "404": {
+            "description": "No enabled client matches the subscription ID. Empty body."
+          },
+          "500": {
+            "description": "Database lookup failed. Empty body."
+          }
+        }
       }
     },
     "/{jsonPath}{subid}": {
@@ -13655,7 +16682,7 @@
         "tags": [
           "Subscription Server"
         ],
-        "summary": "Return subscription as a JSON array of proxy configs (one per enabled client). Only when JSON subscription is enabled in settings. Default path: /json/:subid.",
+        "summary": "Return subscription as a JSON array of proxy configs (one per enabled client). Only when JSON subscription is enabled in settings. The path prefix is configured by subJsonPath.",
         "operationId": "get_jsonPath_subid",
         "parameters": [
           {
@@ -13698,6 +16725,44 @@
             }
           }
         }
+      },
+      "head": {
+        "tags": [
+          "Subscription Server"
+        ],
+        "summary": "Return the JSON subscription status and metadata headers without a body. Registered only when JSON subscriptions are enabled.",
+        "operationId": "head_jsonPath_subid",
+        "parameters": [
+          {
+            "name": "subid",
+            "in": "path",
+            "required": true,
+            "description": "Client subscription ID.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "jsonPath",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscription is available. Headers match GET; no response body."
+          },
+          "404": {
+            "description": "No enabled client matches the subscription ID."
+          },
+          "500": {
+            "description": "Subscription generation failed."
+          }
+        }
       }
     },
     "/{clashPath}{subid}": {
@@ -13705,7 +16770,7 @@
         "tags": [
           "Subscription Server"
         ],
-        "summary": "Return subscription as a Clash/Mihomo-compatible YAML config, including configured global Clash routing rules. Only when Clash subscription is enabled in settings. Default path: /clash/:subid.",
+        "summary": "Return subscription as a Clash/Mihomo-compatible YAML config, including configured global Clash routing rules. Only when Clash subscription is enabled in settings. The path prefix is configured by subClashPath.",
         "operationId": "get_clashPath_subid",
         "parameters": [
           {
@@ -13748,6 +16813,44 @@
             }
           }
         }
+      },
+      "head": {
+        "tags": [
+          "Subscription Server"
+        ],
+        "summary": "Return the Clash subscription status and metadata headers without a body. Registered only when Clash subscriptions are enabled.",
+        "operationId": "head_clashPath_subid",
+        "parameters": [
+          {
+            "name": "subid",
+            "in": "path",
+            "required": true,
+            "description": "Client subscription ID.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clashPath",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscription is available. Headers match GET; no response body."
+          },
+          "404": {
+            "description": "No enabled client matches the subscription ID."
+          },
+          "500": {
+            "description": "Subscription generation failed."
+          }
+        }
       }
     },
     "/ws": {
@@ -13758,173 +16861,822 @@
         "summary": "Upgrade an HTTP connection to a WebSocket. Requires an authenticated session cookie (Bearer token auth is not supported here). Returns 101 Switching Protocols on success. The server then pushes JSON messages described below.",
         "operationId": "get_ws",
         "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "obj": {}
-                  }
-                }
-              }
-            }
+          "101": {
+            "description": "Switching Protocols. WebSocket messages use WebSocketEnvelope."
+          },
+          "401": {
+            "description": "No authenticated panel session cookie."
           }
-        }
-      }
-    },
-    "→ type: status": {
-      "ws": {
-        "tags": [
-          "WebSocket"
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
         ],
-        "summary": "Server health snapshot pushed every 2 seconds. Contains CPU, memory, swap, disk, network IO, load, and Xray state — same shape as <code>GET /panel/api/server/status</code>.",
-        "operationId": "ws_type_status",
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
+        "x-websocket-events": [
+          {
+            "type": "status",
+            "summary": "Server health snapshot pushed every two seconds; same payload as server/status obj.",
+            "payloadSchema": {
+              "type": "object",
+              "required": [
+                "cpu",
+                "cpuCores",
+                "logicalPro",
+                "cpuSpeedMhz",
+                "mem",
+                "swap",
+                "disk",
+                "diskIO",
+                "diskTraffic",
+                "xray",
+                "amneziawg",
+                "panelVersion",
+                "panelGuid",
+                "uptime",
+                "loads",
+                "tcpCount",
+                "udpCount",
+                "netIO",
+                "netTraffic",
+                "publicIP",
+                "appStats"
+              ],
+              "properties": {
+                "cpu": {
+                  "type": "number"
+                },
+                "cpuCores": {
+                  "type": "integer"
+                },
+                "logicalPro": {
+                  "type": "integer"
+                },
+                "cpuSpeedMhz": {
+                  "type": "number"
+                },
+                "mem": {
                   "type": "object",
+                  "required": [
+                    "current",
+                    "total"
+                  ],
                   "properties": {
-                    "success": {
-                      "type": "boolean"
+                    "current": {
+                      "type": "integer",
+                      "format": "int64"
                     },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "obj": {}
+                    "total": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
                   }
                 },
-                "example": {
-                  "type": "status",
-                  "data": {
-                    "cpu": 12.5,
-                    "mem": {
-                      "current": 2147483648,
-                      "total": 8589934592
+                "swap": {
+                  "type": "object",
+                  "required": [
+                    "current",
+                    "total"
+                  ],
+                  "properties": {
+                    "current": {
+                      "type": "integer",
+                      "format": "int64"
                     },
-                    "xray": {
-                      "state": "running"
+                    "total": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                },
+                "disk": {
+                  "type": "object",
+                  "required": [
+                    "current",
+                    "total"
+                  ],
+                  "properties": {
+                    "current": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                },
+                "diskIO": {
+                  "type": "object",
+                  "required": [
+                    "read",
+                    "write"
+                  ],
+                  "properties": {
+                    "read": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "write": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                },
+                "diskTraffic": {
+                  "type": "object",
+                  "required": [
+                    "read",
+                    "write"
+                  ],
+                  "properties": {
+                    "read": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "write": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                },
+                "xray": {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "errorMsg",
+                    "version"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "stop",
+                        "error"
+                      ]
+                    },
+                    "errorMsg": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "amneziawg": {
+                  "type": "object",
+                  "required": [
+                    "configured",
+                    "running"
+                  ],
+                  "properties": {
+                    "configured": {
+                      "type": "boolean"
+                    },
+                    "running": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "panelVersion": {
+                  "type": "string"
+                },
+                "panelGuid": {
+                  "type": "string"
+                },
+                "uptime": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "loads": {
+                  "type": "array",
+                  "nullable": true,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "tcpCount": {
+                  "type": "integer"
+                },
+                "udpCount": {
+                  "type": "integer"
+                },
+                "netIO": {
+                  "type": "object",
+                  "required": [
+                    "up",
+                    "down",
+                    "pktUp",
+                    "pktDown"
+                  ],
+                  "properties": {
+                    "up": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "down": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "pktUp": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "pktDown": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                },
+                "netTraffic": {
+                  "type": "object",
+                  "required": [
+                    "sent",
+                    "recv",
+                    "pktSent",
+                    "pktRecv"
+                  ],
+                  "properties": {
+                    "sent": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "recv": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "pktSent": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "pktRecv": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                },
+                "publicIP": {
+                  "type": "object",
+                  "required": [
+                    "ipv4",
+                    "ipv6"
+                  ],
+                  "properties": {
+                    "ipv4": {
+                      "type": "string"
+                    },
+                    "ipv6": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "appStats": {
+                  "type": "object",
+                  "required": [
+                    "threads",
+                    "mem",
+                    "uptime"
+                  ],
+                  "properties": {
+                    "threads": {
+                      "type": "integer"
+                    },
+                    "mem": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "uptime": {
+                      "type": "integer",
+                      "format": "int64"
                     }
                   }
                 }
               }
+            },
+            "example": {
+              "type": "status",
+              "payload": {
+                "cpu": 12.5,
+                "cpuCores": 4,
+                "logicalPro": 8,
+                "cpuSpeedMhz": 3200,
+                "mem": {
+                  "current": 2147483648,
+                  "total": 8589934592
+                },
+                "swap": {
+                  "current": 0,
+                  "total": 2147483648
+                },
+                "disk": {
+                  "current": 53687091200,
+                  "total": 107374182400
+                },
+                "diskIO": {
+                  "read": 1048576,
+                  "write": 2097152
+                },
+                "diskTraffic": {
+                  "read": 4096,
+                  "write": 8192
+                },
+                "xray": {
+                  "state": "running",
+                  "errorMsg": "",
+                  "version": "25.10.31"
+                },
+                "amneziawg": {
+                  "configured": false,
+                  "running": false
+                },
+                "panelVersion": "v3.x.x",
+                "panelGuid": "panel-guid",
+                "uptime": 86400,
+                "loads": [
+                  0.1,
+                  0.2,
+                  0.3
+                ],
+                "tcpCount": 24,
+                "udpCount": 8,
+                "netIO": {
+                  "up": 1048576,
+                  "down": 2097152,
+                  "pktUp": 100,
+                  "pktDown": 200
+                },
+                "netTraffic": {
+                  "sent": 4096,
+                  "recv": 8192,
+                  "pktSent": 10,
+                  "pktRecv": 20
+                },
+                "publicIP": {
+                  "ipv4": "192.0.2.1",
+                  "ipv6": "2001:db8::1"
+                },
+                "appStats": {
+                  "threads": 16,
+                  "mem": 67108864,
+                  "uptime": 3600
+                }
+              },
+              "time": 1735689600000
             }
-          }
-        }
-      }
-    },
-    "→ type: xrayState": {
-      "ws": {
-        "tags": [
-          "WebSocket"
-        ],
-        "summary": "Xray process state change. Fired when Xray starts, stops, or encounters an error.",
-        "operationId": "ws_type_xrayState",
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "obj": {}
+          },
+          {
+            "type": "traffic",
+            "summary": "Live traffic deltas plus online, per-node and last-online maps. Local polls send traffics/clientTraffics; node polls send nodeTraffics.",
+            "payloadSchema": {
+              "type": "object",
+              "required": [
+                "onlineClients",
+                "onlineByGuid",
+                "activeInbounds",
+                "lastOnlineMap"
+              ],
+              "properties": {
+                "traffics": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Traffic"
                   }
                 },
-                "example": {
-                  "type": "xrayState",
-                  "data": "running"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "→ type: notification": {
-      "ws": {
-        "tags": [
-          "WebSocket"
-        ],
-        "summary": "In-panel toast notification. Fired on Xray stop/restart, DB import, panel restart, etc.",
-        "operationId": "ws_type_notification",
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "obj": {}
+                "clientTraffics": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClientTraffic"
                   }
                 },
-                "example": {
-                  "type": "notification",
-                  "title": "Xray service restarted",
-                  "body": "Xray has been restarted successfully",
-                  "severity": "success"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "→ type: invalidate": {
-      "ws": {
-        "tags": [
-          "WebSocket"
-        ],
-        "summary": "Instructs the UI to re-fetch a resource. Fired when another admin session modifies data (e.g. toggling inbound enable).",
-        "operationId": "ws_type_invalidate",
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "obj": {}
+                "nodeTraffics": {
+                  "type": "array",
+                  "nullable": true,
+                  "items": {
+                    "$ref": "#/components/schemas/Traffic"
                   }
                 },
-                "example": {
-                  "type": "invalidate",
-                  "resource": "inbounds"
+                "onlineClients": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "onlineByGuid": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "activeInbounds": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "lastOnlineMap": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "format": "int64"
+                  }
+                }
+              },
+              "oneOf": [
+                {
+                  "required": [
+                    "traffics",
+                    "clientTraffics"
+                  ]
+                },
+                {
+                  "required": [
+                    "nodeTraffics"
+                  ]
+                }
+              ]
+            },
+            "example": {
+              "type": "traffic",
+              "payload": {
+                "traffics": [
+                  {
+                    "Down": 2097152,
+                    "IsInbound": true,
+                    "IsOutbound": false,
+                    "Tag": "inbound-443",
+                    "Up": 1048576
+                  }
+                ],
+                "clientTraffics": [
+                  {
+                    "down": 2097152,
+                    "email": "user1",
+                    "enable": true,
+                    "expiryTime": 1735689600000,
+                    "id": 14825,
+                    "inboundId": 1,
+                    "lastOnline": 1735680000000,
+                    "lastSubFetch": 1735680000000,
+                    "reset": 0,
+                    "resetCount": 0,
+                    "resetDay": 0,
+                    "resetMax": 0,
+                    "subId": "i7tvdpeffi0hvvf1",
+                    "total": 10737418240,
+                    "up": 1048576,
+                    "uuid": "e18c9a96-71bf-48d4-933f-8b9a46d4290c"
+                  }
+                ],
+                "onlineClients": [
+                  "alice@example.com"
+                ],
+                "onlineByGuid": {
+                  "panel-guid": [
+                    "alice@example.com"
+                  ]
+                },
+                "activeInbounds": {
+                  "panel-guid": [
+                    "inbound-443"
+                  ]
+                },
+                "lastOnlineMap": {
+                  "alice@example.com": 1735689600000
+                }
+              },
+              "time": 1735689600000
+            }
+          },
+          {
+            "type": "client_stats",
+            "summary": "Absolute client counters and/or inbound summaries; snapshot says whether clients is complete or only recently active rows.",
+            "payloadSchema": {
+              "type": "object",
+              "required": [
+                "snapshot"
+              ],
+              "properties": {
+                "snapshot": {
+                  "type": "boolean"
+                },
+                "clients": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClientTraffic"
+                  }
+                },
+                "inbounds": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InboundTrafficSummary"
+                  }
+                }
+              },
+              "anyOf": [
+                {
+                  "required": [
+                    "clients"
+                  ]
+                },
+                {
+                  "required": [
+                    "inbounds"
+                  ]
+                }
+              ]
+            },
+            "example": {
+              "type": "client_stats",
+              "payload": {
+                "snapshot": true,
+                "clients": [
+                  {
+                    "down": 2097152,
+                    "email": "user1",
+                    "enable": true,
+                    "expiryTime": 1735689600000,
+                    "id": 14825,
+                    "inboundId": 1,
+                    "lastOnline": 1735680000000,
+                    "lastSubFetch": 1735680000000,
+                    "reset": 0,
+                    "resetCount": 0,
+                    "resetDay": 0,
+                    "resetMax": 0,
+                    "subId": "i7tvdpeffi0hvvf1",
+                    "total": 10737418240,
+                    "up": 1048576,
+                    "uuid": "e18c9a96-71bf-48d4-933f-8b9a46d4290c"
+                  }
+                ],
+                "inbounds": [
+                  {
+                    "down": 0,
+                    "enable": false,
+                    "id": 0,
+                    "total": 0,
+                    "up": 0
+                  }
+                ]
+              },
+              "time": 1735689600000
+            }
+          },
+          {
+            "type": "inbounds",
+            "summary": "Full inbound list after an inbound mutation, unless invalidate is used at scale.",
+            "payloadSchema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Inbound"
+              }
+            },
+            "example": {
+              "type": "inbounds",
+              "payload": [
+                {
+                  "clientStats": [
+                    {
+                      "down": 2097152,
+                      "email": "user1",
+                      "enable": true,
+                      "expiryTime": 1735689600000,
+                      "id": 14825,
+                      "inboundId": 1,
+                      "lastOnline": 1735680000000,
+                      "lastSubFetch": 1735680000000,
+                      "reset": 0,
+                      "resetCount": 0,
+                      "resetDay": 0,
+                      "resetMax": 0,
+                      "subId": "i7tvdpeffi0hvvf1",
+                      "total": 10737418240,
+                      "up": 1048576,
+                      "uuid": "e18c9a96-71bf-48d4-933f-8b9a46d4290c"
+                    }
+                  ],
+                  "disableFlow": false,
+                  "down": 0,
+                  "enable": true,
+                  "expiryTime": 0,
+                  "fallbackParent": null,
+                  "id": 1,
+                  "lastTrafficResetTime": 0,
+                  "listen": "",
+                  "nodeId": null,
+                  "originNodeGuid": "",
+                  "port": 443,
+                  "protocol": "vless",
+                  "remark": "VLESS-443",
+                  "settings": null,
+                  "shareAddr": "",
+                  "shareAddrStrategy": "node",
+                  "sniffing": null,
+                  "streamSettings": null,
+                  "subSortIndex": 1,
+                  "tag": "in-443-tcp",
+                  "total": 0,
+                  "trafficReset": "never",
+                  "trafficResetDay": 1,
+                  "up": 0
+                }
+              ],
+              "time": 1735689600000
+            }
+          },
+          {
+            "type": "outbounds",
+            "summary": "Current outbound traffic rows after the periodic traffic collection.",
+            "payloadSchema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/OutboundTraffics"
+              }
+            },
+            "example": {
+              "type": "outbounds",
+              "payload": [
+                {
+                  "down": 0,
+                  "id": 0,
+                  "tag": "",
+                  "total": 0,
+                  "up": 0
+                }
+              ],
+              "time": 1735689600000
+            }
+          },
+          {
+            "type": "nodes",
+            "summary": "Current node tree after the heartbeat probe cycle.",
+            "payloadSchema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/NodeView"
+              }
+            },
+            "example": {
+              "type": "nodes",
+              "payload": [
+                {
+                  "activeCount": 20,
+                  "address": "node.example.com",
+                  "allowPrivateAddress": false,
+                  "basePath": "/",
+                  "clientCount": 25,
+                  "configDirty": false,
+                  "configDirtyAt": 0,
+                  "cpuPct": 12.5,
+                  "createdAt": 1700000000,
+                  "depletedCount": 1,
+                  "disabledCount": 2,
+                  "enable": true,
+                  "guid": "node-guid",
+                  "hasApiToken": true,
+                  "id": 1,
+                  "inboundCount": 3,
+                  "inboundSyncMode": "all",
+                  "inboundTags": [
+                    "in-443-tcp"
+                  ],
+                  "lastError": "",
+                  "lastHeartbeat": 1700000000,
+                  "latencyMs": 42,
+                  "memPct": 45.2,
+                  "name": "edge-1",
+                  "netDown": 1048576,
+                  "netUp": 2097152,
+                  "onlineCount": 5,
+                  "outboundTag": "direct",
+                  "panelVersion": "v3.x.x",
+                  "parentGuid": "",
+                  "pinnedCertSha256": "",
+                  "port": 2053,
+                  "remark": "Primary edge",
+                  "scheme": "https",
+                  "status": "online",
+                  "tlsVerifyMode": "verify",
+                  "transitive": false,
+                  "updatedAt": 1700003600,
+                  "uptimeSecs": 86400,
+                  "xrayError": "",
+                  "xrayState": "running",
+                  "xrayVersion": "25.10.31"
+                }
+              ],
+              "time": 1735689600000
+            }
+          },
+          {
+            "type": "notification",
+            "summary": "An in-panel notification emitted by server actions.",
+            "payloadSchema": {
+              "type": "object",
+              "required": [
+                "title",
+                "message",
+                "level"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "level": {
+                  "type": "string",
+                  "enum": [
+                    "success",
+                    "warning"
+                  ]
                 }
               }
+            },
+            "example": {
+              "type": "notification",
+              "payload": {
+                "title": "Xray service restarted",
+                "message": "Xray service has been restarted successfully",
+                "level": "success"
+              },
+              "time": 1735689600000
+            }
+          },
+          {
+            "type": "xray_state",
+            "summary": "Xray process state change after a stop, restart or error.",
+            "payloadSchema": {
+              "type": "object",
+              "required": [
+                "state",
+                "errorMsg"
+              ],
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "running",
+                    "stop",
+                    "error"
+                  ]
+                },
+                "errorMsg": {
+                  "type": "string"
+                }
+              }
+            },
+            "example": {
+              "type": "xray_state",
+              "payload": {
+                "state": "running",
+                "errorMsg": ""
+              },
+              "time": 1735689600000
+            }
+          },
+          {
+            "type": "invalidate",
+            "summary": "Requests a REST re-fetch. clients is an invalidate payload type, not a top-level event.",
+            "payloadSchema": {
+              "type": "object",
+              "required": [
+                "type"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "status",
+                    "traffic",
+                    "client_stats",
+                    "inbounds",
+                    "outbounds",
+                    "nodes",
+                    "notification",
+                    "xray_state",
+                    "clients"
+                  ]
+                }
+              }
+            },
+            "example": {
+              "type": "invalidate",
+              "payload": {
+                "type": "inbounds"
+              },
+              "time": 1735689600000
             }
           }
-        }
+        ]
       }
     }
   }

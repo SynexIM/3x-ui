@@ -320,7 +320,7 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 		if gcErr != nil {
 			return false, gcErr
 		}
-		if dErr := defaultWireguardClients(existingClients, clients, interfaceClients); dErr != nil {
+		if dErr := defaultWireguardClients(oldInbound.Settings, existingClients, clients, interfaceClients, nil); dErr != nil {
 			return false, dErr
 		}
 	}
@@ -435,7 +435,7 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 					"publicKey":    client.PublicKey,
 					"allowedIPs":   client.AllowedIPs,
 					"preSharedKey": client.PreSharedKey,
-					"keepAlive":    keepAliveStr(client.KeepAlive),
+					"keepAlive":    keepAliveStr(client.KeepAliveSeconds()),
 				})
 				if err1 == nil {
 					logger.Debug("Client added on", rt.Name(), ":", client.Email)
@@ -664,7 +664,7 @@ func (s *ClientService) applyClientFieldByEmail(inboundSvc *InboundService, clie
 		return false, err
 	}
 	updated.UpdatedAt = time.Now().UnixMilli()
-	return s.Update(inboundSvc, record.Id, updated)
+	return s.Update(inboundSvc, record.Id, updated, record.LimitHwid)
 }
 
 func (s *ClientService) ResetClientIpLimitByEmail(inboundSvc *InboundService, clientEmail string, count int) (bool, error) {

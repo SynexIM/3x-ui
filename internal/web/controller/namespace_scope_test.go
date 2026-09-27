@@ -72,7 +72,7 @@ func (s *stubWebServer) GetWSHub() any           { return nil }
 
 func (f *scopeFixture) newToken(name string, namespaces []string) string {
 	f.t.Helper()
-	view, err := (&panel.ApiTokenService{}).Create(name, namespaces)
+	view, err := (&panel.ApiTokenService{}).Create(name, "", 0, namespaces)
 	if err != nil {
 		f.t.Fatalf("create token: %v", err)
 	}

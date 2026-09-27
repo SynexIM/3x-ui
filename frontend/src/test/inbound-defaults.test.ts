@@ -9,6 +9,8 @@ import {
   createDefaultShadowsocksInboundSettings,
   createDefaultTrojanClient,
   createDefaultTrojanInboundSettings,
+  createDefaultTuicClient,
+  createDefaultTuicInboundSettings,
   createDefaultTunnelInboundSettings,
   createDefaultVlessClient,
   createDefaultVlessInboundSettings,
@@ -18,10 +20,20 @@ import {
 } from '@/lib/xray/inbound-defaults';
 import { createHysteriaTlsSettingsWithDefaultCert } from '@/lib/xray/inbound-tls-defaults';
 import { HttpInboundSettingsSchema } from '@/schemas/protocols/inbound/http';
-import { HysteriaClientSchema, HysteriaInboundSettingsSchema } from '@/schemas/protocols/inbound/hysteria';
+import {
+  HysteriaClientSchema,
+  HysteriaInboundSettingsSchema,
+} from '@/schemas/protocols/inbound/hysteria';
 import { MixedInboundSettingsSchema } from '@/schemas/protocols/inbound/mixed';
-import { ShadowsocksClientSchema, ShadowsocksInboundSettingsSchema } from '@/schemas/protocols/inbound/shadowsocks';
-import { TrojanClientSchema, TrojanInboundSettingsSchema } from '@/schemas/protocols/inbound/trojan';
+import {
+  ShadowsocksClientSchema,
+  ShadowsocksInboundSettingsSchema,
+} from '@/schemas/protocols/inbound/shadowsocks';
+import {
+  TrojanClientSchema,
+  TrojanInboundSettingsSchema,
+} from '@/schemas/protocols/inbound/trojan';
+import { TuicClientSchema, TuicInboundSettingsSchema } from '@/schemas/protocols/inbound/tuic';
 import { TunnelInboundSettingsSchema } from '@/schemas/protocols/inbound/tunnel';
 import { VlessClientSchema, VlessInboundSettingsSchema } from '@/schemas/protocols/inbound/vless';
 import { VmessClientSchema, VmessInboundSettingsSchema } from '@/schemas/protocols/inbound/vmess';
@@ -77,6 +89,17 @@ describe('createDefaultHysteriaClient', () => {
     const c = createDefaultHysteriaClient({ ...seed, auth: 'fixed-hyst-auth' });
     expect(c).toMatchSnapshot();
     expect(HysteriaClientSchema.parse(c)).toEqual(c);
+  });
+});
+
+describe('createDefaultTuicClient', () => {
+  it('produces a Zod-valid client', () => {
+    const c = createDefaultTuicClient({
+      ...seed,
+      uuid: '11111111-2222-3333-4444-555555555555',
+      password: 'fixed-tuic-pw',
+    });
+    expect(TuicClientSchema.parse(c)).toEqual(c);
   });
 });
 
@@ -141,6 +164,11 @@ describe('createDefault*InboundSettings factories', () => {
     expect(WireguardInboundSettingsSchema.parse(s)).toEqual(s);
     expect(s.peers).toEqual([]);
     expect(s.clients).toEqual([]);
+  });
+
+  it('tuic', () => {
+    const s = createDefaultTuicInboundSettings();
+    expect(TuicInboundSettingsSchema.parse(s)).toEqual(s);
   });
 });
 
