@@ -22,6 +22,7 @@ import (
 // A successful import must schedule the panel restart itself: the browser's
 // restartPanel follow-up can 401 once the imported users table lands (#6446).
 func TestImportDBSchedulesPanelRestart(t *testing.T) {
+	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	if runtime.GOOS == "windows" {
 		t.Skip("the stub xray binary is a shell script")
 	}

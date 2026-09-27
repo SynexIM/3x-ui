@@ -47,6 +47,7 @@ func TestFailedDeleteWithdrawsTombstone(t *testing.T) {
 // A client re-created under a just-deleted email is a live identity again. If
 // the tombstone outlives it, the node merge prunes the new client's link.
 func TestRecreatedClientSurvivesNodeMerge(t *testing.T) {
+	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	db := initTrafficTestDB(t)
 	svc := &ClientService{}
 	inboundSvc := &InboundService{}

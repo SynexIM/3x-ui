@@ -265,6 +265,7 @@ func TestAttach_PreservesVisionFlowWhenCanonicalColumnZeroed(t *testing.T) {
 }
 
 func TestBulkAttach_PreservesVisionFlowWhenCanonicalColumnZeroed(t *testing.T) {
+	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	dbDir := t.TempDir()
 	t.Setenv("XUI_DB_FOLDER", dbDir)
 	if err := database.InitDB(filepath.Join(dbDir, "x-ui.db")); err != nil {

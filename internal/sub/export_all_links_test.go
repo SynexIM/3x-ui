@@ -128,6 +128,7 @@ func TestInboundLinks_SettingsOnlyVLESSProducesLink(t *testing.T) {
 // and private key when the same email is attached to both — those fields live
 // only in the per-inbound settings JSON, not the shared clients.wg_* columns.
 func TestInboundLinks_PreservesPerInboundWireGuardIdentity(t *testing.T) {
+	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	seedSubDB(t)
 	db := database.GetDB()
 

@@ -100,6 +100,27 @@ surfaces its gRPC error instead of rendering an empty list.
   a real-core test asserts a rule's `user` survives the round trip — reverting
   the call makes it fail with an empty `User`.
 
+## Upstream merge 2026-09 (MHSanaei/3x-ui v3.8.5)
+
+Merged on top of the fork's normalized client authority. Upstream's client and
+inbound services still treat `inbounds.settings.clients` as a source of truth;
+the fork's versions of those files were kept whole, so these upstream v3.8.5
+behaviours are **not** carried yet (their tests are skipped with a reason, not
+deleted where the file also held fork tests):
+
+- AmneziaWG / TUIC client management through inbound settings, relay-port
+  window checks on create, per-inbound tunnel AllowedIPs overrides.
+- Inbound save refusing missing TLS certificates (`validateInboundTLSCertificates`),
+  Hysteria client-auth validation on inbound update, email case-folding on
+  cross-inbound identity checks, calendar/max-count auto-renew and per-client
+  traffic-reset cycles on the renewal path (the reset job itself is wired).
+- Upstream's "restart on partial apply" flags: the fork keeps its redline that a
+  client write must hot-apply or fail, never schedule a restart.
+
+Upstream targets xray-core v26.9.x; the SynexIM core is still v26.7.28. The
+panel's `finalmask.udphop` (Hysteria2 port hopping) and three migration tests
+that assert v26.9 warnings do not hold against the fork core until it is rebased.
+
 ## Licensing and attribution
 
 3x-ui remains licensed under GPL-3.0. Upstream copyright and license notices are

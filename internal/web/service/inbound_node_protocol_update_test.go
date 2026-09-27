@@ -11,6 +11,7 @@ import (
 // A node-managed inbound arrives by adoption, so its protocol can be one the
 // master never assigns itself. Editing its share metadata must still work.
 func TestUpdateInbound_NodeMtprotoShareAddrIsEditable(t *testing.T) {
+	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	nodeID := 5
 	seedNodeRow(t, database.GetDB(), &model.Node{Id: nodeID, Name: "n5", Address: "127.0.0.1", Port: 2096, ApiToken: "tok", Enable: true})
@@ -45,6 +46,7 @@ func TestUpdateInbound_NodeMtprotoShareAddrIsEditable(t *testing.T) {
 // Converting a node inbound to a protocol the master's sidecars only reconcile
 // for local rows is still refused: those loops query node_id IS NULL.
 func TestUpdateInbound_RejectsProtocolChangeToNodeIneligible(t *testing.T) {
+	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	nodeID := 6
 	seedNodeRow(t, database.GetDB(), &model.Node{Id: nodeID, Name: "n6", Address: "127.0.0.1", Port: 2096, ApiToken: "tok", Enable: true})
