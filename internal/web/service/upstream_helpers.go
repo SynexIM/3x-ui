@@ -2,9 +2,12 @@ package service
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -236,8 +239,32 @@ func (s *InboundService) SetInboundSubSortIndex(id int, index int) error {
 	return nil
 }
 
+// checkInboundKeyPair parses the pair the way Xray does. Xray drops a pair it
+// cannot parse with only a warning, leaving the listener certificate-less.
+// Inline PEM is always checked; a file path is checked only when both files
+// are readable here, since a node's paths live on the node.
+func checkInboundKeyPair(certFile, keyFile string, certLines, keyLines []string) error {
+	var certPEM, keyPEM []byte
+	if certFile != "" || keyFile != "" {
+		c, errC := os.ReadFile(certFile)
+		k, errK := os.ReadFile(keyFile)
+		if errC != nil || errK != nil {
+			return nil
+		}
+		certPEM, keyPEM = c, k
+	} else {
+		certPEM, keyPEM = []byte(strings.Join(certLines, "\n")), []byte(strings.Join(keyLines, "\n"))
+	}
+	pair, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		return err
+	}
+	_, err = x509.ParseCertificate(pair.Certificate[0])
+	return err
+}
+
 // validateInboundTLSCertificates rejects incomplete TLS credentials before a save
-// can restart Xray. File paths belong to the node, so only presence is checked.
+// can restart Xray.
 func validateInboundTLSCertificates(streamSettings string) error {
 	if strings.TrimSpace(streamSettings) == "" {
 		return nil
@@ -285,6 +312,9 @@ func validateInboundTLSCertificates(streamSettings string) error {
 		}
 		if strings.TrimSpace(key) == "" {
 			return common.NewErrorf("TLS certificate %d is missing its private key. Configure a private key file path or private key content before saving the inbound.", i+1)
+		}
+		if err := checkInboundKeyPair(cert.CertificateFile, cert.KeyFile, cert.Certificate, cert.Key); err != nil {
+			return common.NewErrorf("TLS certificate %d cannot be loaded by Xray: %v. Xray would skip it and every handshake would fail with \"unrecognized name\"; EC keys must use a named curve (e.g. openssl ecparam -name prime256v1 -param_enc named_curve).", i+1, err)
 		}
 		hasServerCertificate = true
 	}
