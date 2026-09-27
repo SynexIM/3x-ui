@@ -26,11 +26,13 @@ type ClientRuntimePatch struct {
 	DownloadBurstBytes   *uint64 `json:"download_burst_bytes,omitempty"`
 	ConnLimit            *uint32 `json:"conn_limit,omitempty"`
 	EgressTag            *string `json:"egress_tag,omitempty"`
-	// Three-tier shaping over the upload/download standard rates (symmetric).
-	BurstBps              *uint64 `json:"burst_bps,omitempty"`
-	BurstCreditBytes      *uint64 `json:"burst_credit_bytes,omitempty"`
-	SustainedBps          *uint64 `json:"sustained_bps,omitempty"`
-	SustainedAfterSeconds *uint32 `json:"sustained_after_seconds,omitempty"`
+	// Pool shaping over the upload/download standard rates (symmetric).
+	BurstBps         *uint64 `json:"burst_bps,omitempty"`
+	BurstCreditBytes *uint64 `json:"burst_credit_bytes,omitempty"`
+	SustainedBps     *uint64 `json:"sustained_bps,omitempty"`
+	// Pool and class are opaque names set by the caller; empty clears them.
+	Pool  *string `json:"pool,omitempty"`
+	Class *string `json:"class,omitempty"`
 }
 
 type ClientRuntimeReceipt struct {
@@ -63,8 +65,11 @@ func (s *ClientService) UpdateRuntime(ctx context.Context, inboundSvc *InboundSe
 	if patch.ConnLimit != nil {
 		updates["conn_limit"] = *patch.ConnLimit
 	}
-	if patch.SustainedAfterSeconds != nil {
-		updates["sustained_after_seconds"] = *patch.SustainedAfterSeconds
+	if patch.Pool != nil {
+		updates["pool"] = strings.TrimSpace(*patch.Pool)
+	}
+	if patch.Class != nil {
+		updates["class"] = strings.TrimSpace(*patch.Class)
 	}
 	if patch.EgressTag != nil {
 		updates["egress_tag"] = strings.TrimSpace(*patch.EgressTag)

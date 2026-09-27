@@ -1481,13 +1481,16 @@
             "type": "string"
           },
           "burst_bps": {
-            "description": "Three-tier shaping on top of the upload/download standard rates; bit/s,\nbytes and seconds, 0 = tier off. Emitted to xray as *_bit_per_sec names.",
+            "description": "Pool shaping on top of the upload/download standard rates; bit/s and\nbytes, 0 = off. Emitted to xray as *_bit_per_sec names. Sustained is not a\ncap: it is the pool's guaranteed rate once it counts as heavy while the\nnode is congested.",
             "format": "int64",
             "type": "integer"
           },
           "burst_credit_bytes": {
             "format": "int64",
             "type": "integer"
+          },
+          "class": {
+            "type": "string"
           },
           "comment": {
             "description": "Client comment",
@@ -1573,6 +1576,10 @@
             "description": "Client password",
             "type": "string"
           },
+          "pool": {
+            "description": "Pool names the shaping pool this client shares with every other client\ncarrying the same value; empty = the client's email. Class names its\ncontention parameters in the node fair-share class table.",
+            "type": "string"
+          },
           "preSharedKey": {
             "type": "string"
           },
@@ -1618,9 +1625,6 @@
           "subId": {
             "description": "Subscription identifier",
             "type": "string"
-          },
-          "sustained_after_seconds": {
-            "type": "integer"
           },
           "sustained_bps": {
             "format": "int64",
@@ -1814,6 +1818,9 @@
             "format": "int64",
             "type": "integer"
           },
+          "class": {
+            "type": "string"
+          },
           "comment": {
             "type": "string"
           },
@@ -1887,6 +1894,9 @@
           "password": {
             "type": "string"
           },
+          "pool": {
+            "type": "string"
+          },
           "preSharedKey": {
             "type": "string"
           },
@@ -1917,9 +1927,6 @@
           },
           "subId": {
             "type": "string"
-          },
-          "sustained_after_seconds": {
-            "type": "integer"
           },
           "sustained_bps": {
             "format": "int64",
@@ -1967,6 +1974,7 @@
           "burstUnit",
           "burst_bps",
           "burst_credit_bytes",
+          "class",
           "comment",
           "committed_bps",
           "committed_burst_bytes",
@@ -1989,6 +1997,7 @@
           "mixed_pass",
           "mixed_user",
           "password",
+          "pool",
           "preSharedKey",
           "privateKey",
           "publicKey",
@@ -2000,7 +2009,6 @@
           "secret",
           "security",
           "subId",
-          "sustained_after_seconds",
           "sustained_bps",
           "tgId",
           "totalGB",
@@ -2034,7 +2042,7 @@
             "type": "integer"
           },
           "burst_bps": {
-            "description": "Three-tier shaping over the upload/download standard rates (symmetric).",
+            "description": "Pool shaping over the upload/download standard rates (symmetric).",
             "format": "int64",
             "nullable": true,
             "type": "integer"
@@ -2043,6 +2051,10 @@
             "format": "int64",
             "nullable": true,
             "type": "integer"
+          },
+          "class": {
+            "nullable": true,
+            "type": "string"
           },
           "committed_bps": {
             "format": "int64",
@@ -2077,9 +2089,10 @@
             "nullable": true,
             "type": "string"
           },
-          "sustained_after_seconds": {
+          "pool": {
+            "description": "Pool and class are opaque names set by the caller; empty clears them.",
             "nullable": true,
-            "type": "integer"
+            "type": "string"
           },
           "sustained_bps": {
             "format": "int64",
@@ -2396,28 +2409,32 @@
         "type": "object"
       },
       "FairShareClassPolicy": {
-        "description": "FairShareClassPolicy is one contention policy shared by a group of clients.\nEvery rate is bit/s and 0 means \"not enabled\", never \"use a default\".",
+        "description": "FairShareClassPolicy is one set of contention parameters shared by every\nclient whose `class` names it. They apply only while the node is congested.\nRates are bit/s; 0 means \"no such item\", never \"use a default\".",
         "properties": {
-          "burstCapBitPerSec": {
-            "example": 50000000,
+          "downloadReservedBitPerSec": {
+            "example": 0,
             "format": "int64",
             "type": "integer"
           },
-          "burstCreditBytes": {
-            "example": 1000000000,
+          "floorBitPerSec": {
+            "example": 5000000,
             "format": "int64",
             "type": "integer"
           },
-          "floorRatioPercent": {
-            "example": 20,
+          "heavyPercent": {
+            "example": 80,
+            "type": "integer"
+          },
+          "heavyWindowSeconds": {
+            "example": 900,
             "type": "integer"
           },
           "name": {
-            "example": "live",
+            "example": "c1",
             "type": "string"
           },
-          "normalCapBitPerSec": {
-            "example": 20000000,
+          "uploadReservedBitPerSec": {
+            "example": 0,
             "format": "int64",
             "type": "integer"
           },
@@ -2427,11 +2444,12 @@
           }
         },
         "required": [
-          "burstCapBitPerSec",
-          "burstCreditBytes",
-          "floorRatioPercent",
+          "downloadReservedBitPerSec",
+          "floorBitPerSec",
+          "heavyPercent",
+          "heavyWindowSeconds",
           "name",
-          "normalCapBitPerSec",
+          "uploadReservedBitPerSec",
           "weight"
         ],
         "type": "object"
@@ -2461,16 +2479,6 @@
           "congestionExitTicks": {
             "example": 5,
             "type": "integer"
-          },
-          "hardFloorBitPerSec": {
-            "example": 0,
-            "format": "int64",
-            "type": "integer"
-          },
-          "softFloorBitPerSec": {
-            "example": 500000,
-            "format": "int64",
-            "type": "integer"
           }
         },
         "required": [
@@ -2478,9 +2486,7 @@
           "classes",
           "congestionEnterPercent",
           "congestionExitPercent",
-          "congestionExitTicks",
-          "hardFloorBitPerSec",
-          "softFloorBitPerSec"
+          "congestionExitTicks"
         ],
         "type": "object"
       },
@@ -2534,6 +2540,10 @@
             "example": 0,
             "type": "integer"
           },
+          "heavyMembers": {
+            "example": 0,
+            "type": "integer"
+          },
           "rootCapBitPerSec": {
             "example": 1000000000,
             "format": "int64",
@@ -2542,6 +2552,16 @@
           "running": {
             "example": true,
             "type": "boolean"
+          },
+          "usedDownloadBitPerSec": {
+            "example": 480000000,
+            "format": "int64",
+            "type": "integer"
+          },
+          "usedUploadBitPerSec": {
+            "example": 12000000,
+            "format": "int64",
+            "type": "integer"
           }
         },
         "required": [
@@ -2552,8 +2572,11 @@
           "fillTruncatedTicks",
           "fillTruncatedTotalTicks",
           "fillUnresolvedMembers",
+          "heavyMembers",
           "rootCapBitPerSec",
-          "running"
+          "running",
+          "usedDownloadBitPerSec",
+          "usedUploadBitPerSec"
         ],
         "type": "object"
       },
@@ -8754,7 +8777,7 @@
                 "properties": {
                   "client": {
                     "type": "object",
-                    "description": "Client fields: email, subId, id (uuid), password, auth, flow, totalGB, expiryTime, limitIp, tgId, comment, enable; bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit (Mbps/Kbps/MB/s/KB/s), burstUnit (MB/GB); upload_bandwidth_bps / download_bandwidth_bps (standard bits/s), burst_bps, burst_credit_bytes, sustained_bps, sustained_after_seconds (three-tier shaping); mixed_user / mixed_pass (Mixed login, default email / password). Zero rate values mean unlimited; units are display metadata."
+                    "description": "Client fields: email, subId, id (uuid), password, auth, flow, totalGB, expiryTime, limitIp, tgId, comment, enable; bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit (Mbps/Kbps/MB/s/KB/s), burstUnit (MB/GB); upload_bandwidth_bps / download_bandwidth_bps (standard bits/s), burst_bps, burst_credit_bytes, sustained_bps (pool shaping), pool (shaping pool shared by every client carrying it; empty = email), class (fair-share class name); mixed_user / mixed_pass (Mixed login, default email / password). Zero rate values mean unlimited; units are display metadata."
                   },
                   "inboundIds": {
                     "type": "array",
@@ -8917,7 +8940,7 @@
         "tags": [
           "Clients"
         ],
-        "summary": "Patch runtime rate limits, connection limit and egress tag for one identity. upload_bandwidth_bps / download_bandwidth_bps are the standard rates; burst_bps + burst_credit_bytes add a credit-paid burst and sustained_bps + sustained_after_seconds a long-saturation rate (symmetric, 0 = tier off, burst >= standard >= sustained). Omitted fields are preserved; zero clears a limit. Applied to the running core without restarting it or dropping established connections. Credentials, validity, traffic quota and per-inbound flow are preserved. A failed or pending receipt requires reconciliation before reporting the change as usable.",
+        "summary": "Patch runtime rate limits, connection limit and egress tag for one identity. upload_bandwidth_bps / download_bandwidth_bps are the standard rates; burst_bps + burst_credit_bytes add a credit-paid burst above standard; sustained_bps is not a cap but the guaranteed rate of a heavy pool while the node is congested (symmetric, 0 = off, burst >= standard >= sustained). pool names the shaping pool shared across clients and inbounds; class names the fair-share class. Omitted fields are preserved; zero clears a limit. Applied to the running core without restarting it or dropping established connections. Credentials, validity, traffic quota and per-inbound flow are preserved. A failed or pending receipt requires reconciliation before reporting the change as usable.",
         "operationId": "post_panel_api_clients_runtime_email",
         "parameters": [
           {
@@ -8941,6 +8964,7 @@
                 "bandwidth_bps": null,
                 "burst_bps": null,
                 "burst_credit_bytes": null,
+                "class": null,
                 "committed_bps": null,
                 "committed_burst_bytes": null,
                 "conn_limit": null,
@@ -8948,7 +8972,7 @@
                 "download_burst_bytes": null,
                 "download_peak_bps": null,
                 "egress_tag": null,
-                "sustained_after_seconds": null,
+                "pool": null,
                 "sustained_bps": null,
                 "upload_bandwidth_bps": null,
                 "upload_burst_bytes": null,
@@ -12280,19 +12304,18 @@
                       "availBitPerSec": 1000000000,
                       "classes": [
                         {
-                          "burstCapBitPerSec": 50000000,
-                          "burstCreditBytes": 1000000000,
-                          "floorRatioPercent": 20,
-                          "name": "live",
-                          "normalCapBitPerSec": 20000000,
+                          "downloadReservedBitPerSec": 0,
+                          "floorBitPerSec": 5000000,
+                          "heavyPercent": 80,
+                          "heavyWindowSeconds": 900,
+                          "name": "c1",
+                          "uploadReservedBitPerSec": 0,
                           "weight": 3
                         }
                       ],
                       "congestionEnterPercent": 85,
                       "congestionExitPercent": 70,
-                      "congestionExitTicks": 5,
-                      "hardFloorBitPerSec": 0,
-                      "softFloorBitPerSec": 500000
+                      "congestionExitTicks": 5
                     }
                   }
                 }
@@ -12316,19 +12339,18 @@
               },
               "example": {
                 "availBitPerSec": 1000000000,
-                "softFloorBitPerSec": 500000,
-                "hardFloorBitPerSec": 0,
                 "congestionEnterPercent": 85,
                 "congestionExitPercent": 70,
                 "congestionExitTicks": 5,
                 "classes": [
                   {
-                    "name": "live",
+                    "name": "c1",
                     "weight": 3,
-                    "normalCapBitPerSec": 20000000,
-                    "burstCapBitPerSec": 50000000,
-                    "burstCreditBytes": 1000000000,
-                    "floorRatioPercent": 20
+                    "floorBitPerSec": 5000000,
+                    "uploadReservedBitPerSec": 0,
+                    "downloadReservedBitPerSec": 0,
+                    "heavyWindowSeconds": 900,
+                    "heavyPercent": 80
                   }
                 ]
               }
@@ -12420,7 +12442,7 @@
         "tags": [
           "Nodes"
         ],
-        "summary": "Live state of the local core's fair-share scheduler. `congested` is the first thing to check when limits look like they do nothing: outside fair mode nothing is shaped at all. The fill* fields report water-filling truncation, which is an approximation, not a fault. running=false means the core is down and there are no numbers yet.",
+        "summary": "Live state of the local core's fair-share scheduler. Outside the congested state every pool runs at its standard rate (burst while it has credit); inside it, pools get weighted shares and heavy pools are served last. usedUpload/DownloadBitPerSec are the last tick's measured throughput; heavyMembers counts heavy pools. The fill* fields report water-filling truncation, which is an approximation, not a fault. running=false means the core is down and there are no numbers yet.",
         "operationId": "get_panel_api_nodes_fairshare_status",
         "responses": {
           "200": {
@@ -12451,8 +12473,11 @@
                     "fillTruncatedTicks": 0,
                     "fillTruncatedTotalTicks": 0,
                     "fillUnresolvedMembers": 0,
+                    "heavyMembers": 0,
                     "rootCapBitPerSec": 1000000000,
-                    "running": true
+                    "running": true,
+                    "usedDownloadBitPerSec": 480000000,
+                    "usedUploadBitPerSec": 12000000
                   }
                 }
               }

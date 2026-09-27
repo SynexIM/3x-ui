@@ -10,8 +10,6 @@ import type { FairSharePolicy, FairSharePolicyView, FairShareStatusView } from '
 
 const OFF: FairSharePolicy = {
   availBitPerSec: 0,
-  softFloorBitPerSec: 0,
-  hardFloorBitPerSec: 0,
   congestionEnterPercent: 0,
   congestionExitPercent: 0,
   congestionExitTicks: 0,
@@ -28,13 +26,17 @@ const STATUS: FairShareStatusView = {
   fillTruncatedTicks: 0,
   fillTruncatedTotalTicks: 0,
   fillRounds: 0,
+  heavyMembers: 0,
+  usedUploadBitPerSec: 0,
+  usedDownloadBitPerSec: 0,
 };
 
 // Renders the panel and waits until both queries are really in the cache;
 // asserting earlier only inspects the component's own empty state.
 async function renderLoaded(view: FairSharePolicyView, status: FairShareStatusView = STATUS) {
-  vi.spyOn(HttpUtil, 'get').mockImplementation(async (url: string) =>
-    (url.endsWith('/status') ? new Msg(true, '', status) : new Msg(true, '', view)) as never,
+  vi.spyOn(HttpUtil, 'get').mockImplementation(
+    async (url: string) =>
+      (url.endsWith('/status') ? new Msg(true, '', status) : new Msg(true, '', view)) as never,
   );
   const queryClient: QueryClient = makeTestQueryClient();
   renderWithProviders(<NodeFairSharePanel />, { queryClient });
@@ -69,8 +71,13 @@ describe('NodeFairSharePanel', () => {
   // automation touched it — exactly when an operator needs to get in and fix
   // something. The warning replaces the lock, it does not join it.
   it('stays editable while an API client manages the node, and says why that matters', async () => {
-    await renderLoaded({ declarativelyManaged: true, policy: { ...OFF, availBitPerSec: 1_000_000_000 } });
-    await waitFor(() => expect(document.body.textContent).toContain('An API client is managing this policy'));
+    await renderLoaded({
+      declarativelyManaged: true,
+      policy: { ...OFF, availBitPerSec: 1_000_000_000 },
+    });
+    await waitFor(() =>
+      expect(document.body.textContent).toContain('An API client is managing this policy'),
+    );
     expect(document.body.textContent).toContain('may be put back within minutes');
     for (const input of numberInputs()) {
       expect(input.disabled).toBe(false);
@@ -85,12 +92,17 @@ describe('NodeFairSharePanel', () => {
   const FORBIDDEN_PHRASE = ['control', 'plane'].join(' ');
   it('never names the automation that drives it', async () => {
     await renderLoaded({ declarativelyManaged: true, policy: OFF });
-    await waitFor(() => expect(document.body.textContent).toContain('An API client is managing this policy'));
+    await waitFor(() =>
+      expect(document.body.textContent).toContain('An API client is managing this policy'),
+    );
     expect(document.body.textContent?.toLowerCase()).not.toContain(FORBIDDEN_PHRASE);
   });
 
   it('leaves the controls editable on a standalone install', async () => {
-    await renderLoaded({ declarativelyManaged: false, policy: { ...OFF, availBitPerSec: 1_000_000_000 } });
+    await renderLoaded({
+      declarativelyManaged: false,
+      policy: { ...OFF, availBitPerSec: 1_000_000_000 },
+    });
     await waitFor(() => expect(numberInputs().some((input) => input.value === '1000')).toBe(true));
     for (const input of numberInputs()) {
       expect(input.disabled).toBe(false);
@@ -100,9 +112,8 @@ describe('NodeFairSharePanel', () => {
   });
 
   // congested is the first thing to check when tuning appears to do nothing.
-  it('says out loud that nothing is being shaped when the node is not congested', async () => {
+  it('says out loud that an uncongested node runs every pool at its standard rate', async () => {
     await renderLoaded({ declarativelyManaged: false, policy: OFF });
-    expect(document.body.textContent).toContain('nothing is being shaped');
-    expect(document.body.textContent).toContain('Outside fair mode the core slows nobody down');
+    expect(document.body.textContent).toContain('every pool runs at its standard rate');
   });
 });

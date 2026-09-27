@@ -529,6 +529,11 @@ func copyClientRateLimits(from, to map[string]any) {
 		}
 		to[key] = v
 	}
+	for _, key := range []string{"pool", "class"} {
+		if v, ok := from[key].(string); ok && v != "" {
+			to[key] = v
+		}
+	}
 }
 
 func MixedClientsToAccounts(settings string) (string, bool) {
@@ -1071,12 +1076,18 @@ type Client struct {
 	ConnLimit            uint32 `json:"conn_limit,omitempty" form:"conn_limit"`
 	EgressTag            string `json:"egress_tag,omitempty" form:"egress_tag"`
 
-	// Three-tier shaping on top of the upload/download standard rates; bit/s,
-	// bytes and seconds, 0 = tier off. Emitted to xray as *_bit_per_sec names.
-	BurstBps              uint64 `json:"burst_bps,omitempty" form:"burst_bps"`
-	BurstCreditBytes      uint64 `json:"burst_credit_bytes,omitempty" form:"burst_credit_bytes"`
-	SustainedBps          uint64 `json:"sustained_bps,omitempty" form:"sustained_bps"`
-	SustainedAfterSeconds uint32 `json:"sustained_after_seconds,omitempty" form:"sustained_after_seconds"`
+	// Pool shaping on top of the upload/download standard rates; bit/s and
+	// bytes, 0 = off. Emitted to xray as *_bit_per_sec names. Sustained is not a
+	// cap: it is the pool's guaranteed rate once it counts as heavy while the
+	// node is congested.
+	BurstBps         uint64 `json:"burst_bps,omitempty" form:"burst_bps"`
+	BurstCreditBytes uint64 `json:"burst_credit_bytes,omitempty" form:"burst_credit_bytes"`
+	SustainedBps     uint64 `json:"sustained_bps,omitempty" form:"sustained_bps"`
+	// Pool names the shaping pool this client shares with every other client
+	// carrying the same value; empty = the client's email. Class names its
+	// contention parameters in the node fair-share class table.
+	Pool  string `json:"pool,omitempty" form:"pool"`
+	Class string `json:"class,omitempty" form:"class"`
 
 	// Mixed (HTTP+SOCKS5) login; empty falls back to email / password.
 	MixedUser string `json:"mixed_user,omitempty" form:"mixed_user"`
@@ -1123,25 +1134,26 @@ type ClientRecord struct {
 	UpdatedAt       int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
 	// Per-client limits (see Client). One line = one client, so all five
 	// protocols it is attached to share the same tier.
-	BandwidthBps          uint64 `json:"bandwidth_bps" gorm:"column:bandwidth_bps;default:0"`
-	CommittedBps          uint64 `json:"committed_bps" gorm:"column:committed_bps;default:0"`
-	CommittedBurstBytes   uint64 `json:"committed_burst_bytes" gorm:"column:committed_burst_bytes;default:0"`
-	UploadBandwidthBps    uint64 `json:"upload_bandwidth_bps" gorm:"column:upload_bandwidth_bps;default:0"`
-	UploadPeakBps         uint64 `json:"upload_peak_bps" gorm:"column:upload_peak_bps;default:0"`
-	UploadBurstBytes      uint64 `json:"upload_burst_bytes" gorm:"column:upload_burst_bytes;default:0"`
-	DownloadBandwidthBps  uint64 `json:"download_bandwidth_bps" gorm:"column:download_bandwidth_bps;default:0"`
-	DownloadPeakBps       uint64 `json:"download_peak_bps" gorm:"column:download_peak_bps;default:0"`
-	DownloadBurstBytes    uint64 `json:"download_burst_bytes" gorm:"column:download_burst_bytes;default:0"`
-	ConnLimit             uint32 `json:"conn_limit" gorm:"column:conn_limit;default:0"`
-	RateUnit              string `json:"rateUnit" gorm:"column:rate_unit;default:''"`
-	BurstUnit             string `json:"burstUnit" gorm:"column:burst_unit;default:''"`
-	EgressTag             string `json:"egress_tag" gorm:"column:egress_tag;default:''"`
-	BurstBps              uint64 `json:"burst_bps" gorm:"column:burst_bps;default:0"`
-	BurstCreditBytes      uint64 `json:"burst_credit_bytes" gorm:"column:burst_credit_bytes;default:0"`
-	SustainedBps          uint64 `json:"sustained_bps" gorm:"column:sustained_bps;default:0"`
-	SustainedAfterSeconds uint32 `json:"sustained_after_seconds" gorm:"column:sustained_after_seconds;default:0"`
-	MixedUser             string `json:"mixed_user" gorm:"column:mixed_user;default:''"`
-	MixedPass             string `json:"mixed_pass" gorm:"column:mixed_pass;default:''"`
+	BandwidthBps         uint64 `json:"bandwidth_bps" gorm:"column:bandwidth_bps;default:0"`
+	CommittedBps         uint64 `json:"committed_bps" gorm:"column:committed_bps;default:0"`
+	CommittedBurstBytes  uint64 `json:"committed_burst_bytes" gorm:"column:committed_burst_bytes;default:0"`
+	UploadBandwidthBps   uint64 `json:"upload_bandwidth_bps" gorm:"column:upload_bandwidth_bps;default:0"`
+	UploadPeakBps        uint64 `json:"upload_peak_bps" gorm:"column:upload_peak_bps;default:0"`
+	UploadBurstBytes     uint64 `json:"upload_burst_bytes" gorm:"column:upload_burst_bytes;default:0"`
+	DownloadBandwidthBps uint64 `json:"download_bandwidth_bps" gorm:"column:download_bandwidth_bps;default:0"`
+	DownloadPeakBps      uint64 `json:"download_peak_bps" gorm:"column:download_peak_bps;default:0"`
+	DownloadBurstBytes   uint64 `json:"download_burst_bytes" gorm:"column:download_burst_bytes;default:0"`
+	ConnLimit            uint32 `json:"conn_limit" gorm:"column:conn_limit;default:0"`
+	RateUnit             string `json:"rateUnit" gorm:"column:rate_unit;default:''"`
+	BurstUnit            string `json:"burstUnit" gorm:"column:burst_unit;default:''"`
+	EgressTag            string `json:"egress_tag" gorm:"column:egress_tag;default:''"`
+	BurstBps             uint64 `json:"burst_bps" gorm:"column:burst_bps;default:0"`
+	BurstCreditBytes     uint64 `json:"burst_credit_bytes" gorm:"column:burst_credit_bytes;default:0"`
+	SustainedBps         uint64 `json:"sustained_bps" gorm:"column:sustained_bps;default:0"`
+	Pool                 string `json:"pool" gorm:"column:pool;default:''"`
+	Class                string `json:"class" gorm:"column:class;default:''"`
+	MixedUser            string `json:"mixed_user" gorm:"column:mixed_user;default:''"`
+	MixedPass            string `json:"mixed_pass" gorm:"column:mixed_pass;default:''"`
 	// Owned solely by the node-snapshot sweep, which soft-orphans instead of
 	// deleting; orphans from any other cause stay at zero and are never reaped.
 	SyncOrphanedAt int64 `json:"-" gorm:"column:sync_orphaned_at;default:0"`
@@ -1149,7 +1161,7 @@ type ClientRecord struct {
 
 // ClientRateLimitKeys are the xray-facing limit keys, in one place so every
 // emit path (config.json, mixed accounts, runtime AddUser) stays in sync.
-var ClientRateLimitKeys = []string{"bandwidth_bps", "committed_bps", "committed_burst_bytes", "conn_limit", "upload_bandwidth_bps", "upload_peak_bps", "upload_burst_bytes", "download_bandwidth_bps", "download_peak_bps", "download_burst_bytes", "burst_bps", "burst_credit_bytes", "sustained_bps", "sustained_after_seconds"}
+var ClientRateLimitKeys = []string{"bandwidth_bps", "committed_bps", "committed_burst_bytes", "conn_limit", "upload_bandwidth_bps", "upload_peak_bps", "upload_burst_bytes", "download_bandwidth_bps", "download_peak_bps", "download_burst_bytes", "burst_bps", "burst_credit_bytes", "sustained_bps"}
 
 func (ClientRecord) TableName() string { return "clients" }
 
@@ -1358,25 +1370,26 @@ func (c *Client) ToRecord() *ClientRecord {
 		CreatedAt:       c.CreatedAt,
 		UpdatedAt:       c.UpdatedAt,
 
-		BandwidthBps:          c.BandwidthBps,
-		CommittedBps:          c.CommittedBps,
-		CommittedBurstBytes:   c.CommittedBurstBytes,
-		UploadBandwidthBps:    c.UploadBandwidthBps,
-		UploadPeakBps:         c.UploadPeakBps,
-		UploadBurstBytes:      c.UploadBurstBytes,
-		DownloadBandwidthBps:  c.DownloadBandwidthBps,
-		DownloadPeakBps:       c.DownloadPeakBps,
-		DownloadBurstBytes:    c.DownloadBurstBytes,
-		ConnLimit:             c.ConnLimit,
-		BurstBps:              c.BurstBps,
-		BurstCreditBytes:      c.BurstCreditBytes,
-		SustainedBps:          c.SustainedBps,
-		SustainedAfterSeconds: c.SustainedAfterSeconds,
-		MixedUser:             c.MixedUser,
-		MixedPass:             c.MixedPass,
-		RateUnit:              c.RateUnit,
-		BurstUnit:             c.BurstUnit,
-		EgressTag:             c.EgressTag,
+		BandwidthBps:         c.BandwidthBps,
+		CommittedBps:         c.CommittedBps,
+		CommittedBurstBytes:  c.CommittedBurstBytes,
+		UploadBandwidthBps:   c.UploadBandwidthBps,
+		UploadPeakBps:        c.UploadPeakBps,
+		UploadBurstBytes:     c.UploadBurstBytes,
+		DownloadBandwidthBps: c.DownloadBandwidthBps,
+		DownloadPeakBps:      c.DownloadPeakBps,
+		DownloadBurstBytes:   c.DownloadBurstBytes,
+		ConnLimit:            c.ConnLimit,
+		BurstBps:             c.BurstBps,
+		BurstCreditBytes:     c.BurstCreditBytes,
+		SustainedBps:         c.SustainedBps,
+		Pool:                 c.Pool,
+		Class:                c.Class,
+		MixedUser:            c.MixedUser,
+		MixedPass:            c.MixedPass,
+		RateUnit:             c.RateUnit,
+		BurstUnit:            c.BurstUnit,
+		EgressTag:            c.EgressTag,
 
 		PrivateKey:     c.PrivateKey,
 		PublicKey:      c.PublicKey,
@@ -1436,25 +1449,26 @@ func (r *ClientRecord) ToClient() *Client {
 		CreatedAt:       r.CreatedAt,
 		UpdatedAt:       r.UpdatedAt,
 
-		BandwidthBps:          r.BandwidthBps,
-		CommittedBps:          r.CommittedBps,
-		CommittedBurstBytes:   r.CommittedBurstBytes,
-		UploadBandwidthBps:    r.UploadBandwidthBps,
-		UploadPeakBps:         r.UploadPeakBps,
-		UploadBurstBytes:      r.UploadBurstBytes,
-		DownloadBandwidthBps:  r.DownloadBandwidthBps,
-		DownloadPeakBps:       r.DownloadPeakBps,
-		DownloadBurstBytes:    r.DownloadBurstBytes,
-		ConnLimit:             r.ConnLimit,
-		BurstBps:              r.BurstBps,
-		BurstCreditBytes:      r.BurstCreditBytes,
-		SustainedBps:          r.SustainedBps,
-		SustainedAfterSeconds: r.SustainedAfterSeconds,
-		MixedUser:             r.MixedUser,
-		MixedPass:             r.MixedPass,
-		RateUnit:              r.RateUnit,
-		BurstUnit:             r.BurstUnit,
-		EgressTag:             r.EgressTag,
+		BandwidthBps:         r.BandwidthBps,
+		CommittedBps:         r.CommittedBps,
+		CommittedBurstBytes:  r.CommittedBurstBytes,
+		UploadBandwidthBps:   r.UploadBandwidthBps,
+		UploadPeakBps:        r.UploadPeakBps,
+		UploadBurstBytes:     r.UploadBurstBytes,
+		DownloadBandwidthBps: r.DownloadBandwidthBps,
+		DownloadPeakBps:      r.DownloadPeakBps,
+		DownloadBurstBytes:   r.DownloadBurstBytes,
+		ConnLimit:            r.ConnLimit,
+		BurstBps:             r.BurstBps,
+		BurstCreditBytes:     r.BurstCreditBytes,
+		SustainedBps:         r.SustainedBps,
+		Pool:                 r.Pool,
+		Class:                r.Class,
+		MixedUser:            r.MixedUser,
+		MixedPass:            r.MixedPass,
+		RateUnit:             r.RateUnit,
+		BurstUnit:            r.BurstUnit,
+		EgressTag:            r.EgressTag,
 
 		PrivateKey:     r.PrivateKey,
 		PublicKey:      r.PublicKey,
@@ -1756,20 +1770,21 @@ func ShadowsocksClientKey(method, inboundTag, password string) string {
 // own names (bit/s, bytes, seconds); zero values are kept so a clear applies.
 func (c Client) RuntimeLimitFields() map[string]any {
 	fields := map[string]any{
-		"bandwidth_bps":           c.BandwidthBps,
-		"committed_bps":           c.CommittedBps,
-		"committed_burst_bytes":   c.CommittedBurstBytes,
-		"upload_bandwidth_bps":    c.UploadBandwidthBps,
-		"upload_peak_bps":         c.UploadPeakBps,
-		"upload_burst_bytes":      c.UploadBurstBytes,
-		"download_bandwidth_bps":  c.DownloadBandwidthBps,
-		"download_peak_bps":       c.DownloadPeakBps,
-		"download_burst_bytes":    c.DownloadBurstBytes,
-		"conn_limit":              uint64(c.ConnLimit),
-		"burst_bit_per_sec":       c.BurstBps,
-		"burst_credit_bytes":      c.BurstCreditBytes,
-		"sustained_bit_per_sec":   c.SustainedBps,
-		"sustained_after_seconds": uint64(c.SustainedAfterSeconds),
+		"bandwidth_bps":          c.BandwidthBps,
+		"committed_bps":          c.CommittedBps,
+		"committed_burst_bytes":  c.CommittedBurstBytes,
+		"upload_bandwidth_bps":   c.UploadBandwidthBps,
+		"upload_peak_bps":        c.UploadPeakBps,
+		"upload_burst_bytes":     c.UploadBurstBytes,
+		"download_bandwidth_bps": c.DownloadBandwidthBps,
+		"download_peak_bps":      c.DownloadPeakBps,
+		"download_burst_bytes":   c.DownloadBurstBytes,
+		"conn_limit":             uint64(c.ConnLimit),
+		"burst_bit_per_sec":      c.BurstBps,
+		"burst_credit_bytes":     c.BurstCreditBytes,
+		"sustained_bit_per_sec":  c.SustainedBps,
+		"pool":                   c.Pool,
+		"class":                  c.Class,
 	}
 	if c.EgressTag != "" {
 		fields["egress_tag"] = c.EgressTag

@@ -12,7 +12,7 @@ import (
 func TestApplyUserRateLimitsFromPanelClient(t *testing.T) {
 	// Values arrive as float64 after a JSON round-trip through settings.
 	var src map[string]any
-	raw := `{"email":"line-042","bandwidth_bps":100000000,"committed_bps":20000000,"committed_burst_bytes":50000000,"conn_limit":4,"egress_tag":"dedicated-us"}`
+	raw := `{"email":"line-042","bandwidth_bps":100000000,"committed_bps":20000000,"committed_burst_bytes":50000000,"conn_limit":4,"egress_tag":"dedicated-us","burst_bit_per_sec":300000000,"burst_credit_bytes":1000000000,"sustained_bit_per_sec":10000000,"pool":"inst-7","class":"c1"}`
 	if err := json.Unmarshal([]byte(raw), &src); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -32,6 +32,10 @@ func TestApplyUserRateLimitsFromPanelClient(t *testing.T) {
 	}
 	if u.EgressTag != "dedicated-us" {
 		t.Errorf("egress_tag = %q, want dedicated-us", u.EgressTag)
+	}
+	// Pool is what keeps one client on five inbounds from getting five rates.
+	if u.Pool != "inst-7" || u.Class != "c1" || u.BurstBitPerSec != 300_000_000 || u.BurstCreditBytes != 1_000_000_000 || u.SustainedBitPerSec != 10_000_000 {
+		t.Errorf("pool shaping lost on hot apply: pool=%q class=%q burst=%d credit=%d sustained=%d", u.Pool, u.Class, u.BurstBitPerSec, u.BurstCreditBytes, u.SustainedBitPerSec)
 	}
 }
 

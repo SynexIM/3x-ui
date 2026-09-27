@@ -77,7 +77,6 @@ func TestFairShareAPI_E2E(t *testing.T) {
 
 	if err := api.SetNodeBandwidth(NodeFairShare{
 		AvailBitPerSec:         800_000_000,
-		SoftFloorBitPerSec:     4_000_000,
 		CongestionEnterPercent: 85,
 		CongestionExitPercent:  70,
 		CongestionExitTicks:    3,
@@ -85,12 +84,11 @@ func TestFairShareAPI_E2E(t *testing.T) {
 		t.Fatalf("SetNodeBandwidth: %v", err)
 	}
 	if err := api.SetClassPolicy([]ClassFairShare{{
-		Name:               "live",
+		Name:               "c1",
 		Weight:             3,
-		NormalCapBitPerSec: 160_000_000,
-		BurstCapBitPerSec:  400_000_000,
-		BurstCreditBytes:   1_000_000_000,
-		FloorRatioPercent:  20,
+		FloorBitPerSec:     8_000_000,
+		HeavyWindowSeconds: 900,
+		HeavyPercent:       80,
 	}}); err != nil {
 		t.Fatalf("SetClassPolicy: %v", err)
 	}

@@ -359,6 +359,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "burstUnit": "",
     "burst_bps": 0,
     "burst_credit_bytes": 0,
+    "class": "",
     "comment": "",
     "committed_bps": 0,
     "committed_burst_bytes": 0,
@@ -380,6 +381,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "mixed_pass": "",
     "mixed_user": "",
     "password": "",
+    "pool": "",
     "preSharedKey": "",
     "privateKey": "",
     "publicKey": "",
@@ -391,7 +393,6 @@ export const EXAMPLES: Record<string, unknown> = {
     "secret": "ee1234567890abcdef1234567890abcd7777772e636c6f7564666c6172652e636f6d",
     "security": "",
     "subId": "",
-    "sustained_after_seconds": 0,
     "sustained_bps": 0,
     "tgId": 0,
     "totalGB": 0,
@@ -481,6 +482,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "burstUnit": "",
     "burst_bps": 0,
     "burst_credit_bytes": 0,
+    "class": "",
     "comment": "",
     "committed_bps": 0,
     "committed_burst_bytes": 0,
@@ -503,6 +505,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "mixed_pass": "",
     "mixed_user": "",
     "password": "",
+    "pool": "",
     "preSharedKey": "",
     "privateKey": "",
     "publicKey": "",
@@ -514,7 +517,6 @@ export const EXAMPLES: Record<string, unknown> = {
     "secret": "",
     "security": "",
     "subId": "",
-    "sustained_after_seconds": 0,
     "sustained_bps": 0,
     "tgId": 0,
     "totalGB": 0,
@@ -533,6 +535,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "bandwidth_bps": null,
     "burst_bps": null,
     "burst_credit_bytes": null,
+    "class": null,
     "committed_bps": null,
     "committed_burst_bytes": null,
     "conn_limit": null,
@@ -540,7 +543,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "download_burst_bytes": null,
     "download_peak_bps": null,
     "egress_tag": null,
-    "sustained_after_seconds": null,
+    "pool": null,
     "sustained_bps": null,
     "upload_bandwidth_bps": null,
     "upload_burst_bytes": null,
@@ -616,30 +619,30 @@ export const EXAMPLES: Record<string, unknown> = {
     "total": 0
   },
   "FairShareClassPolicy": {
-    "burstCapBitPerSec": 50000000,
-    "burstCreditBytes": 1000000000,
-    "floorRatioPercent": 20,
-    "name": "live",
-    "normalCapBitPerSec": 20000000,
+    "downloadReservedBitPerSec": 0,
+    "floorBitPerSec": 5000000,
+    "heavyPercent": 80,
+    "heavyWindowSeconds": 900,
+    "name": "c1",
+    "uploadReservedBitPerSec": 0,
     "weight": 3
   },
   "FairSharePolicy": {
     "availBitPerSec": 1000000000,
     "classes": [
       {
-        "burstCapBitPerSec": 50000000,
-        "burstCreditBytes": 1000000000,
-        "floorRatioPercent": 20,
-        "name": "live",
-        "normalCapBitPerSec": 20000000,
+        "downloadReservedBitPerSec": 0,
+        "floorBitPerSec": 5000000,
+        "heavyPercent": 80,
+        "heavyWindowSeconds": 900,
+        "name": "c1",
+        "uploadReservedBitPerSec": 0,
         "weight": 3
       }
     ],
     "congestionEnterPercent": 85,
     "congestionExitPercent": 70,
-    "congestionExitTicks": 5,
-    "hardFloorBitPerSec": 0,
-    "softFloorBitPerSec": 500000
+    "congestionExitTicks": 5
   },
   "FairSharePolicyView": {
     "declarativelyManaged": false,
@@ -647,19 +650,18 @@ export const EXAMPLES: Record<string, unknown> = {
       "availBitPerSec": 1000000000,
       "classes": [
         {
-          "burstCapBitPerSec": 50000000,
-          "burstCreditBytes": 1000000000,
-          "floorRatioPercent": 20,
-          "name": "live",
-          "normalCapBitPerSec": 20000000,
+          "downloadReservedBitPerSec": 0,
+          "floorBitPerSec": 5000000,
+          "heavyPercent": 80,
+          "heavyWindowSeconds": 900,
+          "name": "c1",
+          "uploadReservedBitPerSec": 0,
           "weight": 3
         }
       ],
       "congestionEnterPercent": 85,
       "congestionExitPercent": 70,
-      "congestionExitTicks": 5,
-      "hardFloorBitPerSec": 0,
-      "softFloorBitPerSec": 500000
+      "congestionExitTicks": 5
     }
   },
   "FairShareStatusView": {
@@ -670,8 +672,11 @@ export const EXAMPLES: Record<string, unknown> = {
     "fillTruncatedTicks": 0,
     "fillTruncatedTotalTicks": 0,
     "fillUnresolvedMembers": 0,
+    "heavyMembers": 0,
     "rootCapBitPerSec": 1000000000,
-    "running": true
+    "running": true,
+    "usedDownloadBitPerSec": 480000000,
+    "usedUploadBitPerSec": 12000000
   },
   "FallbackParentInfo": {
     "masterId": 0,

@@ -12,21 +12,20 @@ import (
 // its API speak everywhere: bit/s. 0 means "not enabled", never "use a default".
 type NodeFairShare struct {
 	AvailBitPerSec         uint64
-	SoftFloorBitPerSec     uint64
-	HardFloorBitPerSec     uint64
 	CongestionEnterPercent uint32
 	CongestionExitPercent  uint32
 	CongestionExitTicks    uint32
 }
 
-// ClassFairShare is one contention policy shared by a group of clients, rates in bit/s.
+// ClassFairShare is one set of contention parameters, rates in bit/s.
 type ClassFairShare struct {
-	Name               string
-	Weight             uint32
-	NormalCapBitPerSec uint64
-	BurstCapBitPerSec  uint64
-	BurstCreditBytes   uint64
-	FloorRatioPercent  uint32
+	Name                      string
+	Weight                    uint32
+	FloorBitPerSec            uint64
+	UploadReservedBitPerSec   uint64
+	DownloadReservedBitPerSec uint64
+	HeavyWindowSeconds        uint32
+	HeavyPercent              uint32
 }
 
 // FairShareStatus is the scheduler's runtime state, rates converted back to bit/s.
@@ -39,6 +38,9 @@ type FairShareStatus struct {
 	FillTruncatedTicks      uint64
 	FillTruncatedTotalTicks uint64
 	FillRounds              uint32
+	HeavyMembers            uint32
+	UsedUploadBitPerSec     uint64
+	UsedDownloadBitPerSec   uint64
 }
 
 // bitToBytePerSec is the ONLY place the panel's bit/s becomes the fairshare
@@ -56,8 +58,6 @@ func (x *XrayAPI) SetNodeBandwidth(policy NodeFairShare) error {
 	defer cancel()
 	_, err := x.FairShareServiceClient.SetNodeBandwidth(ctx, &fairShareService.SetNodeBandwidthRequest{
 		AvailBps:               bitToBytePerSec(policy.AvailBitPerSec),
-		SoftFloorBps:           bitToBytePerSec(policy.SoftFloorBitPerSec),
-		HardFloorBps:           bitToBytePerSec(policy.HardFloorBitPerSec),
 		CongestionEnterPercent: policy.CongestionEnterPercent,
 		CongestionExitPercent:  policy.CongestionExitPercent,
 		CongestionExitTicks:    policy.CongestionExitTicks,
@@ -74,12 +74,13 @@ func (x *XrayAPI) SetClassPolicy(classes []ClassFairShare) error {
 	request := &fairShareService.SetClassPolicyRequest{Classes: make([]*fairShareService.ClassPolicy, 0, len(classes))}
 	for _, class := range classes {
 		request.Classes = append(request.Classes, &fairShareService.ClassPolicy{
-			Name:                class.Name,
-			Weight:              class.Weight,
-			NormalCapBytePerSec: bitToBytePerSec(class.NormalCapBitPerSec),
-			BurstCapBytePerSec:  bitToBytePerSec(class.BurstCapBitPerSec),
-			BurstCreditBytes:    class.BurstCreditBytes,
-			FloorRatioPercent:   class.FloorRatioPercent,
+			Name:                       class.Name,
+			Weight:                     class.Weight,
+			FloorBytePerSec:            bitToBytePerSec(class.FloorBitPerSec),
+			UploadReservedBytePerSec:   bitToBytePerSec(class.UploadReservedBitPerSec),
+			DownloadReservedBytePerSec: bitToBytePerSec(class.DownloadReservedBitPerSec),
+			HeavyWindowSeconds:         class.HeavyWindowSeconds,
+			HeavyPercent:               class.HeavyPercent,
 		})
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), handlerRPCTimeout)
@@ -107,5 +108,8 @@ func (x *XrayAPI) GetFairShareStatus() (*FairShareStatus, error) {
 		FillTruncatedTicks:      response.FillTruncatedTicks,
 		FillTruncatedTotalTicks: response.FillTruncatedTotalTicks,
 		FillRounds:              response.FillRounds,
+		HeavyMembers:            response.HeavyMembers,
+		UsedUploadBitPerSec:     byteToBitPerSec(response.UsedUploadBytePerSec),
+		UsedDownloadBitPerSec:   byteToBitPerSec(response.UsedDownloadBytePerSec),
 	}, nil
 }

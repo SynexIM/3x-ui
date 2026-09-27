@@ -107,12 +107,18 @@ the SynexIM xray-core (`common/protocol/tier_shaper.go`).
 
 - **Client fields** (`clients` table, `/clients/add`, `/clients/runtime/:email`,
   `GET /clients/get/:email`): `upload_bandwidth_bps` / `download_bandwidth_bps`
-  are the standard rate; `burst_bps`, `burst_credit_bytes`, `sustained_bps`,
-  `sustained_after_seconds` add the burst and sustained tiers (0 = tier off,
-  burst >= standard >= sustained). They are emitted to the core as
-  `burst_bit_per_sec`, `burst_credit_bytes`, `sustained_bit_per_sec`,
-  `sustained_after_seconds`; a runtime patch re-adds the user and the core swaps
-  the policy under established connections.
+  are the standard rate; `burst_bps` + `burst_credit_bytes` add a credit-paid
+  burst; `sustained_bps` is not a cap but the guaranteed rate of a heavy pool
+  while the node is congested (0 = off, burst >= standard >= sustained).
+  `pool` names the shaping pool shared by every client carrying it (the caller
+  sets it; empty = email) and `class` names the node fair-share class. They are
+  emitted to the core as `burst_bit_per_sec`, `burst_credit_bytes`,
+  `sustained_bit_per_sec`, `pool`, `class`; a runtime patch re-adds the user and
+  the core swaps the policy under established connections.
+- **Node fair-share** (`/panel/api/nodes/fairshare`): root cap, congestion
+  hysteresis and the class table (weight, floor, upload/download reserved, heavy
+  window and percent). Every value is set by the caller; 0 = none. Status adds
+  heavy pools and measured throughput so a controller can split a shared link.
 - **`POST /clients/:email/credentials`** `{id?, password?, mixed_user?, mixed_pass?}`
   rotates credentials on every attached inbound and hot-applies them. `password`
   is also the Hysteria2 `auth`; empty `mixed_user` / `mixed_pass` fall back to

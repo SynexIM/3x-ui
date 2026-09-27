@@ -99,12 +99,14 @@ _openapi:
         authentication.
       url: '#probe-an-ingress-ip-over-tcp-tls-or-quic-certificate-verification-is-mandatory-for-encrypted-transports-this-does-not-test-customer-authentication'
     - depth: 2
-      title: "Live state of the local core's fair-share scheduler. `congested` is the
-        first thing to check when limits look like they do nothing: outside fair
-        mode nothing is shaped at all. The fill* fields report water-filling
-        truncation, which is an approximation, not a fault. running=false means
-        the core is down and there are no numbers yet."
-      url: '#live-state-of-the-local-cores-fair-share-scheduler-congested-is-the-first-thing-to-check-when-limits-look-like-they-do-nothing-outside-fair-mode-nothing-is-shaped-at-all-the-fill-fields-report-water-filling-truncation-which-is-an-approximation-not-a-fault-runningfalse-means-the-core-is-down-and-there-are-no-numbers-yet'
+      title: Live state of the local core's fair-share scheduler. Outside the
+        congested state every pool runs at its standard rate (burst while it has
+        credit); inside it, pools get weighted shares and heavy pools are served
+        last. usedUpload/DownloadBitPerSec are the last tick's measured
+        throughput; heavyMembers counts heavy pools. The fill* fields report
+        water-filling truncation, which is an approximation, not a fault.
+        running=false means the core is down and there are no numbers yet.
+      url: '#live-state-of-the-local-cores-fair-share-scheduler-outside-the-congested-state-every-pool-runs-at-its-standard-rate-burst-while-it-has-credit-inside-it-pools-get-weighted-shares-and-heavy-pools-are-served-last-useduploaddownloadbitpersec-are-the-last-ticks-measured-throughput-heavymembers-counts-heavy-pools-the-fill-fields-report-water-filling-truncation-which-is-an-approximation-not-a-fault-runningfalse-means-the-core-is-down-and-there-are-no-numbers-yet'
   structuredData:
     headings:
       - content: List every configured node with its connection details, health, and
@@ -179,12 +181,14 @@ _openapi:
           mandatory for encrypted transports. This does not test customer
           authentication.
         id: probe-an-ingress-ip-over-tcp-tls-or-quic-certificate-verification-is-mandatory-for-encrypted-transports-this-does-not-test-customer-authentication
-      - content: "Live state of the local core's fair-share scheduler. `congested` is
-          the first thing to check when limits look like they do nothing:
-          outside fair mode nothing is shaped at all. The fill* fields report
+      - content: Live state of the local core's fair-share scheduler. Outside the
+          congested state every pool runs at its standard rate (burst while it
+          has credit); inside it, pools get weighted shares and heavy pools are
+          served last. usedUpload/DownloadBitPerSec are the last tick's measured
+          throughput; heavyMembers counts heavy pools. The fill* fields report
           water-filling truncation, which is an approximation, not a fault.
-          running=false means the core is down and there are no numbers yet."
-        id: live-state-of-the-local-cores-fair-share-scheduler-congested-is-the-first-thing-to-check-when-limits-look-like-they-do-nothing-outside-fair-mode-nothing-is-shaped-at-all-the-fill-fields-report-water-filling-truncation-which-is-an-approximation-not-a-fault-runningfalse-means-the-core-is-down-and-there-are-no-numbers-yet
+          running=false means the core is down and there are no numbers yet.
+        id: live-state-of-the-local-cores-fair-share-scheduler-outside-the-congested-state-every-pool-runs-at-its-standard-rate-burst-while-it-has-credit-inside-it-pools-get-weighted-shares-and-heavy-pools-are-served-last-useduploaddownloadbitpersec-are-the-last-ticks-measured-throughput-heavymembers-counts-heavy-pools-the-fill-fields-report-water-filling-truncation-which-is-an-approximation-not-a-fault-runningfalse-means-the-core-is-down-and-there-are-no-numbers-yet
     contents: []
 ---
 

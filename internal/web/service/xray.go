@@ -203,11 +203,17 @@ func addClientRateLimits(entry map[string]any, c model.Client) {
 	if c.EgressTag != "" {
 		entry["egress_tag"] = c.EgressTag
 	}
-	// The core's three-tier rate fields carry an explicit _bit_per_sec suffix.
-	for _, key := range []string{"burst_bit_per_sec", "burst_credit_bytes", "sustained_bit_per_sec", "sustained_after_seconds"} {
+	// The core's pool-shaping rate fields carry an explicit _bit_per_sec suffix.
+	for _, key := range []string{"burst_bit_per_sec", "burst_credit_bytes", "sustained_bit_per_sec"} {
 		if value, _ := c.RuntimeLimitFields()[key].(uint64); value > 0 {
 			entry[key] = value
 		}
+	}
+	if c.Pool != "" {
+		entry["pool"] = c.Pool
+	}
+	if c.Class != "" {
+		entry["class"] = c.Class
 	}
 }
 

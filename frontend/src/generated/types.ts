@@ -352,6 +352,7 @@ export interface Client {
   burstUnit?: string;
   burst_bps?: number;
   burst_credit_bytes?: number;
+  class?: string;
   comment: string;
   committed_bps?: number;
   committed_burst_bytes?: number;
@@ -373,6 +374,7 @@ export interface Client {
   mixed_pass?: string;
   mixed_user?: string;
   password?: string;
+  pool?: string;
   preSharedKey?: string;
   privateKey?: string;
   publicKey?: string;
@@ -384,7 +386,6 @@ export interface Client {
   secret?: string;
   security: string;
   subId: string;
-  sustained_after_seconds?: number;
   sustained_bps?: number;
   tgId: number;
   totalGB: number;
@@ -430,6 +431,7 @@ export interface ClientRecord {
   burstUnit: string;
   burst_bps: number;
   burst_credit_bytes: number;
+  class: string;
   comment: string;
   committed_bps: number;
   committed_burst_bytes: number;
@@ -452,6 +454,7 @@ export interface ClientRecord {
   mixed_pass: string;
   mixed_user: string;
   password: string;
+  pool: string;
   preSharedKey: string;
   privateKey: string;
   publicKey: string;
@@ -463,7 +466,6 @@ export interface ClientRecord {
   secret: string;
   security: string;
   subId: string;
-  sustained_after_seconds: number;
   sustained_bps: number;
   tgId: number;
   totalGB: number;
@@ -484,6 +486,7 @@ export interface ClientRuntimePatch {
   bandwidth_bps?: number | null;
   burst_bps?: number | null;
   burst_credit_bytes?: number | null;
+  class?: string | null;
   committed_bps?: number | null;
   committed_burst_bytes?: number | null;
   conn_limit?: number | null;
@@ -491,7 +494,7 @@ export interface ClientRuntimePatch {
   download_burst_bytes?: number | null;
   download_peak_bps?: number | null;
   egress_tag?: string | null;
-  sustained_after_seconds?: number | null;
+  pool?: string | null;
   sustained_bps?: number | null;
   upload_bandwidth_bps?: number | null;
   upload_burst_bytes?: number | null;
@@ -562,11 +565,12 @@ export interface ClientsSummary {
 }
 
 export interface FairShareClassPolicy {
-  burstCapBitPerSec: number;
-  burstCreditBytes: number;
-  floorRatioPercent: number;
+  downloadReservedBitPerSec: number;
+  floorBitPerSec: number;
+  heavyPercent: number;
+  heavyWindowSeconds: number;
   name: string;
-  normalCapBitPerSec: number;
+  uploadReservedBitPerSec: number;
   weight: number;
 }
 
@@ -576,8 +580,6 @@ export interface FairSharePolicy {
   congestionEnterPercent: number;
   congestionExitPercent: number;
   congestionExitTicks: number;
-  hardFloorBitPerSec: number;
-  softFloorBitPerSec: number;
 }
 
 export interface FairSharePolicyView {
@@ -593,8 +595,11 @@ export interface FairShareStatusView {
   fillTruncatedTicks: number;
   fillTruncatedTotalTicks: number;
   fillUnresolvedMembers: number;
+  heavyMembers: number;
   rootCapBitPerSec: number;
   running: boolean;
+  usedDownloadBitPerSec: number;
+  usedUploadBitPerSec: number;
 }
 
 export interface FallbackParentInfo {

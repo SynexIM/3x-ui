@@ -11,22 +11,22 @@ import (
 
 const fairSharePolicySettingKey = "fairSharePolicy"
 
-// FairShareClassPolicy is one contention policy shared by a group of clients.
-// Every rate is bit/s and 0 means "not enabled", never "use a default".
+// FairShareClassPolicy is one set of contention parameters shared by every
+// client whose `class` names it. They apply only while the node is congested.
+// Rates are bit/s; 0 means "no such item", never "use a default".
 type FairShareClassPolicy struct {
-	Name               string `json:"name" example:"live"`
-	Weight             uint32 `json:"weight" example:"3"`
-	NormalCapBitPerSec uint64 `json:"normalCapBitPerSec" example:"20000000"`
-	BurstCapBitPerSec  uint64 `json:"burstCapBitPerSec" example:"50000000"`
-	BurstCreditBytes   uint64 `json:"burstCreditBytes" example:"1000000000"`
-	FloorRatioPercent  uint32 `json:"floorRatioPercent" example:"20"`
+	Name                      string `json:"name" example:"c1"`
+	Weight                    uint32 `json:"weight" example:"3"`
+	FloorBitPerSec            uint64 `json:"floorBitPerSec" example:"5000000"`
+	UploadReservedBitPerSec   uint64 `json:"uploadReservedBitPerSec" example:"0"`
+	DownloadReservedBitPerSec uint64 `json:"downloadReservedBitPerSec" example:"0"`
+	HeavyWindowSeconds        uint32 `json:"heavyWindowSeconds" example:"900"`
+	HeavyPercent              uint32 `json:"heavyPercent" example:"80"`
 }
 
 // FairSharePolicy is the whole node-level fair-share configuration the panel owns.
 type FairSharePolicy struct {
 	AvailBitPerSec         uint64                 `json:"availBitPerSec" example:"1000000000"`
-	SoftFloorBitPerSec     uint64                 `json:"softFloorBitPerSec" example:"500000"`
-	HardFloorBitPerSec     uint64                 `json:"hardFloorBitPerSec" example:"0"`
 	CongestionEnterPercent uint32                 `json:"congestionEnterPercent" example:"85"`
 	CongestionExitPercent  uint32                 `json:"congestionExitPercent" example:"70"`
 	CongestionExitTicks    uint32                 `json:"congestionExitTicks" example:"5"`
@@ -51,6 +51,9 @@ type FairShareStatusView struct {
 	FillTruncatedTicks      uint64 `json:"fillTruncatedTicks" example:"0"`
 	FillTruncatedTotalTicks uint64 `json:"fillTruncatedTotalTicks" example:"0"`
 	FillRounds              uint32 `json:"fillRounds" example:"3"`
+	HeavyMembers            uint32 `json:"heavyMembers" example:"0"`
+	UsedUploadBitPerSec     uint64 `json:"usedUploadBitPerSec" example:"12000000"`
+	UsedDownloadBitPerSec   uint64 `json:"usedDownloadBitPerSec" example:"480000000"`
 }
 
 type FairShareService struct {
@@ -134,6 +137,9 @@ func (s *FairShareService) GetStatus() (*FairShareStatusView, error) {
 		FillTruncatedTicks:      status.FillTruncatedTicks,
 		FillTruncatedTotalTicks: status.FillTruncatedTotalTicks,
 		FillRounds:              status.FillRounds,
+		HeavyMembers:            status.HeavyMembers,
+		UsedUploadBitPerSec:     status.UsedUploadBitPerSec,
+		UsedDownloadBitPerSec:   status.UsedDownloadBitPerSec,
 	}, nil
 }
 
@@ -165,8 +171,6 @@ func (s *FairShareService) Reapply() {
 func (s *FairShareService) push(policy *FairSharePolicy) error {
 	if err := s.xrayService.SetNodeBandwidth(xray.NodeFairShare{
 		AvailBitPerSec:         policy.AvailBitPerSec,
-		SoftFloorBitPerSec:     policy.SoftFloorBitPerSec,
-		HardFloorBitPerSec:     policy.HardFloorBitPerSec,
 		CongestionEnterPercent: policy.CongestionEnterPercent,
 		CongestionExitPercent:  policy.CongestionExitPercent,
 		CongestionExitTicks:    policy.CongestionExitTicks,
@@ -176,12 +180,13 @@ func (s *FairShareService) push(policy *FairSharePolicy) error {
 	classes := make([]xray.ClassFairShare, 0, len(policy.Classes))
 	for _, class := range policy.Classes {
 		classes = append(classes, xray.ClassFairShare{
-			Name:               class.Name,
-			Weight:             class.Weight,
-			NormalCapBitPerSec: class.NormalCapBitPerSec,
-			BurstCapBitPerSec:  class.BurstCapBitPerSec,
-			BurstCreditBytes:   class.BurstCreditBytes,
-			FloorRatioPercent:  class.FloorRatioPercent,
+			Name:                      class.Name,
+			Weight:                    class.Weight,
+			FloorBitPerSec:            class.FloorBitPerSec,
+			UploadReservedBitPerSec:   class.UploadReservedBitPerSec,
+			DownloadReservedBitPerSec: class.DownloadReservedBitPerSec,
+			HeavyWindowSeconds:        class.HeavyWindowSeconds,
+			HeavyPercent:              class.HeavyPercent,
 		})
 	}
 	if err := s.xrayService.SetClassPolicy(classes); err != nil {
@@ -194,8 +199,6 @@ func (s *FairShareService) push(policy *FairSharePolicy) error {
 func isEmptyFairSharePolicy(policy *FairSharePolicy) bool {
 	return len(policy.Classes) == 0 &&
 		policy.AvailBitPerSec == 0 &&
-		policy.SoftFloorBitPerSec == 0 &&
-		policy.HardFloorBitPerSec == 0 &&
 		policy.CongestionEnterPercent == 0 &&
 		policy.CongestionExitPercent == 0 &&
 		policy.CongestionExitTicks == 0
@@ -210,23 +213,17 @@ func validateFairSharePolicy(policy *FairSharePolicy) error {
 	if policy.CongestionExitPercent > policy.CongestionEnterPercent {
 		return fmt.Errorf("congestion exit %d%% is above enter %d%%, which the core ignores", policy.CongestionExitPercent, policy.CongestionEnterPercent)
 	}
-	if policy.HardFloorBitPerSec > 0 && policy.SoftFloorBitPerSec > 0 && policy.HardFloorBitPerSec > policy.SoftFloorBitPerSec {
-		return fmt.Errorf("hard floor is above the soft floor, which makes the soft floor unreachable")
-	}
 	seen := make(map[string]bool, len(policy.Classes))
 	for _, class := range policy.Classes {
 		if seen[class.Name] {
 			return fmt.Errorf("duplicate class %q: the class table is replaced whole, so one of the two would be lost", class.Name)
 		}
 		seen[class.Name] = true
-		if class.FloorRatioPercent > 100 {
-			return fmt.Errorf("class %q floor ratio %d%% is above 100%%", class.Name, class.FloorRatioPercent)
+		if class.HeavyPercent > 100 {
+			return fmt.Errorf("class %q heavy percent %d%% is above 100%%", class.Name, class.HeavyPercent)
 		}
-		if class.BurstCapBitPerSec > 0 && class.BurstCapBitPerSec <= class.NormalCapBitPerSec {
-			return fmt.Errorf("class %q burst cap is not above its normal cap, so it would never burst", class.Name)
-		}
-		if class.BurstCreditBytes > 0 && class.BurstCapBitPerSec == 0 {
-			return fmt.Errorf("class %q has burst credit but no burst cap, so the credit is never spent", class.Name)
+		if (class.HeavyPercent == 0) != (class.HeavyWindowSeconds == 0) {
+			return fmt.Errorf("class %q needs both heavy window and heavy percent, or neither", class.Name)
 		}
 	}
 	return nil

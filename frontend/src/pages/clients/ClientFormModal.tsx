@@ -48,12 +48,25 @@ import type {
   ExternalLinkInput,
 } from '@/hooks/useClients';
 import { useFail2banStatusQuery, getLimitIpNotice } from '@/api/queries/useFail2banStatusQuery';
-import { ClientFormRefinedSchema, ClientCreateFormSchema, type ClientFormValues } from '@/schemas/client';
 import {
-  RATE_UNITS, BURST_UNITS, DEFAULT_RATE_UNIT, DEFAULT_BURST_UNIT,
-  rateToBps, bpsToRate, burstToBytes, bytesToBurst,
-  normalizeRateUnit, normalizeBurstUnit, committedExceedsPeak,
-  type RateUnit, type BurstUnit,
+  ClientFormRefinedSchema,
+  ClientCreateFormSchema,
+  type ClientFormValues,
+} from '@/schemas/client';
+import {
+  RATE_UNITS,
+  BURST_UNITS,
+  DEFAULT_RATE_UNIT,
+  DEFAULT_BURST_UNIT,
+  rateToBps,
+  bpsToRate,
+  burstToBytes,
+  bytesToBurst,
+  normalizeRateUnit,
+  normalizeBurstUnit,
+  committedExceedsPeak,
+  type RateUnit,
+  type BurstUnit,
 } from '@/lib/clients/rate-limit';
 import './ClientFormModal.css';
 
@@ -155,7 +168,8 @@ type Values = ClientFormValues & {
   tierBurstRate: number;
   tierBurstCredit: number;
   sustainedRate: number;
-  sustainedAfter: number;
+  pool: string;
+  rateClass: string;
   mixedUser: string;
   mixedPass: string;
 };
@@ -204,7 +218,8 @@ const EMPTY: Values = {
   tierBurstRate: 0,
   tierBurstCredit: 0,
   sustainedRate: 0,
-  sustainedAfter: 0,
+  pool: '',
+  rateClass: '',
   mixedUser: '',
   mixedPass: '',
 };
@@ -312,7 +327,8 @@ export default function ClientFormModal({
   const tierBurstRate = useWatch({ control: methods.control, name: 'tierBurstRate' });
   const tierBurstCredit = useWatch({ control: methods.control, name: 'tierBurstCredit' });
   const sustainedRate = useWatch({ control: methods.control, name: 'sustainedRate' });
-  const sustainedAfter = useWatch({ control: methods.control, name: 'sustainedAfter' });
+  const pool = useWatch({ control: methods.control, name: 'pool' });
+  const rateClass = useWatch({ control: methods.control, name: 'rateClass' });
   const mixedUser = useWatch({ control: methods.control, name: 'mixedUser' });
   const mixedPass = useWatch({ control: methods.control, name: 'mixedPass' });
   // burst >= standard >= sustained; a zero tier is off and never out of order.
@@ -446,13 +462,17 @@ export default function ClientFormModal({
         rateUnit: seedRateUnit,
         burstSize: bytesToBurst(Number(client.committed_burst_bytes) || 0, seedBurstUnit),
         standardRate: bpsToRate(
-          Math.max(Number(client.upload_bandwidth_bps) || 0, Number(client.download_bandwidth_bps) || 0),
+          Math.max(
+            Number(client.upload_bandwidth_bps) || 0,
+            Number(client.download_bandwidth_bps) || 0,
+          ),
           seedRateUnit,
         ),
         tierBurstRate: bpsToRate(Number(client.burst_bps) || 0, seedRateUnit),
         tierBurstCredit: bytesToBurst(Number(client.burst_credit_bytes) || 0, seedBurstUnit),
         sustainedRate: bpsToRate(Number(client.sustained_bps) || 0, seedRateUnit),
-        sustainedAfter: Number(client.sustained_after_seconds) || 0,
+        pool: client.pool || '',
+        rateClass: client.class || '',
         mixedUser: client.mixed_user || '',
         mixedPass: client.mixed_pass || '',
         burstUnit: seedBurstUnit,
@@ -588,7 +608,9 @@ export default function ClientFormModal({
   );
 
   const showMixed = useMemo(() => {
-    const mixedIds = new Set((inbounds || []).filter((row) => row?.protocol === 'mixed').map((row) => row.id));
+    const mixedIds = new Set(
+      (inbounds || []).filter((row) => row?.protocol === 'mixed').map((row) => row.id),
+    );
     return (inboundIds || []).some((id) => mixedIds.has(id));
   }, [inbounds, inboundIds]);
 
@@ -793,7 +815,8 @@ export default function ClientFormModal({
       burst_bps: rateToBps(Number(values.tierBurstRate) || 0, values.rateUnit),
       burst_credit_bytes: burstToBytes(Number(values.tierBurstCredit) || 0, values.burstUnit),
       sustained_bps: rateToBps(Number(values.sustainedRate) || 0, values.rateUnit),
-      sustained_after_seconds: Number(values.sustainedAfter) || 0,
+      pool: values.pool.trim(),
+      class: values.rateClass.trim(),
       mixed_user: showMixed ? values.mixedUser.trim() : '',
       mixed_pass: showMixed ? values.mixedPass : '',
       rateUnit: values.rateUnit,
@@ -1047,7 +1070,10 @@ export default function ClientFormModal({
 
                       <Row gutter={16}>
                         <Col xs={24} md={8}>
-                          <Form.Item label={t('pages.clients.peakRate')} tooltip={t('pages.clients.peakRateDesc')}>
+                          <Form.Item
+                            label={t('pages.clients.peakRate')}
+                            tooltip={t('pages.clients.peakRateDesc')}
+                          >
                             <Space.Compact style={{ display: 'flex' }}>
                               <InputNumber
                                 value={peakRate}
@@ -1071,7 +1097,9 @@ export default function ClientFormModal({
                             label={t('pages.clients.committedRate')}
                             tooltip={t('pages.clients.committedRateDesc')}
                             validateStatus={committedTooHigh ? 'error' : undefined}
-                            help={committedTooHigh ? t('pages.clients.committedAbovePeak') : undefined}
+                            help={
+                              committedTooHigh ? t('pages.clients.committedAbovePeak') : undefined
+                            }
                           >
                             <InputNumber
                               value={committedRate}
@@ -1085,7 +1113,10 @@ export default function ClientFormModal({
                           </Form.Item>
                         </Col>
                         <Col xs={24} md={8}>
-                          <Form.Item label={t('pages.clients.burstSize')} tooltip={t('pages.clients.burstSizeDesc')}>
+                          <Form.Item
+                            label={t('pages.clients.burstSize')}
+                            tooltip={t('pages.clients.burstSizeDesc')}
+                          >
                             <Space.Compact style={{ display: 'flex' }}>
                               <InputNumber
                                 value={burstSize}
@@ -1108,7 +1139,10 @@ export default function ClientFormModal({
 
                       <Row gutter={16}>
                         <Col xs={24} md={8}>
-                          <Form.Item label={t('pages.clients.standardRate')} tooltip={t('pages.clients.standardRateDesc')}>
+                          <Form.Item
+                            label={t('pages.clients.standardRate')}
+                            tooltip={t('pages.clients.standardRateDesc')}
+                          >
                             <InputNumber
                               value={standardRate}
                               min={0}
@@ -1139,7 +1173,10 @@ export default function ClientFormModal({
                           </Form.Item>
                         </Col>
                         <Col xs={24} md={8}>
-                          <Form.Item label={t('pages.clients.tierBurstCredit')} tooltip={t('pages.clients.tierBurstCreditDesc')}>
+                          <Form.Item
+                            label={t('pages.clients.tierBurstCredit')}
+                            tooltip={t('pages.clients.tierBurstCreditDesc')}
+                          >
                             <InputNumber
                               value={tierBurstCredit}
                               min={0}
@@ -1155,7 +1192,10 @@ export default function ClientFormModal({
 
                       <Row gutter={16}>
                         <Col xs={24} md={8}>
-                          <Form.Item label={t('pages.clients.sustainedRate')} tooltip={t('pages.clients.sustainedRateDesc')}>
+                          <Form.Item
+                            label={t('pages.clients.sustainedRate')}
+                            tooltip={t('pages.clients.sustainedRateDesc')}
+                          >
                             <InputNumber
                               value={sustainedRate}
                               min={0}
@@ -1168,14 +1208,26 @@ export default function ClientFormModal({
                           </Form.Item>
                         </Col>
                         <Col xs={24} md={8}>
-                          <Form.Item label={t('pages.clients.sustainedAfter')} tooltip={t('pages.clients.sustainedAfterDesc')}>
-                            <InputNumber
-                              value={sustainedAfter}
-                              min={0}
-                              step={1}
-                              addonAfter={t('pages.clients.seconds')}
-                              style={{ width: '100%' }}
-                              onChange={(v) => methods.setValue('sustainedAfter', Number(v) || 0)}
+                          <Form.Item
+                            label={t('pages.clients.pool')}
+                            tooltip={t('pages.clients.poolDesc')}
+                          >
+                            <Input
+                              value={pool}
+                              placeholder={t('pages.clients.poolPlaceholder')}
+                              onChange={(e) => methods.setValue('pool', e.target.value)}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={8}>
+                          <Form.Item
+                            label={t('pages.clients.rateClass')}
+                            tooltip={t('pages.clients.rateClassDesc')}
+                          >
+                            <Input
+                              value={rateClass}
+                              placeholder={t('pages.clients.rateClassPlaceholder')}
+                              onChange={(e) => methods.setValue('rateClass', e.target.value)}
                             />
                           </Form.Item>
                         </Col>
@@ -1432,7 +1484,10 @@ export default function ClientFormModal({
 
                       {showMixed && (
                         <>
-                          <Form.Item label={t('pages.clients.mixedUser')} tooltip={t('pages.clients.mixedUserDesc')}>
+                          <Form.Item
+                            label={t('pages.clients.mixedUser')}
+                            tooltip={t('pages.clients.mixedUserDesc')}
+                          >
                             <Input
                               value={mixedUser}
                               maxLength={64}
@@ -1440,7 +1495,10 @@ export default function ClientFormModal({
                               onChange={(e) => methods.setValue('mixedUser', e.target.value)}
                             />
                           </Form.Item>
-                          <Form.Item label={t('pages.clients.mixedPass')} tooltip={t('pages.clients.mixedPassDesc')}>
+                          <Form.Item
+                            label={t('pages.clients.mixedPass')}
+                            tooltip={t('pages.clients.mixedPassDesc')}
+                          >
                             <Space.Compact style={{ display: 'flex' }}>
                               <Input
                                 value={mixedPass}
@@ -1452,7 +1510,9 @@ export default function ClientFormModal({
                               <Button
                                 aria-label={t('regenerate')}
                                 icon={<ReloadOutlined />}
-                                onClick={() => methods.setValue('mixedPass', RandomUtil.randomLowerAndNum(16))}
+                                onClick={() =>
+                                  methods.setValue('mixedPass', RandomUtil.randomLowerAndNum(16))
+                                }
                               />
                             </Space.Compact>
                           </Form.Item>

@@ -1455,13 +1455,16 @@ export const SCHEMAS: Record<string, unknown> = {
         "type": "string"
       },
       "burst_bps": {
-        "description": "Three-tier shaping on top of the upload/download standard rates; bit/s,\nbytes and seconds, 0 = tier off. Emitted to xray as *_bit_per_sec names.",
+        "description": "Pool shaping on top of the upload/download standard rates; bit/s and\nbytes, 0 = off. Emitted to xray as *_bit_per_sec names. Sustained is not a\ncap: it is the pool's guaranteed rate once it counts as heavy while the\nnode is congested.",
         "format": "int64",
         "type": "integer"
       },
       "burst_credit_bytes": {
         "format": "int64",
         "type": "integer"
+      },
+      "class": {
+        "type": "string"
       },
       "comment": {
         "description": "Client comment",
@@ -1547,6 +1550,10 @@ export const SCHEMAS: Record<string, unknown> = {
         "description": "Client password",
         "type": "string"
       },
+      "pool": {
+        "description": "Pool names the shaping pool this client shares with every other client\ncarrying the same value; empty = the client's email. Class names its\ncontention parameters in the node fair-share class table.",
+        "type": "string"
+      },
       "preSharedKey": {
         "type": "string"
       },
@@ -1592,9 +1599,6 @@ export const SCHEMAS: Record<string, unknown> = {
       "subId": {
         "description": "Subscription identifier",
         "type": "string"
-      },
-      "sustained_after_seconds": {
-        "type": "integer"
       },
       "sustained_bps": {
         "format": "int64",
@@ -1788,6 +1792,9 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "type": "integer"
       },
+      "class": {
+        "type": "string"
+      },
       "comment": {
         "type": "string"
       },
@@ -1861,6 +1868,9 @@ export const SCHEMAS: Record<string, unknown> = {
       "password": {
         "type": "string"
       },
+      "pool": {
+        "type": "string"
+      },
       "preSharedKey": {
         "type": "string"
       },
@@ -1891,9 +1901,6 @@ export const SCHEMAS: Record<string, unknown> = {
       },
       "subId": {
         "type": "string"
-      },
-      "sustained_after_seconds": {
-        "type": "integer"
       },
       "sustained_bps": {
         "format": "int64",
@@ -1941,6 +1948,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "burstUnit",
       "burst_bps",
       "burst_credit_bytes",
+      "class",
       "comment",
       "committed_bps",
       "committed_burst_bytes",
@@ -1963,6 +1971,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "mixed_pass",
       "mixed_user",
       "password",
+      "pool",
       "preSharedKey",
       "privateKey",
       "publicKey",
@@ -1974,7 +1983,6 @@ export const SCHEMAS: Record<string, unknown> = {
       "secret",
       "security",
       "subId",
-      "sustained_after_seconds",
       "sustained_bps",
       "tgId",
       "totalGB",
@@ -2008,7 +2016,7 @@ export const SCHEMAS: Record<string, unknown> = {
         "type": "integer"
       },
       "burst_bps": {
-        "description": "Three-tier shaping over the upload/download standard rates (symmetric).",
+        "description": "Pool shaping over the upload/download standard rates (symmetric).",
         "format": "int64",
         "nullable": true,
         "type": "integer"
@@ -2017,6 +2025,10 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "nullable": true,
         "type": "integer"
+      },
+      "class": {
+        "nullable": true,
+        "type": "string"
       },
       "committed_bps": {
         "format": "int64",
@@ -2051,9 +2063,10 @@ export const SCHEMAS: Record<string, unknown> = {
         "nullable": true,
         "type": "string"
       },
-      "sustained_after_seconds": {
+      "pool": {
+        "description": "Pool and class are opaque names set by the caller; empty clears them.",
         "nullable": true,
-        "type": "integer"
+        "type": "string"
       },
       "sustained_bps": {
         "format": "int64",
@@ -2370,28 +2383,32 @@ export const SCHEMAS: Record<string, unknown> = {
     "type": "object"
   },
   "FairShareClassPolicy": {
-    "description": "FairShareClassPolicy is one contention policy shared by a group of clients.\nEvery rate is bit/s and 0 means \"not enabled\", never \"use a default\".",
+    "description": "FairShareClassPolicy is one set of contention parameters shared by every\nclient whose `class` names it. They apply only while the node is congested.\nRates are bit/s; 0 means \"no such item\", never \"use a default\".",
     "properties": {
-      "burstCapBitPerSec": {
-        "example": 50000000,
+      "downloadReservedBitPerSec": {
+        "example": 0,
         "format": "int64",
         "type": "integer"
       },
-      "burstCreditBytes": {
-        "example": 1000000000,
+      "floorBitPerSec": {
+        "example": 5000000,
         "format": "int64",
         "type": "integer"
       },
-      "floorRatioPercent": {
-        "example": 20,
+      "heavyPercent": {
+        "example": 80,
+        "type": "integer"
+      },
+      "heavyWindowSeconds": {
+        "example": 900,
         "type": "integer"
       },
       "name": {
-        "example": "live",
+        "example": "c1",
         "type": "string"
       },
-      "normalCapBitPerSec": {
-        "example": 20000000,
+      "uploadReservedBitPerSec": {
+        "example": 0,
         "format": "int64",
         "type": "integer"
       },
@@ -2401,11 +2418,12 @@ export const SCHEMAS: Record<string, unknown> = {
       }
     },
     "required": [
-      "burstCapBitPerSec",
-      "burstCreditBytes",
-      "floorRatioPercent",
+      "downloadReservedBitPerSec",
+      "floorBitPerSec",
+      "heavyPercent",
+      "heavyWindowSeconds",
       "name",
-      "normalCapBitPerSec",
+      "uploadReservedBitPerSec",
       "weight"
     ],
     "type": "object"
@@ -2435,16 +2453,6 @@ export const SCHEMAS: Record<string, unknown> = {
       "congestionExitTicks": {
         "example": 5,
         "type": "integer"
-      },
-      "hardFloorBitPerSec": {
-        "example": 0,
-        "format": "int64",
-        "type": "integer"
-      },
-      "softFloorBitPerSec": {
-        "example": 500000,
-        "format": "int64",
-        "type": "integer"
       }
     },
     "required": [
@@ -2452,9 +2460,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "classes",
       "congestionEnterPercent",
       "congestionExitPercent",
-      "congestionExitTicks",
-      "hardFloorBitPerSec",
-      "softFloorBitPerSec"
+      "congestionExitTicks"
     ],
     "type": "object"
   },
@@ -2508,6 +2514,10 @@ export const SCHEMAS: Record<string, unknown> = {
         "example": 0,
         "type": "integer"
       },
+      "heavyMembers": {
+        "example": 0,
+        "type": "integer"
+      },
       "rootCapBitPerSec": {
         "example": 1000000000,
         "format": "int64",
@@ -2516,6 +2526,16 @@ export const SCHEMAS: Record<string, unknown> = {
       "running": {
         "example": true,
         "type": "boolean"
+      },
+      "usedDownloadBitPerSec": {
+        "example": 480000000,
+        "format": "int64",
+        "type": "integer"
+      },
+      "usedUploadBitPerSec": {
+        "example": 12000000,
+        "format": "int64",
+        "type": "integer"
       }
     },
     "required": [
@@ -2526,8 +2546,11 @@ export const SCHEMAS: Record<string, unknown> = {
       "fillTruncatedTicks",
       "fillTruncatedTotalTicks",
       "fillUnresolvedMembers",
+      "heavyMembers",
       "rootCapBitPerSec",
-      "running"
+      "running",
+      "usedDownloadBitPerSec",
+      "usedUploadBitPerSec"
     ],
     "type": "object"
   },

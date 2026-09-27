@@ -371,6 +371,7 @@ export const ClientSchema = z.object({
   burstUnit: z.string().optional(),
   burst_bps: z.number().int().optional(),
   burst_credit_bytes: z.number().int().optional(),
+  class: z.string().optional(),
   comment: z.string(),
   committed_bps: z.number().int().optional(),
   committed_burst_bytes: z.number().int().optional(),
@@ -392,6 +393,7 @@ export const ClientSchema = z.object({
   mixed_pass: z.string().optional(),
   mixed_user: z.string().optional(),
   password: z.string().optional(),
+  pool: z.string().optional(),
   preSharedKey: z.string().optional(),
   privateKey: z.string().optional(),
   publicKey: z.string().optional(),
@@ -403,7 +405,6 @@ export const ClientSchema = z.object({
   secret: z.string().optional(),
   security: z.string(),
   subId: z.string(),
-  sustained_after_seconds: z.number().int().optional(),
   sustained_bps: z.number().int().optional(),
   tgId: z.number().int(),
   totalGB: z.number().int(),
@@ -453,6 +454,7 @@ export const ClientRecordSchema = z.object({
   burstUnit: z.string(),
   burst_bps: z.number().int(),
   burst_credit_bytes: z.number().int(),
+  class: z.string(),
   comment: z.string(),
   committed_bps: z.number().int(),
   committed_burst_bytes: z.number().int(),
@@ -475,6 +477,7 @@ export const ClientRecordSchema = z.object({
   mixed_pass: z.string(),
   mixed_user: z.string(),
   password: z.string(),
+  pool: z.string(),
   preSharedKey: z.string(),
   privateKey: z.string(),
   publicKey: z.string(),
@@ -486,7 +489,6 @@ export const ClientRecordSchema = z.object({
   secret: z.string(),
   security: z.string(),
   subId: z.string(),
-  sustained_after_seconds: z.number().int(),
   sustained_bps: z.number().int(),
   tgId: z.number().int(),
   totalGB: z.number().int(),
@@ -509,6 +511,7 @@ export const ClientRuntimePatchSchema = z.object({
   bandwidth_bps: z.number().int().nullable().optional(),
   burst_bps: z.number().int().nullable().optional(),
   burst_credit_bytes: z.number().int().nullable().optional(),
+  class: z.string().nullable().optional(),
   committed_bps: z.number().int().nullable().optional(),
   committed_burst_bytes: z.number().int().nullable().optional(),
   conn_limit: z.number().int().nullable().optional(),
@@ -516,7 +519,7 @@ export const ClientRuntimePatchSchema = z.object({
   download_burst_bytes: z.number().int().nullable().optional(),
   download_peak_bps: z.number().int().nullable().optional(),
   egress_tag: z.string().nullable().optional(),
-  sustained_after_seconds: z.number().int().nullable().optional(),
+  pool: z.string().nullable().optional(),
   sustained_bps: z.number().int().nullable().optional(),
   upload_bandwidth_bps: z.number().int().nullable().optional(),
   upload_burst_bytes: z.number().int().nullable().optional(),
@@ -592,11 +595,12 @@ export const ClientsSummarySchema = z.object({
 export type ClientsSummary = z.infer<typeof ClientsSummarySchema>;
 
 export const FairShareClassPolicySchema = z.object({
-  burstCapBitPerSec: z.number().int(),
-  burstCreditBytes: z.number().int(),
-  floorRatioPercent: z.number().int(),
+  downloadReservedBitPerSec: z.number().int(),
+  floorBitPerSec: z.number().int(),
+  heavyPercent: z.number().int(),
+  heavyWindowSeconds: z.number().int(),
   name: z.string(),
-  normalCapBitPerSec: z.number().int(),
+  uploadReservedBitPerSec: z.number().int(),
   weight: z.number().int(),
 });
 export type FairShareClassPolicy = z.infer<typeof FairShareClassPolicySchema>;
@@ -607,8 +611,6 @@ export const FairSharePolicySchema = z.object({
   congestionEnterPercent: z.number().int(),
   congestionExitPercent: z.number().int(),
   congestionExitTicks: z.number().int(),
-  hardFloorBitPerSec: z.number().int(),
-  softFloorBitPerSec: z.number().int(),
 });
 export type FairSharePolicy = z.infer<typeof FairSharePolicySchema>;
 
@@ -626,8 +628,11 @@ export const FairShareStatusViewSchema = z.object({
   fillTruncatedTicks: z.number().int(),
   fillTruncatedTotalTicks: z.number().int(),
   fillUnresolvedMembers: z.number().int(),
+  heavyMembers: z.number().int(),
   rootCapBitPerSec: z.number().int(),
   running: z.boolean(),
+  usedDownloadBitPerSec: z.number().int(),
+  usedUploadBitPerSec: z.number().int(),
 });
 export type FairShareStatusView = z.infer<typeof FairShareStatusViewSchema>;
 

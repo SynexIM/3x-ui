@@ -1,14 +1,29 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, Card, Col, Descriptions, Form, Input, InputNumber, Row, Space, Table, Tag, Tooltip, message } from 'antd';
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Descriptions,
+  Form,
+  Input,
+  InputNumber,
+  Row,
+  Space,
+  Table,
+  Tag,
+  Tooltip,
+  message,
+} from 'antd';
 import { DeleteOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
 
 import { useFairShareMutation, useFairShareQuery } from '@/api/queries/useFairShareQuery';
 import {
   EMPTY_FAIR_SHARE_CLASS,
   EMPTY_FAIR_SHARE_FORM,
-  burstCapNotAboveNormal,
   bitPerSecToMbps,
+  heavyHalfSet,
   exitAboveEnter,
   formToPayload,
   payloadToForm,
@@ -42,22 +57,18 @@ export default function NodeFairSharePanel() {
     }));
 
   const exitTooHigh = exitAboveEnter(form);
-  const badBurstClasses = useMemo(
-    () => form.classes.filter(burstCapNotAboveNormal).map((klass) => klass.name || '-'),
+  const badHeavyClasses = useMemo(
+    () => form.classes.filter(heavyHalfSet).map((klass) => klass.name || '-'),
     [form.classes],
   );
-  const blocked = exitTooHigh || badBurstClasses.length > 0;
+  const blocked = exitTooHigh || badHeavyClasses.length > 0;
 
   async function onSave() {
     const msg = await save.mutateAsync(formToPayload(form));
     if (msg?.success) message.success(t('pages.nodes.fairShare.saved'));
   }
 
-  const rateField = (
-    label: string,
-    tip: string,
-    key: 'availMbps' | 'softFloorMbps' | 'hardFloorMbps',
-  ) => (
+  const rateField = (label: string, tip: string, key: 'availMbps') => (
     <Form.Item label={label} tooltip={tip} extra={tip}>
       <InputNumber
         value={form[key]}
@@ -102,11 +113,21 @@ export default function NodeFairSharePanel() {
   const classColumn = (
     title: string,
     tip: string,
-    key: 'weight' | 'normalCapMbps' | 'burstCapMbps' | 'burstCreditGB' | 'floorRatioPercent',
+    key:
+      | 'weight'
+      | 'floorMbps'
+      | 'uploadReservedMbps'
+      | 'downloadReservedMbps'
+      | 'heavyWindowSeconds'
+      | 'heavyPercent',
     addon: string,
     max?: number,
   ) => ({
-    title: <Tooltip title={tip}><span>{title}</span></Tooltip>,
+    title: (
+      <Tooltip title={tip}>
+        <span>{title}</span>
+      </Tooltip>
+    ),
     dataIndex: key,
     width: 170,
     render: (_: unknown, klass: FairShareClassForm, index: number) => (
@@ -131,7 +152,9 @@ export default function NodeFairSharePanel() {
       children: (
         <Space direction="vertical" size={0}>
           <Tag color={live?.congested ? 'orange' : 'green'}>
-            {live?.congested ? t('pages.nodes.fairShare.congestedYes') : t('pages.nodes.fairShare.congestedNo')}
+            {live?.congested
+              ? t('pages.nodes.fairShare.congestedYes')
+              : t('pages.nodes.fairShare.congestedNo')}
           </Tag>
           <span className="hint">{t('pages.nodes.fairShare.statusCongestedHint')}</span>
         </Space>
@@ -151,6 +174,16 @@ export default function NodeFairSharePanel() {
       children: live?.activeMembers ?? 0,
     },
     {
+      key: 'heavyMembers',
+      label: t('pages.nodes.fairShare.statusHeavyMembers'),
+      children: live?.heavyMembers ?? 0,
+    },
+    {
+      key: 'used',
+      label: t('pages.nodes.fairShare.statusUsed'),
+      children: `↑ ${bitPerSecToMbps(live?.usedUploadBitPerSec ?? 0) ?? 0} / ↓ ${bitPerSecToMbps(live?.usedDownloadBitPerSec ?? 0) ?? 0} Mbps`,
+    },
+    {
       key: 'fillRounds',
       label: t('pages.nodes.fairShare.statusFillRounds'),
       children: live?.fillRounds ?? 0,
@@ -160,7 +193,9 @@ export default function NodeFairSharePanel() {
       label: t('pages.nodes.fairShare.statusFillTruncated'),
       children: (
         <Tag color={live?.fillTruncated ? 'orange' : 'green'}>
-          {live?.fillTruncated ? t('pages.nodes.fairShare.truncatedYes') : t('pages.nodes.fairShare.truncatedNo')}
+          {live?.fillTruncated
+            ? t('pages.nodes.fairShare.truncatedYes')
+            : t('pages.nodes.fairShare.truncatedNo')}
         </Tag>
       ),
     },
@@ -185,7 +220,7 @@ export default function NodeFairSharePanel() {
     <Card
       style={{ marginBottom: 16 }}
       title={t('pages.nodes.fairShare.title')}
-      extra={(
+      extra={
         <Button
           type="primary"
           icon={<SaveOutlined />}
@@ -195,7 +230,7 @@ export default function NodeFairSharePanel() {
         >
           {t('save')}
         </Button>
-      )}
+      }
     >
       <Alert
         type="info"
@@ -214,30 +249,51 @@ export default function NodeFairSharePanel() {
         />
       )}
 
-      <Card type="inner" size="small" title={t('pages.nodes.fairShare.statusSection')} style={{ marginBottom: 16 }}>
+      <Card
+        type="inner"
+        size="small"
+        title={t('pages.nodes.fairShare.statusSection')}
+        style={{ marginBottom: 16 }}
+      >
         {!live?.running && (
-          <Alert type="warning" showIcon style={{ marginBottom: 12 }} message={t('pages.nodes.fairShare.statusStopped')} />
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message={t('pages.nodes.fairShare.statusStopped')}
+          />
         )}
         <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 2 }} items={statusItems} />
-        <p className="hint" style={{ marginTop: 8 }}>{t('pages.nodes.fairShare.statusFillHint')}</p>
+        <p className="hint" style={{ marginTop: 8 }}>
+          {t('pages.nodes.fairShare.statusFillHint')}
+        </p>
       </Card>
 
       <Form layout="vertical">
-        <Card type="inner" size="small" title={t('pages.nodes.fairShare.nodeSection')} style={{ marginBottom: 16 }}>
+        <Card
+          type="inner"
+          size="small"
+          title={t('pages.nodes.fairShare.nodeSection')}
+          style={{ marginBottom: 16 }}
+        >
           <Row gutter={16}>
             <Col xs={24} md={8}>
-              {rateField(t('pages.nodes.fairShare.avail'), t('pages.nodes.fairShare.availBlank'), 'availMbps')}
-            </Col>
-            <Col xs={24} md={8}>
-              {rateField(t('pages.nodes.fairShare.softFloor'), t('pages.nodes.fairShare.softFloorBlank'), 'softFloorMbps')}
-            </Col>
-            <Col xs={24} md={8}>
-              {rateField(t('pages.nodes.fairShare.hardFloor'), t('pages.nodes.fairShare.hardFloorBlank'), 'hardFloorMbps')}
+              {rateField(
+                t('pages.nodes.fairShare.avail'),
+                t('pages.nodes.fairShare.availBlank'),
+                'availMbps',
+              )}
             </Col>
           </Row>
           <Row gutter={16}>
             <Col xs={24} md={8}>
-              {countField(t('pages.nodes.fairShare.congestionEnter'), t('pages.nodes.fairShare.congestionEnterBlank'), 'congestionEnterPercent', '%', 100)}
+              {countField(
+                t('pages.nodes.fairShare.congestionEnter'),
+                t('pages.nodes.fairShare.congestionEnterBlank'),
+                'congestionEnterPercent',
+                '%',
+                100,
+              )}
             </Col>
             <Col xs={24} md={8}>
               {countField(
@@ -250,7 +306,12 @@ export default function NodeFairSharePanel() {
               )}
             </Col>
             <Col xs={24} md={8}>
-              {countField(t('pages.nodes.fairShare.congestionTicks'), t('pages.nodes.fairShare.congestionTicksBlank'), 'congestionExitTicks', 's')}
+              {countField(
+                t('pages.nodes.fairShare.congestionTicks'),
+                t('pages.nodes.fairShare.congestionTicksBlank'),
+                'congestionExitTicks',
+                's',
+              )}
             </Col>
           </Row>
         </Card>
@@ -259,23 +320,32 @@ export default function NodeFairSharePanel() {
           type="inner"
           size="small"
           title={t('pages.nodes.fairShare.classSection')}
-          extra={(
+          extra={
             <Button
               size="small"
               icon={<PlusOutlined />}
-              onClick={() => setForm((p) => ({ ...p, classes: [...p.classes, { ...EMPTY_FAIR_SHARE_CLASS }] }))}
+              onClick={() =>
+                setForm((p) => ({ ...p, classes: [...p.classes, { ...EMPTY_FAIR_SHARE_CLASS }] }))
+              }
             >
               {t('pages.nodes.fairShare.addClass')}
             </Button>
-          )}
+          }
         >
-          <Alert type="info" showIcon style={{ marginBottom: 12 }} message={t('pages.nodes.fairShare.classReplaceWhole')} />
-          {badBurstClasses.length > 0 && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message={t('pages.nodes.fairShare.classReplaceWhole')}
+          />
+          {badHeavyClasses.length > 0 && (
             <Alert
               type="error"
               showIcon
               style={{ marginBottom: 12 }}
-              message={t('pages.nodes.fairShare.burstNotAboveNormal', { classes: badBurstClasses.join(', ') })}
+              message={t('pages.nodes.fairShare.heavyHalfSet', {
+                classes: badHeavyClasses.join(', '),
+              })}
             />
           )}
           <Table<FairShareClassForm>
@@ -287,7 +357,11 @@ export default function NodeFairSharePanel() {
             locale={{ emptyText: t('pages.nodes.fairShare.noClasses') }}
             columns={[
               {
-                title: <Tooltip title={t('pages.nodes.fairShare.classNameDesc')}><span>{t('pages.nodes.fairShare.className')}</span></Tooltip>,
+                title: (
+                  <Tooltip title={t('pages.nodes.fairShare.classNameDesc')}>
+                    <span>{t('pages.nodes.fairShare.className')}</span>
+                  </Tooltip>
+                ),
                 dataIndex: 'name',
                 width: 180,
                 render: (_: unknown, klass: FairShareClassForm, index: number) => (
@@ -298,11 +372,43 @@ export default function NodeFairSharePanel() {
                   />
                 ),
               },
-              classColumn(t('pages.nodes.fairShare.weight'), t('pages.nodes.fairShare.weightBlank'), 'weight', 'x'),
-              classColumn(t('pages.nodes.fairShare.normalCap'), t('pages.nodes.fairShare.normalCapBlank'), 'normalCapMbps', 'Mbps'),
-              classColumn(t('pages.nodes.fairShare.burstCap'), t('pages.nodes.fairShare.burstCapBlank'), 'burstCapMbps', 'Mbps'),
-              classColumn(t('pages.nodes.fairShare.burstCredit'), t('pages.nodes.fairShare.burstCreditBlank'), 'burstCreditGB', 'GB'),
-              classColumn(t('pages.nodes.fairShare.floorRatio'), t('pages.nodes.fairShare.floorRatioBlank'), 'floorRatioPercent', '%', 100),
+              classColumn(
+                t('pages.nodes.fairShare.weight'),
+                t('pages.nodes.fairShare.weightBlank'),
+                'weight',
+                'x',
+              ),
+              classColumn(
+                t('pages.nodes.fairShare.floor'),
+                t('pages.nodes.fairShare.floorBlank'),
+                'floorMbps',
+                'Mbps',
+              ),
+              classColumn(
+                t('pages.nodes.fairShare.uploadReserved'),
+                t('pages.nodes.fairShare.reservedBlank'),
+                'uploadReservedMbps',
+                'Mbps',
+              ),
+              classColumn(
+                t('pages.nodes.fairShare.downloadReserved'),
+                t('pages.nodes.fairShare.reservedBlank'),
+                'downloadReservedMbps',
+                'Mbps',
+              ),
+              classColumn(
+                t('pages.nodes.fairShare.heavyWindow'),
+                t('pages.nodes.fairShare.heavyBlank'),
+                'heavyWindowSeconds',
+                's',
+              ),
+              classColumn(
+                t('pages.nodes.fairShare.heavyPercent'),
+                t('pages.nodes.fairShare.heavyBlank'),
+                'heavyPercent',
+                '%',
+                100,
+              ),
               {
                 title: '',
                 dataIndex: 'remove',
@@ -314,7 +420,9 @@ export default function NodeFairSharePanel() {
                     danger
                     icon={<DeleteOutlined />}
                     aria-label={t('delete')}
-                    onClick={() => setForm((p) => ({ ...p, classes: p.classes.filter((_, i) => i !== index) }))}
+                    onClick={() =>
+                      setForm((p) => ({ ...p, classes: p.classes.filter((_, i) => i !== index) }))
+                    }
                   />
                 ),
               },

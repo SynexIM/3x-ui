@@ -1145,10 +1145,21 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/clients/add',
-        summary: 'Create a new client and attach it to one or more inbounds in a single call. Body is JSON. Per-protocol secrets (UUID for VLESS/VMess, password for Trojan/Mixed/HTTP/Shadowsocks, auth for Hysteria) are generated server-side when omitted, so callers can send only the universal fields.',
+        summary:
+          'Create a new client and attach it to one or more inbounds in a single call. Body is JSON. Per-protocol secrets (UUID for VLESS/VMess, password for Trojan/Mixed/HTTP/Shadowsocks, auth for Hysteria) are generated server-side when omitted, so callers can send only the universal fields.',
         params: [
-          { name: 'client', in: 'body (json)', type: 'object', desc: 'Client fields: email, subId, id (uuid), password, auth, flow, totalGB, expiryTime, limitIp, tgId, comment, enable; bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit (Mbps/Kbps/MB/s/KB/s), burstUnit (MB/GB); upload_bandwidth_bps / download_bandwidth_bps (standard bits/s), burst_bps, burst_credit_bytes, sustained_bps, sustained_after_seconds (three-tier shaping); mixed_user / mixed_pass (Mixed login, default email / password). Zero rate values mean unlimited; units are display metadata.' },
-          { name: 'inboundIds', in: 'body (json)', type: 'integer[]', desc: 'Inbound IDs to attach the client to. At least one required.' },
+          {
+            name: 'client',
+            in: 'body (json)',
+            type: 'object',
+            desc: 'Client fields: email, subId, id (uuid), password, auth, flow, totalGB, expiryTime, limitIp, tgId, comment, enable; bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit (Mbps/Kbps/MB/s/KB/s), burstUnit (MB/GB); upload_bandwidth_bps / download_bandwidth_bps (standard bits/s), burst_bps, burst_credit_bytes, sustained_bps (pool shaping), pool (shaping pool shared by every client carrying it; empty = email), class (fair-share class name); mixed_user / mixed_pass (Mixed login, default email / password). Zero rate values mean unlimited; units are display metadata.',
+          },
+          {
+            name: 'inboundIds',
+            in: 'body (json)',
+            type: 'integer[]',
+            desc: 'Inbound IDs to attach the client to. At least one required.',
+          },
         ],
         body: '{\n  "client": {\n    "email": "alice@example.com",\n    "totalGB": 53687091200,\n    "expiryTime": 1735689600000,\n    "tgId": 0,\n    "limitIp": 0,\n    "bandwidth_bps": 100000000,\n    "committed_bps": 10000000,\n    "committed_burst_bytes": 5000000,\n    "rateUnit": "Mbps",\n    "burstUnit": "MB",\n    "enable": true\n  },\n  "inboundIds": [3, 5]\n}',
         response: '{\n  "success": true,\n  "msg": "Client added"\n}',
@@ -1178,17 +1189,17 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/clients/runtime/:email',
-        summary: 'Patch runtime rate limits, connection limit and egress tag for one identity. upload_bandwidth_bps / download_bandwidth_bps are the standard rates; burst_bps + burst_credit_bytes add a credit-paid burst and sustained_bps + sustained_after_seconds a long-saturation rate (symmetric, 0 = tier off, burst >= standard >= sustained). Omitted fields are preserved; zero clears a limit. Applied to the running core without restarting it or dropping established connections. Credentials, validity, traffic quota and per-inbound flow are preserved. A failed or pending receipt requires reconciliation before reporting the change as usable.',
+        summary:
+          'Patch runtime rate limits, connection limit and egress tag for one identity. upload_bandwidth_bps / download_bandwidth_bps are the standard rates; burst_bps + burst_credit_bytes add a credit-paid burst above standard; sustained_bps is not a cap but the guaranteed rate of a heavy pool while the node is congested (symmetric, 0 = off, burst >= standard >= sustained). pool names the shaping pool shared across clients and inbounds; class names the fair-share class. Omitted fields are preserved; zero clears a limit. Applied to the running core without restarting it or dropping established connections. Credentials, validity, traffic quota and per-inbound flow are preserved. A failed or pending receipt requires reconciliation before reporting the change as usable.',
         requestSchema: 'ClientRuntimePatch',
         responseSchema: 'ClientRuntimeReceipt',
-        params: [
-          { name: 'email', in: 'path', type: 'string', desc: 'Stable client identity.' },
-        ],
+        params: [{ name: 'email', in: 'path', type: 'string', desc: 'Stable client identity.' }],
       },
       {
         method: 'POST',
         path: '/panel/api/clients/:email/credentials',
-        summary: 'Rotate one client\'s credentials on every inbound it is attached to, hot-applied without restarting the core. id is the VLESS/VMess UUID; password is the Trojan/Shadowsocks password and the Hysteria2 auth (Shadowsocks-2022 inbounds derive a per-inbound key from it); mixed_user / mixed_pass are the Mixed inbound login (empty restores the email / password fallback). Only the fields sent change.',
+        summary:
+          "Rotate one client's credentials on every inbound it is attached to, hot-applied without restarting the core. id is the VLESS/VMess UUID; password is the Trojan/Shadowsocks password and the Hysteria2 auth (Shadowsocks-2022 inbounds derive a per-inbound key from it); mixed_user / mixed_pass are the Mixed inbound login (empty restores the email / password fallback). Only the fields sent change.",
         requestSchema: 'ClientCredentialPatch',
         responseSchema: 'ClientRuntimeReceipt',
         params: [{ name: 'email', in: 'path', type: 'string', desc: 'Stable client identity.' }],
@@ -1347,9 +1358,11 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/clients/bulkCreate',
-        summary: 'Create many clients in one call. Body is a JSON array of {client, inboundIds} payloads — the same shape /add accepts, including bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit, and burstUnit. Items are processed sequentially; per-email skip reasons are returned for items that fail (e.g., duplicate email). The running core is reconciled once after the batch.',
+        summary:
+          'Create many clients in one call. Body is a JSON array of {client, inboundIds} payloads — the same shape /add accepts, including bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit, and burstUnit. Items are processed sequentially; per-email skip reasons are returned for items that fail (e.g., duplicate email). The running core is reconciled once after the batch.',
         body: '[\n  {\n    "client": {\n      "email": "alice@example.com",\n      "totalGB": 53687091200,\n      "expiryTime": 0,\n      "bandwidth_bps": 100000000,\n      "committed_bps": 10000000,\n      "committed_burst_bytes": 5000000,\n      "rateUnit": "Mbps",\n      "burstUnit": "MB",\n      "enable": true\n    },\n    "inboundIds": [7]\n  },\n  {\n    "client": {\n      "email": "bob@example.com",\n      "totalGB": 53687091200,\n      "expiryTime": 0,\n      "enable": true\n    },\n    "inboundIds": [7, 9]\n  }\n]',
-        response: '{\n  "success": true,\n  "obj": {\n    "created": 2,\n    "skipped": [\n      { "email": "alice@example.com", "reason": "email already in use" }\n    ]\n  }\n}',
+        response:
+          '{\n  "success": true,\n  "obj": {\n    "created": 2,\n    "skipped": [\n      { "email": "alice@example.com", "reason": "email already in use" }\n    ]\n  }\n}',
         codedErrors: {
           '409':
             '{\n  "success": false,\n  "code": "CLIENT_CREDENTIAL_CONFLICT",\n  "msg": "CLIENT_CREDENTIAL_CONFLICT: inbound \\"in-vless\\" already has a client with this credential"\n}',
@@ -1607,12 +1620,30 @@ export const sections: readonly Section[] = [
         method: 'GET',
         path: '/panel/api/clients/links/:email',
         summary:
-          "Return every URL for one client across all attached inbounds — the same strings the Copy URL button copies in the panel UI. Supported protocols: vmess, vless, trojan, shadowsocks, hysteria, mixed. Mixed returns SOCKS5, HTTP, and Telegram proxy links. If protocol, host, and port are all supplied, return only that protocol and let 3x-ui render it with the selected customer-facing endpoint without changing the stored inbound. If streamSettings.externalProxy is set, returns one URL per external proxy. Protocols without a URL form contribute nothing.",
+          'Return every URL for one client across all attached inbounds — the same strings the Copy URL button copies in the panel UI. Supported protocols: vmess, vless, trojan, shadowsocks, hysteria, mixed. Mixed returns SOCKS5, HTTP, and Telegram proxy links. If protocol, host, and port are all supplied, return only that protocol and let 3x-ui render it with the selected customer-facing endpoint without changing the stored inbound. If streamSettings.externalProxy is set, returns one URL per external proxy. Protocols without a URL form contribute nothing.',
         params: [
           { name: 'email', in: 'path', type: 'string', desc: 'Client email (unique identifier).' },
-          { name: 'protocol', in: 'query', type: 'string', optional: true, desc: 'Delivery protocol: vless, vmess, mixed, shadowsocks, or hysteria2. Must be supplied together with host and port.' },
-          { name: 'host', in: 'query', type: 'string', optional: true, desc: 'Customer-facing ingress hostname or IP used only while rendering this response.' },
-          { name: 'port', in: 'query', type: 'integer', optional: true, desc: 'Customer-facing ingress port used only while rendering this response.' },
+          {
+            name: 'protocol',
+            in: 'query',
+            type: 'string',
+            optional: true,
+            desc: 'Delivery protocol: vless, vmess, mixed, shadowsocks, or hysteria2. Must be supplied together with host and port.',
+          },
+          {
+            name: 'host',
+            in: 'query',
+            type: 'string',
+            optional: true,
+            desc: 'Customer-facing ingress hostname or IP used only while rendering this response.',
+          },
+          {
+            name: 'port',
+            in: 'query',
+            type: 'integer',
+            optional: true,
+            desc: 'Customer-facing ingress port used only while rendering this response.',
+          },
         ],
         response:
           '{\n  "success": true,\n  "obj": [\n    "vless://uuid@host:443?...#user1"\n  ]\n}',
@@ -1759,27 +1790,31 @@ export const sections: readonly Section[] = [
       {
         method: 'GET',
         path: '/panel/api/nodes/fairshare',
-        summary: "This panel's own node-level fair-share policy, plus whether an API client has applied desired state to it (declarativelyManaged), in which case a later reconciliation may put the automated values back. Local writes are never refused. Every rate is bit/s; 0 means the field is not enabled, never a default.",
+        summary:
+          "This panel's own node-level fair-share policy, plus whether an API client has applied desired state to it (declarativelyManaged), in which case a later reconciliation may put the automated values back. Local writes are never refused. Every rate is bit/s; 0 means the field is not enabled, never a default.",
         responseSchema: 'FairSharePolicyView',
       },
       {
         method: 'POST',
         path: '/panel/api/nodes/ingress-probe',
-        summary: 'Probe an ingress IP over TCP, TLS or QUIC; certificate verification is mandatory for encrypted transports. This does not test customer authentication.',
+        summary:
+          'Probe an ingress IP over TCP, TLS or QUIC; certificate verification is mandatory for encrypted transports. This does not test customer authentication.',
         requestSchema: 'IngressProbeRequest',
         responseSchema: 'IngressProbeResult',
       },
       {
         method: 'GET',
         path: '/panel/api/nodes/fairshare/status',
-        summary: "Live state of the local core's fair-share scheduler. `congested` is the first thing to check when limits look like they do nothing: outside fair mode nothing is shaped at all. The fill* fields report water-filling truncation, which is an approximation, not a fault. running=false means the core is down and there are no numbers yet.",
+        summary:
+          "Live state of the local core's fair-share scheduler. Outside the congested state every pool runs at its standard rate (burst while it has credit); inside it, pools get weighted shares and heavy pools are served last. usedUpload/DownloadBitPerSec are the last tick's measured throughput; heavyMembers counts heavy pools. The fill* fields report water-filling truncation, which is an approximation, not a fault. running=false means the core is down and there are no numbers yet.",
         responseSchema: 'FairShareStatusView',
       },
       {
         method: 'POST',
         path: '/panel/api/nodes/fairshare',
-        summary: 'Save and push the node-level fair-share policy to the running core (SetNodeBandwidth + SetClassPolicy). The class list is replaced whole: a class left out is deleted. Rejected while the node is declaratively managed.',
-        body: '{\n  "availBitPerSec": 1000000000,\n  "softFloorBitPerSec": 500000,\n  "hardFloorBitPerSec": 0,\n  "congestionEnterPercent": 85,\n  "congestionExitPercent": 70,\n  "congestionExitTicks": 5,\n  "classes": [\n    {\n      "name": "live",\n      "weight": 3,\n      "normalCapBitPerSec": 20000000,\n      "burstCapBitPerSec": 50000000,\n      "burstCreditBytes": 1000000000,\n      "floorRatioPercent": 20\n    }\n  ]\n}',
+        summary:
+          'Save and push the node-level fair-share policy to the running core (SetNodeBandwidth + SetClassPolicy). The class list is replaced whole: a class left out is deleted. Rejected while the node is declaratively managed.',
+        body: '{\n  "availBitPerSec": 1000000000,\n  "congestionEnterPercent": 85,\n  "congestionExitPercent": 70,\n  "congestionExitTicks": 5,\n  "classes": [\n    {\n      "name": "c1",\n      "weight": 3,\n      "floorBitPerSec": 5000000,\n      "uploadReservedBitPerSec": 0,\n      "downloadReservedBitPerSec": 0,\n      "heavyWindowSeconds": 900,\n      "heavyPercent": 80\n    }\n  ]\n}',
       },
     ],
   },
@@ -2072,10 +2107,16 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/setting/apiTokens/setNamespaces/:id',
-        summary: 'Replace the namespaces a token owns. Sending an empty list makes the token unrestricted again. A prefix shorter than two characters, or one containing a comma, is refused: it would own more than anyone meant it to.',
+        summary:
+          'Replace the namespaces a token owns. Sending an empty list makes the token unrestricted again. A prefix shorter than two characters, or one containing a comma, is refused: it would own more than anyone meant it to.',
         params: [
           { name: 'id', in: 'path', type: 'number', desc: 'Token row ID.' },
-          { name: 'namespaces', in: 'body', type: 'string', desc: 'Comma-separated prefixes, e.g. "ipl_,fleet-".' },
+          {
+            name: 'namespaces',
+            in: 'body',
+            type: 'string',
+            desc: 'Comma-separated prefixes, e.g. "ipl_,fleet-".',
+          },
         ],
         body: '{\n  "namespaces": "ipl_"\n}',
         response: '{\n  "success": true\n}',
@@ -2100,7 +2141,8 @@ export const sections: readonly Section[] = [
       {
         method: 'HEAD',
         path: '/panel/api/xray/',
-        summary: 'Return the SHA-256 ETag of the stored Xray template without returning the template body.',
+        summary:
+          'Return the SHA-256 ETag of the stored Xray template without returning the template body.',
       },
       {
         method: 'GET',
@@ -2123,64 +2165,130 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/xray/update',
-        summary: 'Save the interactive form template, or accept one whole declarative IPVelo node projection when Content-Type is application/json. Declarative revisions are content identities: the same revision with different content is rejected.',
+        summary:
+          'Save the interactive form template, or accept one whole declarative IPVelo node projection when Content-Type is application/json. Declarative revisions are content identities: the same revision with different content is rejected.',
         params: [
-          { name: 'xraySetting', in: 'body (form)', type: 'string', desc: 'Full Xray JSON config template.' },
-          { name: 'outboundTestUrl', in: 'body (form)', type: 'string', desc: 'URL used for outbound reachability tests. Defaults to https://www.google.com/generate_204.' },
-          { name: 'revision', in: 'body (json)', type: 'integer', optional: true, desc: 'Positive content revision for a declarative whole-node replacement.' },
-          { name: 'requiresRestart', in: 'body (json)', type: 'boolean', optional: true, desc: 'Whether this projection is expected to require a process restart.' },
-          { name: 'config', in: 'body (json)', type: 'object', optional: true, desc: 'Whole desired inbounds, outbounds, and per-account routing projection.' },
+          {
+            name: 'xraySetting',
+            in: 'body (form)',
+            type: 'string',
+            desc: 'Full Xray JSON config template.',
+          },
+          {
+            name: 'outboundTestUrl',
+            in: 'body (form)',
+            type: 'string',
+            desc: 'URL used for outbound reachability tests. Defaults to https://www.google.com/generate_204.',
+          },
+          {
+            name: 'revision',
+            in: 'body (json)',
+            type: 'integer',
+            optional: true,
+            desc: 'Positive content revision for a declarative whole-node replacement.',
+          },
+          {
+            name: 'requiresRestart',
+            in: 'body (json)',
+            type: 'boolean',
+            optional: true,
+            desc: 'Whether this projection is expected to require a process restart.',
+          },
+          {
+            name: 'config',
+            in: 'body (json)',
+            type: 'object',
+            optional: true,
+            desc: 'Whole desired inbounds, outbounds, and per-account routing projection.',
+          },
         ],
       },
       {
         method: 'GET',
         path: '/panel/api/xray/status',
-        summary: 'Return Xray health, measured line capacity, the applied declarative revision, the applied config hash, and current inbound/client/outbound/rule counts.',
+        summary:
+          'Return Xray health, measured line capacity, the applied declarative revision, the applied config hash, and current inbound/client/outbound/rule counts.',
       },
       {
         method: 'POST',
         path: '/panel/api/declarative/apply-delta',
-        summary: 'Apply a set of edits against the currently applied declarative config instead of uploading the whole projection again. The ops are folded into a complete desired state and then run through the ordinary apply, so validation, hashing, template building and hot reload are unchanged. Answers 409 with the node config hash when baseHash does not match, which is the signal to fall back to a whole-node apply.',
+        summary:
+          'Apply a set of edits against the currently applied declarative config instead of uploading the whole projection again. The ops are folded into a complete desired state and then run through the ordinary apply, so validation, hashing, template building and hot reload are unchanged. Answers 409 with the node config hash when baseHash does not match, which is the signal to fall back to a whole-node apply.',
         params: [
-          { name: 'baseHash', in: 'body (json)', type: 'string', desc: 'Config hash this delta was computed against, as returned by /panel/api/xray/status or a previous apply receipt.' },
-          { name: 'ops', in: 'body (json)', type: 'array', desc: 'Edits to fold in: addClient, removeClient, updateClient (each with inboundTag), setRule (empty outboundTag removes the account override), setOutbound (upsert by tag), removeOutbound (by outboundTag; refused while an account is still routed to it).' },
-          { name: 'resultHash', in: 'body (json)', type: 'string', desc: 'Config hash the folded state is expected to have. A mismatch is refused before anything is written.' },
+          {
+            name: 'baseHash',
+            in: 'body (json)',
+            type: 'string',
+            desc: 'Config hash this delta was computed against, as returned by /panel/api/xray/status or a previous apply receipt.',
+          },
+          {
+            name: 'ops',
+            in: 'body (json)',
+            type: 'array',
+            desc: 'Edits to fold in: addClient, removeClient, updateClient (each with inboundTag), setRule (empty outboundTag removes the account override), setOutbound (upsert by tag), removeOutbound (by outboundTag; refused while an account is still routed to it).',
+          },
+          {
+            name: 'resultHash',
+            in: 'body (json)',
+            type: 'string',
+            desc: 'Config hash the folded state is expected to have. A mismatch is refused before anything is written.',
+          },
         ],
       },
       {
         method: 'POST',
         path: '/panel/api/declarative/stage',
-        summary: 'Buffer one slice of a whole-node declarative apply request body. The request body is the raw slice of the JSON document, not a JSON document of its own. Chunks must arrive in order starting at seq 0; the response says which sequence number the panel wants next. Nothing is applied until the upload is committed, and an upload that stops receiving chunks is discarded after ten minutes.',
+        summary:
+          'Buffer one slice of a whole-node declarative apply request body. The request body is the raw slice of the JSON document, not a JSON document of its own. Chunks must arrive in order starting at seq 0; the response says which sequence number the panel wants next. Nothing is applied until the upload is committed, and an upload that stops receiving chunks is discarded after ten minutes.',
         params: [
-          { name: 'uploadId', in: 'query', type: 'string', desc: 'Caller-chosen id tying the chunks of one upload together.' },
-          { name: 'seq', in: 'query', type: 'integer', desc: 'Zero-based chunk index. A chunk that would leave a hole is refused, and the refusal names the chunk the panel is waiting for.' },
-          { name: 'chunk', in: 'body (raw)', type: 'file', desc: 'One raw slice of the apply request JSON document, sent as the request body. It is not JSON on its own: concatenating every chunk in seq order must reproduce the document byte for byte.' },
+          {
+            name: 'uploadId',
+            in: 'query',
+            type: 'string',
+            desc: 'Caller-chosen id tying the chunks of one upload together.',
+          },
+          {
+            name: 'seq',
+            in: 'query',
+            type: 'integer',
+            desc: 'Zero-based chunk index. A chunk that would leave a hole is refused, and the refusal names the chunk the panel is waiting for.',
+          },
+          {
+            name: 'chunk',
+            in: 'body (raw)',
+            type: 'file',
+            desc: 'One raw slice of the apply request JSON document, sent as the request body. It is not JSON on its own: concatenating every chunk in seq order must reproduce the document byte for byte.',
+          },
         ],
       },
       {
         method: 'POST',
         path: '/panel/api/declarative/commit',
-        summary: 'Apply everything staged under one upload id as a single whole-node configuration, through the same path as a single-shot full apply — so an illegal config is still 422 with the previous configuration restored, and a port conflict is still refused here. The upload is consumed whatever the outcome. Answers 404 when the upload is unknown, already committed or expired.',
+        summary:
+          'Apply everything staged under one upload id as a single whole-node configuration, through the same path as a single-shot full apply — so an illegal config is still 422 with the previous configuration restored, and a port conflict is still refused here. The upload is consumed whatever the outcome. Answers 404 when the upload is unknown, already committed or expired.',
         params: [
           { name: 'uploadId', in: 'body (json)', type: 'string', desc: 'The upload to commit.' },
-          { name: 'expectedHash', in: 'body (json)', type: 'string', desc: 'Config hash the assembled upload must have. Checked before anything is written, so a truncated or reordered upload is refused rather than applied.' },
+          {
+            name: 'expectedHash',
+            in: 'body (json)',
+            type: 'string',
+            desc: 'Config hash the assembled upload must have. Checked before anything is written, so a truncated or reordered upload is refused rather than applied.',
+          },
         ],
       },
       {
         method: 'POST',
         path: '/panel/api/declarative/abort',
-        summary: 'Discard a staged upload the caller has given up on, instead of waiting for it to expire. Always answers 204, including for an upload id the panel does not hold.',
-        params: [
-          { name: 'uploadId', in: 'query', type: 'string', desc: 'The upload to discard.' },
-        ],
+        summary:
+          'Discard a staged upload the caller has given up on, instead of waiting for it to expire. Always answers 204, including for an upload id the panel does not hold.',
+        params: [{ name: 'uploadId', in: 'query', type: 'string', desc: 'The upload to discard.' }],
       },
       {
         method: 'GET',
         path: '/panel/api/xray/delivery/:email',
-        summary: 'Generate customer connection strings and PNG QR data URLs from the applied declarative config. The advertised host and port come from each custom share address, never the node listener.',
-        params: [
-          { name: 'email', in: 'path', type: 'string', desc: 'Stable line account email.' },
-        ],
+        summary:
+          'Generate customer connection strings and PNG QR data URLs from the applied declarative config. The advertised host and port come from each custom share address, never the node listener.',
+        params: [{ name: 'email', in: 'path', type: 'string', desc: 'Stable line account email.' }],
       },
       {
         method: 'POST',
@@ -2673,71 +2781,98 @@ export const sections: readonly Section[] = [
       {
         method: 'GET',
         path: '/panel/api/outbounds',
-        summary: 'List the outbounds in the stored template alongside the outbound tags the running core actually holds, so "saved" and "in effect" can be told apart. runtimeError is set when the core is up but did not answer the listing.',
+        summary:
+          'List the outbounds in the stored template alongside the outbound tags the running core actually holds, so "saved" and "in effect" can be told apart. runtimeError is set when the core is up but did not answer the listing.',
         responseSchema: 'OutboundListView',
       },
       {
         method: 'POST',
         path: '/panel/api/outbounds',
-        summary: 'Append one outbound and add it to the running core (xray AddOutbound). The tag is the identity every later request uses and must be unique; a body xray-core would refuse is rejected before anything is written. Appended, never inserted: the core\'s first outbound is fixed at process start.',
+        summary:
+          "Append one outbound and add it to the running core (xray AddOutbound). The tag is the identity every later request uses and must be unique; a body xray-core would refuse is rejected before anything is written. Appended, never inserted: the core's first outbound is fixed at process start.",
         params: [
-          { name: 'outbound', in: 'body (json)', type: 'object', desc: 'One outbound object in xray config shape, including a unique "tag".' },
+          {
+            name: 'outbound',
+            in: 'body (json)',
+            type: 'object',
+            desc: 'One outbound object in xray config shape, including a unique "tag".',
+          },
         ],
         responseSchema: 'ObjectApplyResult',
       },
       {
         method: 'PATCH',
         path: '/panel/api/outbounds/:tag',
-        summary: 'Replace the outbound carrying this tag and reload it in the running core. The body must carry the same tag: renaming would orphan every routing rule pointing at the old name, so it is refused. Answers 404 when no outbound carries the tag.',
+        summary:
+          'Replace the outbound carrying this tag and reload it in the running core. The body must carry the same tag: renaming would orphan every routing rule pointing at the old name, so it is refused. Answers 404 when no outbound carries the tag.',
         params: [
           { name: 'tag', in: 'path', type: 'string', desc: 'Outbound tag to replace.' },
-          { name: 'outbound', in: 'body (json)', type: 'object', desc: 'The full replacement outbound object, carrying the same tag.' },
+          {
+            name: 'outbound',
+            in: 'body (json)',
+            type: 'object',
+            desc: 'The full replacement outbound object, carrying the same tag.',
+          },
         ],
         responseSchema: 'ObjectApplyResult',
       },
       {
         method: 'DELETE',
         path: '/panel/api/outbounds/:tag',
-        summary: 'Remove one outbound from the template and from the running core (xray RemoveOutbound). Answers 404 when no outbound carries the tag.',
-        params: [
-          { name: 'tag', in: 'path', type: 'string', desc: 'Outbound tag to remove.' },
-        ],
+        summary:
+          'Remove one outbound from the template and from the running core (xray RemoveOutbound). Answers 404 when no outbound carries the tag.',
+        params: [{ name: 'tag', in: 'path', type: 'string', desc: 'Outbound tag to remove.' }],
         responseSchema: 'ObjectApplyResult',
       },
       {
         method: 'GET',
         path: '/panel/api/runtime',
-        summary: 'Read-only snapshot of what this node is actually running: every local inbound with whether the core has really loaded it, the outbound tags and routing rules the core holds, the online client count and the traffic totals. Nothing on this path writes anything — it is the page to open when the panel and the node might disagree.',
+        summary:
+          'Read-only snapshot of what this node is actually running: every local inbound with whether the core has really loaded it, the outbound tags and routing rules the core holds, the online client count and the traffic totals. Nothing on this path writes anything — it is the page to open when the panel and the node might disagree.',
         responseSchema: 'XrayRuntimeView',
       },
       {
         method: 'GET',
         path: '/panel/api/routing/rules',
-        summary: 'List the routing rules in the stored template alongside the ruleTag/outboundTag pairs the running core holds. The runtime list also contains the rules the panel injects into the generated config, which is why the two lists are reported separately rather than merged.',
+        summary:
+          'List the routing rules in the stored template alongside the ruleTag/outboundTag pairs the running core holds. The runtime list also contains the rules the panel injects into the generated config, which is why the two lists are reported separately rather than merged.',
         responseSchema: 'RoutingRuleListView',
       },
       {
         method: 'POST',
         path: '/panel/api/routing/rules',
-        summary: 'Append one routing rule and load it into the running core. A ruleTag is required: xray removes rules by ruleTag, so an untagged rule could never be addressed again. Rules are appended, which is where a first-match router wants the most specific overrides.',
+        summary:
+          'Append one routing rule and load it into the running core. A ruleTag is required: xray removes rules by ruleTag, so an untagged rule could never be addressed again. Rules are appended, which is where a first-match router wants the most specific overrides.',
         params: [
-          { name: 'rule', in: 'body (json)', type: 'object', desc: 'One routing rule in xray config shape, including a unique "ruleTag".' },
+          {
+            name: 'rule',
+            in: 'body (json)',
+            type: 'object',
+            desc: 'One routing rule in xray config shape, including a unique "ruleTag".',
+          },
         ],
         responseSchema: 'ObjectApplyResult',
       },
       {
         method: 'POST',
         path: '/panel/api/routing/rules:batch',
-        summary: 'Append many routing rules in one call. All of them are written or none of them are: a half-applied batch would leave the caller unable to say which clients now route where. Accepts a bare JSON array of rules or an object with a "rules" array.',
+        summary:
+          'Append many routing rules in one call. All of them are written or none of them are: a half-applied batch would leave the caller unable to say which clients now route where. Accepts a bare JSON array of rules or an object with a "rules" array.',
         params: [
-          { name: 'rules', in: 'body (json)', type: 'array', desc: 'Routing rules to append, each with a unique "ruleTag".' },
+          {
+            name: 'rules',
+            in: 'body (json)',
+            type: 'array',
+            desc: 'Routing rules to append, each with a unique "ruleTag".',
+          },
         ],
         responseSchema: 'ObjectApplyResult',
       },
       {
         method: 'DELETE',
         path: '/panel/api/routing/rules/:tag',
-        summary: 'Remove the routing rule carrying this ruleTag, from the template and from the running core (xray RemoveRule). Answers 404 when no rule carries the tag.',
+        summary:
+          'Remove the routing rule carrying this ruleTag, from the template and from the running core (xray RemoveRule). Answers 404 when no rule carries the tag.',
         params: [
           { name: 'tag', in: 'path', type: 'string', desc: 'ruleTag of the rule to remove.' },
         ],

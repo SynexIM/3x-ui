@@ -67,7 +67,8 @@ export const ClientRecordSchema = z
     burst_bps: z.number().optional(),
     burst_credit_bytes: z.number().optional(),
     sustained_bps: z.number().optional(),
-    sustained_after_seconds: z.number().optional(),
+    pool: z.string().optional(),
+    class: z.string().optional(),
     mixed_user: z.string().optional(),
     mixed_pass: z.string().optional(),
     createdAt: z.number().optional(),
@@ -366,7 +367,11 @@ export const ClientFormSchema = z.object({
 // be a setting that silently does nothing.
 const refineRateLimits = <T extends z.ZodType<ClientFormValues>>(schema: T) =>
   schema.refine(
-    (v) => !committedExceedsPeak(rateToBps(v.peakRate, v.rateUnit), rateToBps(v.committedRate, v.rateUnit)),
+    (v) =>
+      !committedExceedsPeak(
+        rateToBps(v.peakRate, v.rateUnit),
+        rateToBps(v.committedRate, v.rateUnit),
+      ),
     { message: 'pages.clients.committedAbovePeak', path: ['committedRate'] },
   );
 

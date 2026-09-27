@@ -46,15 +46,17 @@ _openapi:
     - depth: 2
       title: Patch runtime rate limits, connection limit and egress tag for one
         identity. upload_bandwidth_bps / download_bandwidth_bps are the standard
-        rates; burst_bps + burst_credit_bytes add a credit-paid burst and
-        sustained_bps + sustained_after_seconds a long-saturation rate
-        (symmetric, 0 = tier off, burst >= standard >= sustained). Omitted
-        fields are preserved; zero clears a limit. Applied to the running core
-        without restarting it or dropping established connections. Credentials,
+        rates; burst_bps + burst_credit_bytes add a credit-paid burst above
+        standard; sustained_bps is not a cap but the guaranteed rate of a heavy
+        pool while the node is congested (symmetric, 0 = off, burst >= standard
+        >= sustained). pool names the shaping pool shared across clients and
+        inbounds; class names the fair-share class. Omitted fields are
+        preserved; zero clears a limit. Applied to the running core without
+        restarting it or dropping established connections. Credentials,
         validity, traffic quota and per-inbound flow are preserved. A failed or
         pending receipt requires reconciliation before reporting the change as
         usable.
-      url: '#patch-runtime-rate-limits-connection-limit-and-egress-tag-for-one-identity-upload_bandwidth_bps--download_bandwidth_bps-are-the-standard-rates-burst_bps--burst_credit_bytes-add-a-credit-paid-burst-and-sustained_bps--sustained_after_seconds-a-long-saturation-rate-symmetric-0--tier-off-burst--standard--sustained-omitted-fields-are-preserved-zero-clears-a-limit-applied-to-the-running-core-without-restarting-it-or-dropping-established-connections-credentials-validity-traffic-quota-and-per-inbound-flow-are-preserved-a-failed-or-pending-receipt-requires-reconciliation-before-reporting-the-change-as-usable'
+      url: '#patch-runtime-rate-limits-connection-limit-and-egress-tag-for-one-identity-upload_bandwidth_bps--download_bandwidth_bps-are-the-standard-rates-burst_bps--burst_credit_bytes-add-a-credit-paid-burst-above-standard-sustained_bps-is-not-a-cap-but-the-guaranteed-rate-of-a-heavy-pool-while-the-node-is-congested-symmetric-0--off-burst--standard--sustained-pool-names-the-shaping-pool-shared-across-clients-and-inbounds-class-names-the-fair-share-class-omitted-fields-are-preserved-zero-clears-a-limit-applied-to-the-running-core-without-restarting-it-or-dropping-established-connections-credentials-validity-traffic-quota-and-per-inbound-flow-are-preserved-a-failed-or-pending-receipt-requires-reconciliation-before-reporting-the-change-as-usable'
     - depth: 2
       title: Rotate one client's credentials on every inbound it is attached to,
         hot-applied without restarting the core. id is the VLESS/VMess UUID;
@@ -352,14 +354,16 @@ _openapi:
       - content: Patch runtime rate limits, connection limit and egress tag for one
           identity. upload_bandwidth_bps / download_bandwidth_bps are the
           standard rates; burst_bps + burst_credit_bytes add a credit-paid burst
-          and sustained_bps + sustained_after_seconds a long-saturation rate
-          (symmetric, 0 = tier off, burst >= standard >= sustained). Omitted
-          fields are preserved; zero clears a limit. Applied to the running core
+          above standard; sustained_bps is not a cap but the guaranteed rate of
+          a heavy pool while the node is congested (symmetric, 0 = off, burst >=
+          standard >= sustained). pool names the shaping pool shared across
+          clients and inbounds; class names the fair-share class. Omitted fields
+          are preserved; zero clears a limit. Applied to the running core
           without restarting it or dropping established connections.
           Credentials, validity, traffic quota and per-inbound flow are
           preserved. A failed or pending receipt requires reconciliation before
           reporting the change as usable.
-        id: patch-runtime-rate-limits-connection-limit-and-egress-tag-for-one-identity-upload_bandwidth_bps--download_bandwidth_bps-are-the-standard-rates-burst_bps--burst_credit_bytes-add-a-credit-paid-burst-and-sustained_bps--sustained_after_seconds-a-long-saturation-rate-symmetric-0--tier-off-burst--standard--sustained-omitted-fields-are-preserved-zero-clears-a-limit-applied-to-the-running-core-without-restarting-it-or-dropping-established-connections-credentials-validity-traffic-quota-and-per-inbound-flow-are-preserved-a-failed-or-pending-receipt-requires-reconciliation-before-reporting-the-change-as-usable
+        id: patch-runtime-rate-limits-connection-limit-and-egress-tag-for-one-identity-upload_bandwidth_bps--download_bandwidth_bps-are-the-standard-rates-burst_bps--burst_credit_bytes-add-a-credit-paid-burst-above-standard-sustained_bps-is-not-a-cap-but-the-guaranteed-rate-of-a-heavy-pool-while-the-node-is-congested-symmetric-0--off-burst--standard--sustained-pool-names-the-shaping-pool-shared-across-clients-and-inbounds-class-names-the-fair-share-class-omitted-fields-are-preserved-zero-clears-a-limit-applied-to-the-running-core-without-restarting-it-or-dropping-established-connections-credentials-validity-traffic-quota-and-per-inbound-flow-are-preserved-a-failed-or-pending-receipt-requires-reconciliation-before-reporting-the-change-as-usable
       - content: Rotate one client's credentials on every inbound it is attached to,
           hot-applied without restarting the core. id is the VLESS/VMess UUID;
           password is the Trojan/Shadowsocks password and the Hysteria2 auth

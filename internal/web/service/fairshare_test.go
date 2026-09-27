@@ -35,17 +35,15 @@ func TestPolicySurvivesASaveWhileXrayIsDown(t *testing.T) {
 	service := initFairShareDB(t)
 	want := &FairSharePolicy{
 		AvailBitPerSec:         1_000_000_000,
-		SoftFloorBitPerSec:     500_000,
 		CongestionEnterPercent: 85,
 		CongestionExitPercent:  70,
 		CongestionExitTicks:    5,
 		Classes: []FairShareClassPolicy{{
-			Name:               "live",
+			Name:               "c1",
 			Weight:             3,
-			NormalCapBitPerSec: 20_000_000,
-			BurstCapBitPerSec:  50_000_000,
-			BurstCreditBytes:   1_000_000_000,
-			FloorRatioPercent:  20,
+			FloorBitPerSec:     5_000_000,
+			HeavyWindowSeconds: 900,
+			HeavyPercent:       80,
 		}},
 	}
 	if err := service.SavePolicy(want); err != nil {
@@ -68,15 +66,15 @@ func TestSaveStillWorksWhileAnApiClientManagesTheNode(t *testing.T) {
 	if err := (&SettingService{}).saveSetting(declarativeProvisioningStateKey, `{"Request":{"revision":1}}`); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.SavePolicy(&FairSharePolicy{AvailBitPerSec: 1_000_000, SoftFloorBitPerSec: 250_000}); err != nil {
+	if err := service.SavePolicy(&FairSharePolicy{AvailBitPerSec: 1_000_000, CongestionEnterPercent: 85}); err != nil {
 		t.Fatalf("save while managed = %v, want it to go through", err)
 	}
 	got, err := service.GetPolicy()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.SoftFloorBitPerSec != 250_000 {
-		t.Fatalf("soft floor read back as %d, want the 250000 that was just saved", got.SoftFloorBitPerSec)
+	if got.CongestionEnterPercent != 85 {
+		t.Fatalf("enter percent read back as %d, want the 85 that was just saved", got.CongestionEnterPercent)
 	}
 	view, err := service.GetPolicyView()
 	if err != nil {
@@ -104,23 +102,18 @@ func TestValidationRejectsWhatTheCoreWouldIgnore(t *testing.T) {
 			want:   "above 100%",
 		},
 		{
-			name:   "hard floor above soft floor",
-			policy: FairSharePolicy{SoftFloorBitPerSec: 500_000, HardFloorBitPerSec: 1_000_000},
-			want:   "hard floor is above the soft floor",
+			name:   "heavy percent over 100",
+			policy: FairSharePolicy{Classes: []FairShareClassPolicy{{Name: "c1", HeavyWindowSeconds: 900, HeavyPercent: 120}}},
+			want:   "above 100%",
 		},
 		{
-			name:   "burst cap not above normal cap",
-			policy: FairSharePolicy{Classes: []FairShareClassPolicy{{Name: "live", NormalCapBitPerSec: 20, BurstCapBitPerSec: 20}}},
-			want:   "never burst",
-		},
-		{
-			name:   "burst credit with no burst cap",
-			policy: FairSharePolicy{Classes: []FairShareClassPolicy{{Name: "live", BurstCreditBytes: 1}}},
-			want:   "never spent",
+			name:   "heavy window without percent",
+			policy: FairSharePolicy{Classes: []FairShareClassPolicy{{Name: "c1", HeavyWindowSeconds: 900}}},
+			want:   "both heavy window and heavy percent",
 		},
 		{
 			name:   "duplicate class",
-			policy: FairSharePolicy{Classes: []FairShareClassPolicy{{Name: "live"}, {Name: "live"}}},
+			policy: FairSharePolicy{Classes: []FairShareClassPolicy{{Name: "c1"}, {Name: "c1"}}},
 			want:   "duplicate class",
 		},
 	}

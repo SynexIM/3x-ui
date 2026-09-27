@@ -67,8 +67,6 @@ func TestFairShareRatesCrossTheBoundaryAsBytes(t *testing.T) {
 
 	if err := api.SetNodeBandwidth(NodeFairShare{
 		AvailBitPerSec:         800_000_000,
-		SoftFloorBitPerSec:     4_000_000,
-		HardFloorBitPerSec:     800_000,
 		CongestionEnterPercent: 85,
 		CongestionExitPercent:  70,
 		CongestionExitTicks:    5,
@@ -81,8 +79,6 @@ func TestFairShareRatesCrossTheBoundaryAsBytes(t *testing.T) {
 		want  uint64
 	}{
 		{"avail_bps", fake.node.AvailBps, 100_000_000},
-		{"soft_floor_bps", fake.node.SoftFloorBps, 500_000},
-		{"hard_floor_bps", fake.node.HardFloorBps, 100_000},
 		{"congestion_enter_percent", uint64(fake.node.CongestionEnterPercent), 85},
 		{"congestion_exit_percent", uint64(fake.node.CongestionExitPercent), 70},
 		{"congestion_exit_ticks", uint64(fake.node.CongestionExitTicks), 5},
@@ -93,12 +89,12 @@ func TestFairShareRatesCrossTheBoundaryAsBytes(t *testing.T) {
 	}
 
 	if err := api.SetClassPolicy([]ClassFairShare{{
-		Name:               "live",
-		Weight:             3,
-		NormalCapBitPerSec: 160_000_000,
-		BurstCapBitPerSec:  400_000_000,
-		BurstCreditBytes:   1_000_000_000,
-		FloorRatioPercent:  20,
+		Name:                      "c1",
+		Weight:                    3,
+		FloorBitPerSec:            160_000_000,
+		DownloadReservedBitPerSec: 400_000_000,
+		HeavyWindowSeconds:        900,
+		HeavyPercent:              80,
 	}}); err != nil {
 		t.Fatal(err)
 	}
@@ -111,19 +107,20 @@ func TestFairShareRatesCrossTheBoundaryAsBytes(t *testing.T) {
 		got   uint64
 		want  uint64
 	}{
-		{"normal_cap_byte_per_sec", class.NormalCapBytePerSec, 20_000_000},
-		{"burst_cap_byte_per_sec", class.BurstCapBytePerSec, 50_000_000},
-		// A credit is a size, not a rate: bytes on both sides, no factor of 8.
-		{"burst_credit_bytes", class.BurstCreditBytes, 1_000_000_000},
+		{"floor_byte_per_sec", class.FloorBytePerSec, 20_000_000},
+		{"download_reserved_byte_per_sec", class.DownloadReservedBytePerSec, 50_000_000},
+		{"upload_reserved_byte_per_sec", class.UploadReservedBytePerSec, 0},
 		{"weight", uint64(class.Weight), 3},
-		{"floor_ratio_percent", uint64(class.FloorRatioPercent), 20},
+		// Seconds and percents are not rates: they cross unchanged.
+		{"heavy_window_seconds", uint64(class.HeavyWindowSeconds), 900},
+		{"heavy_percent", uint64(class.HeavyPercent), 80},
 	} {
 		if tc.got != tc.want {
 			t.Errorf("%s = %d, want %d", tc.field, tc.got, tc.want)
 		}
 	}
-	if class.Name != "live" {
-		t.Errorf("name = %q, want live", class.Name)
+	if class.Name != "c1" {
+		t.Errorf("name = %q, want c1", class.Name)
 	}
 }
 
