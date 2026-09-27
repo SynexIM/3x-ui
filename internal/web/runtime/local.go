@@ -167,8 +167,12 @@ func (l *Local) reloadInbound(ib *model.Inbound) error {
 	})
 }
 
+// Mixed is not here: the forked core's socks/mixed inbound implements per-user
+// AlterInbound (shared UserStore), and reloading rebuilds the handler from the
+// caller's inbound view, which on the client-record path carries only the
+// client being changed — every other mixed account would drop out of the core.
 func requiresInboundReloadForUserMutation(protocol model.Protocol) bool {
-	return protocol == model.Mixed || protocol == model.HTTP
+	return protocol == model.HTTP
 }
 
 // updateMtprotoInbound applies an inbound update without the Del+Add sequence
