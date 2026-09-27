@@ -330,6 +330,9 @@ func (s *XrayService) hotUserMap(db *gorm.DB, ib hotInbound, record *model.Clien
 	case model.VLESS:
 		user["id"] = client.ID
 		user["flow"] = flow
+		if client.Reverse != nil && strings.TrimSpace(client.Reverse.Tag) != "" {
+			user["reverse"] = client.Reverse
+		}
 	case model.VMESS:
 		user["id"] = client.ID
 	case model.Trojan:

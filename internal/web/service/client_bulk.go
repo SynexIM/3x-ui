@@ -228,6 +228,7 @@ func (s *ClientService) BulkDetach(inboundSvc *InboundService, emails []string, 
 type BulkAdjustResult struct {
 	Adjusted int                `json:"adjusted"`
 	Skipped  []BulkAdjustReport `json:"skipped,omitempty"`
+	adjusted map[string]struct{}
 }
 
 type BulkAdjustReport struct {
@@ -266,8 +267,8 @@ var bulkFlowAllowed = map[string]struct{}{
 //
 // Work is grouped by inbound so the selected records can share one runtime
 // reconciliation decision without loading the inbound's persisted settings.
-// BulkAdjust also sets limitHwid (0 = unlimited) and adTag ("none" clears) on
-// the normalized records; the MTProto sidecar picks ad-tags up on its next sync.
+// BulkAdjust shifts expiry/quota and flow, and sets limitHwid (0 = unlimited)
+// and the MTProto adTag ("none" clears); an adTag only lands on MTProto clients.
 func (s *ClientService) BulkAdjust(inboundSvc *InboundService, emails []string, addDays int, addBytes int64, flow string, limitHwid *int, adTag string) (BulkAdjustResult, bool, error) {
 	adTag = strings.TrimSpace(adTag)
 	if adTag != "" && adTag != bulkFlowClear && !model.ValidMtprotoAdTag(adTag) {
@@ -276,7 +277,7 @@ func (s *ClientService) BulkAdjust(inboundSvc *InboundService, emails []string, 
 	if limitHwid == nil && adTag == "" {
 		return s.bulkAdjustCore(inboundSvc, emails, addDays, addBytes, flow)
 	}
-	result := BulkAdjustResult{}
+	result := BulkAdjustResult{adjusted: map[string]struct{}{}}
 	needRestart := false
 	if addDays != 0 || addBytes != 0 || strings.TrimSpace(flow) != "" {
 		var err error
@@ -284,24 +285,64 @@ func (s *ClientService) BulkAdjust(inboundSvc *InboundService, emails []string, 
 			return result, needRestart, err
 		}
 	}
-	updates := map[string]any{}
-	if limitHwid != nil {
-		updates["limit_hwid"] = max(*limitHwid, 0)
+	if result.adjusted == nil {
+		result.adjusted = map[string]struct{}{}
 	}
-	if adTag == bulkFlowClear {
-		updates["ad_tag"] = ""
-	} else if adTag != "" {
-		updates["ad_tag"] = strings.ToLower(adTag)
-	}
+	db := database.GetDB()
 	clean := trimmedUniqueEmails(emails)
-	for _, batch := range chunkStrings(clean, sqlInChunk) {
-		if err := database.GetDB().Model(&model.ClientRecord{}).Where("email IN ?", batch).Updates(updates).Error; err != nil {
-			return result, needRestart, err
+	records, err := clientRecordsByEmail(db, clean)
+	if err != nil {
+		return result, needRestart, err
+	}
+	if limitHwid != nil {
+		for email := range records {
+			if err := s.setClientLimitHwidByEmail(db, email, max(*limitHwid, 0)); err != nil {
+				return result, needRestart, err
+			}
+			result.adjusted[email] = struct{}{}
 		}
 	}
-	if result.Adjusted == 0 {
-		result.Adjusted = len(clean)
+	if adTag != "" {
+		value := strings.ToLower(adTag)
+		if adTag == bulkFlowClear {
+			value = ""
+		}
+		var mtprotoInbounds []struct {
+			Email     string
+			InboundId int
+			NodeID    *int
+		}
+		if err := db.Table("clients c").
+			Select("c.email AS email, i.id AS inbound_id, i.node_id AS node_id").
+			Joins("JOIN client_inbounds ci ON ci.client_id = c.id").
+			Joins("JOIN inbounds i ON i.id = ci.inbound_id").
+			Where("i.protocol = ? AND c.email IN ?", model.MTProto, clean).
+			Scan(&mtprotoInbounds).Error; err != nil {
+			return result, needRestart, err
+		}
+		eligible := map[string]bool{}
+		touched := map[int]bool{}
+		for _, row := range mtprotoInbounds {
+			eligible[row.Email] = true
+			if row.NodeID == nil {
+				touched[row.InboundId] = true
+			}
+		}
+		for email := range records {
+			if !eligible[email] {
+				result.Skipped = append(result.Skipped, BulkAdjustReport{Email: email, Reason: "adTag not supported on inbound"})
+				continue
+			}
+			if err := db.Model(&model.ClientRecord{}).Where("email = ?", email).UpdateColumn("ad_tag", value).Error; err != nil {
+				return result, needRestart, err
+			}
+			result.adjusted[email] = struct{}{}
+		}
+		for inboundId := range touched {
+			inboundSvc.applyLocalMtproto(inboundId)
+		}
 	}
+	result.Adjusted = len(result.adjusted)
 	return result, needRestart, nil
 }
 
@@ -514,6 +555,18 @@ func (s *ClientService) bulkAdjustCore(inboundSvc *InboundService, emails []stri
 		}
 	}
 	result.Adjusted = len(adjusted)
+	result.adjusted = adjusted
+	// Only clients that actually changed are re-stamped.
+	stamped := make([]string, 0, len(adjusted))
+	for email := range adjusted {
+		stamped = append(stamped, email)
+	}
+	now := time.Now().UnixMilli()
+	for _, batch := range chunkStrings(stamped, sqlInChunk) {
+		if err := db.Model(&model.ClientRecord{}).Where("email IN ?", batch).UpdateColumn("updated_at", now).Error; err != nil {
+			return result, needRestart, err
+		}
+	}
 
 	for email, reason := range skippedReasons {
 		result.Skipped = append(result.Skipped, BulkAdjustReport{Email: email, Reason: reason})
@@ -626,6 +679,10 @@ func (s *ClientService) bulkAdjustInboundClients(
 				res.flowHonored[email] = true
 				flowChanged = flowChanged || client.Flow != entry.record.Flow
 			}
+		}
+		// A directive that changes nothing for this client must not re-stamp it.
+		if !entry.applyExpiry && !entry.applyTotal && client.Flow == entry.record.Flow {
+			continue
 		}
 		client.UpdatedAt = now
 		changed = append(changed, client)
@@ -945,9 +1002,7 @@ func (s *ClientService) BulkCreate(inboundSvc *InboundService, payloads []Client
 		if client.SubID == "" {
 			client.SubID = uuid.NewString()
 		}
-		if !client.Enable {
-			client.Enable = true
-		}
+		// Enable: omit defaults true via ClientCreatePayload.UnmarshalJSON; explicit false kept.
 		now := time.Now().UnixMilli()
 		if client.CreatedAt == 0 {
 			client.CreatedAt = now
@@ -1340,16 +1395,9 @@ func (s *ClientService) bulkSetEnableInboundClients(inboundSvc *InboundService, 
 		res.needRestart = true
 		return res
 	}
-	cipher := ""
-	if inbound.Protocol == model.Shadowsocks {
-		cipher = shadowsocksMethodFromSettings(inbound.Settings)
-	}
 	for _, client := range changed {
 		if enable {
-			if err := rt.AddUser(context.Background(), inbound, apiUserFromClient(map[string]any{
-				"email": client.Email, "id": client.ID, "auth": client.Auth, "security": client.Security,
-				"flow": client.Flow, "password": client.Password, "cipher": cipher,
-			}, "")); err != nil {
+			if err := rt.AddUser(context.Background(), inbound, runtimeUserMap(client, inbound)); err != nil {
 				res.needRestart = true
 			}
 			continue

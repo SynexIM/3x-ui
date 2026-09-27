@@ -79,7 +79,6 @@ func gatedNodes(t *testing.T, gate *fanoutGate, n int) []int {
 // Operations that touch every node walked them one at a time, so a few hanging
 // nodes kept the request running for minutes past the panel's write timeout.
 func TestResetAllTrafficsReachesNodesConcurrently(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	gate := newFanoutGate()
 	gatedNodes(t, gate, 3)
@@ -93,7 +92,6 @@ func TestResetAllTrafficsReachesNodesConcurrently(t *testing.T) {
 }
 
 func TestDelInboundsPushesNodeDeletesConcurrently(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	gate := newFanoutGate()
 	var inboundIDs []int

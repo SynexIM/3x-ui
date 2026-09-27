@@ -1782,6 +1782,11 @@ func (c Client) RuntimeLimitFields() map[string]any {
 func (c Client) RuntimeCredentialFields(ib *Inbound) map[string]any {
 	fields := map[string]any{}
 	switch ib.Protocol {
+	case VLESS:
+		// RemoveUser drops a reverse client's handler; only the tag rebuilds it.
+		if c.Reverse != nil && strings.TrimSpace(c.Reverse.Tag) != "" {
+			fields["reverse"] = c.Reverse
+		}
 	case Shadowsocks:
 		var settings struct {
 			Method string `json:"method"`

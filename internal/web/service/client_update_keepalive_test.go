@@ -78,7 +78,6 @@ func TestUpdateCanClearKeepAliveOnAnExistingClient(t *testing.T) {
 // The other half of the contract: a payload that never mentions keepAlive (a
 // metadata-only edit from the bot or the API) leaves the stored value alone.
 func TestUpdateWithoutKeepAlivePreservesTheStoredValue(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	inboundSvc := &InboundService{}
 	svc := &ClientService{}

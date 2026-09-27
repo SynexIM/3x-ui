@@ -68,7 +68,6 @@ func addAmneziaWGInbound(t *testing.T, tag string, port int, enable bool) *model
 // An id past the slot count used to be refused outright, which capped a
 // database at 435 AmneziaWG inbounds for its entire life (#6537).
 func TestAddInbound_AmneziawgPastTheRelayPortWindowStillCreates(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 
 	// Self-check: the low-id path must work, or the assertion below could pass
@@ -88,7 +87,6 @@ func TestAddInbound_AmneziawgPastTheRelayPortWindowStillCreates(t *testing.T) {
 // Wrapping ids makes the id -> relay-port map non-injective, so a create can
 // land on a port an existing inbound's relay already owns.
 func TestAddInbound_AmneziawgRefusesAClaimedRelayPort(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	for _, blockerEnabled := range []bool{true, false} {
 		t.Run(fmt.Sprintf("blocker enabled=%t", blockerEnabled), func(t *testing.T) {
 			setupConflictDB(t)
@@ -125,7 +123,6 @@ func TestAddInbound_AmneziawgRefusesAClaimedRelayPort(t *testing.T) {
 // Wrapping makes id -> relay port non-injective, so an edit landing on a slot a
 // local inbound already owns has to be refused: the create guard never sees it.
 func TestCheckPortConflict_LocalAmneziawgRelayCollisionBlocksTheEdit(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	blocker := addAmneziaWGInbound(t, "awg-blocker", 51820, true)
 
@@ -155,7 +152,6 @@ func TestCheckPortConflict_LocalAmneziawgRelayCollisionBlocksTheEdit(t *testing.
 // A disabled row still owns the relay slot its id derives: SetInboundEnable
 // flips the column with no port check, so enabling it later would break Xray.
 func TestCheckPortConflict_DisabledAmneziawgStillOwnsItsRelaySlot(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	owner := addAmneziaWGInbound(t, "awg-disabled", 51820, false)
 	relayPort := amneziawgnet.SOCKSPortForInbound(owner.Id)
@@ -183,7 +179,6 @@ func TestCheckPortConflict_DisabledAmneziawgStillOwnsItsRelaySlot(t *testing.T) 
 // The forwarded-ports guard runs before Save, when the row has no id yet, so a
 // client's spec never saw the relay port the row itself derives.
 func TestAddInbound_AmneziawgRefusesAClientForwardingItsOwnRelayPort(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 
 	placeholder := addAmneziaWGInbound(t, "awg-placeholder", 51820, true)
@@ -209,7 +204,6 @@ func TestAddInbound_AmneziawgRefusesAClientForwardingItsOwnRelayPort(t *testing.
 // The row's own WireGuard port can be the relay port its own id derives, and
 // every relay check excludes that id, so nothing else compares the two.
 func TestAddInbound_AmneziawgRefusesItsOwnRelayPort(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 
 	// Read the sequence instead of assuming id 1: the victim's own derived port
@@ -237,7 +231,6 @@ func TestAddInbound_AmneziawgRefusesItsOwnRelayPort(t *testing.T) {
 // The edit path knows the id the relay port comes from, so it has to refuse the
 // same self-collision -- the reverse check skips the row it computes for.
 func TestUpdateInbound_AmneziawgRefusesItsOwnRelayPort(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	created := addAmneziaWGInbound(t, "awg-self-edit", 51820, true)
 
@@ -260,7 +253,6 @@ func TestUpdateInbound_AmneziawgRefusesItsOwnRelayPort(t *testing.T) {
 // A row adopted from a node keeps the protocol it arrived with and its central
 // id (inbound_node.go:737), but gets no relay -- so its slot can never be taken.
 func TestCheckPortConflict_NodeAssignedAmneziawgOwnsNoRelaySlot(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	blocker := addAmneziaWGInbound(t, "awg-blocker", 51820, true)
 

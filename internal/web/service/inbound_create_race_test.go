@@ -13,7 +13,6 @@ import (
 // two different rows: only the in-transaction check can reject the pair, and it
 // can only do so if the check and the insert cannot interleave.
 func TestAddInboundConcurrentOverlappingListenersSingleWinner(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 
 	const rounds = 25

@@ -11,7 +11,6 @@ import (
 // Concurrent creates on two inbounds hold two different lockInbound mutexes,
 // so only the serialized writer's in-tx re-check can reject the second claim.
 func TestAddInboundClientConcurrentCrossInboundAddressSingleWinner(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	svc := &ClientService{}
 	inboundSvc := &InboundService{}

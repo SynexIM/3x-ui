@@ -103,7 +103,6 @@ func inboundClientEnables(t *testing.T, inboundID int) map[string]bool {
 // Each LDAP user was disabled on its own, and every per-user push held the inbound
 // lock for the push timeout, so users sharing a hung node inbound queued behind it.
 func TestLdapBatchSetEnableDoesNotQueueUsersOnHungNode(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	emails := []string{"u1@ldap", "u2@ldap", "u3@ldap", "u4@ldap", "u5@ldap"}
 	gate, ib := ldapHungNodeInbound(t, emails)
 
@@ -128,7 +127,6 @@ func TestLdapBatchSetEnableDoesNotQueueUsersOnHungNode(t *testing.T) {
 // Clients missing from LDAP were detached one at a time, each waiting out the push
 // timeout on a hung node inbound, so a directory cleanup could run for hours.
 func TestLdapDeleteDoesNotQueueClientsOnHungNode(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	emails := []string{"gone1@ldap", "gone2@ldap", "gone3@ldap", "gone4@ldap", "gone5@ldap"}
 	gate, ib := ldapHungNodeInbound(t, emails)
 

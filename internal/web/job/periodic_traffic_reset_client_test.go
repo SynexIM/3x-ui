@@ -100,7 +100,6 @@ func recordFor(t *testing.T, email string) model.ClientRecord {
 }
 
 func TestPeriodicTrafficResetClients(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	t.Run("resets a client on its own cycle inside a never-reset inbound", func(t *testing.T) {
 		initResetJobDB(t)
 		seedClientOnCycle(t, 41001, seededClient{email: "weekly@example.com", cycle: "weekly", day: 1, recordEnable: true, quotaEnable: true})

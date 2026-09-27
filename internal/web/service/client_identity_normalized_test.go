@@ -79,7 +79,6 @@ func TestAddInboundClientStillRejectsMismatchedSubId(t *testing.T) {
 // emailsUsedByOtherInbounds keys on lower(email); the clients table stores the
 // email as typed under a case-sensitive unique index, so a plain IN would miss.
 func TestEmailsUsedByOtherInboundsMatchesCaseInsensitively(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	cs := &ClientService{}
 	is := &InboundService{}
@@ -130,7 +129,6 @@ func TestEmailsUsedByOtherInboundsMatchesCaseInsensitively(t *testing.T) {
 // delta case that is not obviously safe — the rename the taken-email guard
 // refuses, where the old record must still lose this inbound's link.
 func TestUpdateInboundClientRenameToTakenEmailDetachesOldLink(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	cs := &ClientService{}
 	is := &InboundService{}
@@ -179,7 +177,6 @@ func recordSubID(t *testing.T, email string) string {
 // JSON. Building the membership delta from the pre-stamp request values instead
 // of the stamped wire entries silently desyncs the two.
 func TestAddInboundClientPersistsTheGeneratedSubId(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	cs := &ClientService{}
 	is := &InboundService{}

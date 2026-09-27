@@ -9,7 +9,6 @@ import (
 )
 
 func TestUpdateInbound_RejectsHysteriaClientWithoutAuth(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	seedInboundConflict(t, "in-45001-tcp", "0.0.0.0", 45001, model.VLESS,
 		`{"network":"tcp"}`, `{"clients":[]}`)
@@ -41,7 +40,6 @@ func TestUpdateInbound_RejectsHysteriaClientWithoutAuth(t *testing.T) {
 }
 
 func TestUpdateInbound_PreservesHysteriaClientAuth(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	seedInboundConflict(t, "in-45002-udp", "0.0.0.0", 45002, model.Hysteria,
 		`{"network":"hysteria"}`, `{"clients":[]}`)
@@ -65,7 +63,8 @@ func TestUpdateInbound_PreservesHysteriaClientAuth(t *testing.T) {
 	if err := database.GetDB().First(&reloaded, existing.Id).Error; err != nil {
 		t.Fatalf("reload: %v", err)
 	}
-	clients, err := ParseInboundSettingsClients(reloaded.Settings)
+	// The fork keeps clients in the normalized table, not in settings JSON.
+	clients, err := svc.GetClients(&reloaded)
 	if err != nil {
 		t.Fatalf("parse persisted clients: %v", err)
 	}

@@ -20,7 +20,6 @@ import (
 // A sub-node stores whatever the master pushes. A master row whose certificate
 // predates the TLS guard must still land, or the node silently falls out of sync.
 func TestNodeSyncPushSkipsOperatorTLSGuard(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	gin.SetMode(gin.TestMode)
 	dbDir := t.TempDir()
 	t.Setenv("XUI_DB_FOLDER", dbDir)

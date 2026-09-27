@@ -13,7 +13,6 @@ import (
 // drops the credential only: whether the live session ends is what the setting
 // asks for, exactly as on the auto-disable path #6533 reports from.
 func TestManualClientDisableHonoursRestartSetting(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	const email = "manual-disable@example.com"
 
 	for _, tc := range []struct {

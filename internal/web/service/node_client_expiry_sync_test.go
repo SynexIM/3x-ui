@@ -251,7 +251,6 @@ func TestNodeRenew_WithMatchingSettings(t *testing.T) {
 // A node still holding the pre-extension deadline must not undo the extension on
 // traffics, client records or the adopted settings JSON (#6228).
 func TestNodeStaleExpiryAfterExtend_NotClobbered(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	db := initTrafficTestDB(t)
 	createNodeInboundWithClient(t, db, 1, "n1-in", 41001, "extended")
 	svc := &InboundService{}

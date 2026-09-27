@@ -46,7 +46,6 @@ func seedDepletedNodeClient(t *testing.T, nodeID, port int) {
 // A depletion wave used to push every node inbound on the serial writer, one by
 // one with no deadline, so a hanging node froze traffic accounting and client edits.
 func TestTrafficDisableNodePushLeavesWriterFreeAndGivesUp(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	StartTrafficWriter()
 	t.Cleanup(StopTrafficWriter)
@@ -91,7 +90,6 @@ func TestTrafficDisableNodePushLeavesWriterFreeAndGivesUp(t *testing.T) {
 }
 
 func TestTrafficDisableSkipsOfflineNodePushButMarksDirty(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	nodeID, fake := setupNodeRuntime(t)
 	if err := database.GetDB().Model(&model.Node{}).Where("id = ?", nodeID).Update("status", "offline").Error; err != nil {
@@ -132,7 +130,6 @@ func (h *hangingRestartRuntime) RestartXray(ctx context.Context) error {
 // The opt-in restart is best-effort and never replayed, so a hanging node must
 // not hold the traffic poll that disabled its client.
 func TestTrafficDisableNodeRestartDoesNotBlockTrafficPoll(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	setRestartOnClientDisable(t, true)
 	nodeID, _ := setupNodeRuntime(t)

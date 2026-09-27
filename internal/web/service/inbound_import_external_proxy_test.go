@@ -103,7 +103,6 @@ func TestAddInbound_NoExternalProxyCreatesNoHosts(t *testing.T) {
 }
 
 func TestAddInboundImportConvertsMtprotoCustomShareAddrToHost(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	inbound := &model.Inbound{
 		UserId: 1, Tag: "mt-import", Port: 4060, Protocol: model.MTProto,
@@ -127,7 +126,6 @@ func TestAddInboundImportConvertsMtprotoCustomShareAddrToHost(t *testing.T) {
 }
 
 func TestAddInboundImportDropsInvalidMtprotoCustomShareAddr(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	inbound := &model.Inbound{
 		UserId: 1, Tag: "mt-bad-import", Port: 4061, Protocol: model.MTProto,
@@ -148,7 +146,6 @@ func TestAddInboundImportDropsInvalidMtprotoCustomShareAddr(t *testing.T) {
 }
 
 func TestUpdateInboundConvertsMtprotoCustomShareAddrToHost(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupConflictDB(t)
 	seedInboundConflict(t, "mt-update", "127.0.0.1", 4062, model.MTProto, `{}`,
 		`{"clients":[{"email":"mt-upd","enable":true,"secret":"ee0123456789abcdef0123456789abcdef"}]}`)

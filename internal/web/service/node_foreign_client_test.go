@@ -22,7 +22,6 @@ func readClientUUID(t *testing.T, db *gorm.DB, email string) string {
 // Emails are globally unique, so a node reporting one that belongs to a master
 // inbound would otherwise overwrite its credentials and lock the real user out.
 func TestNodeCannotClaimClientOfAnotherInbound(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	db := initTrafficTestDB(t)
 	svc := &InboundService{}
 	clientSvc := &ClientService{}

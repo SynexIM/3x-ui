@@ -11,7 +11,6 @@ import (
 // InboundIds, leaving no dangling member reference (#5648 mirrors the hosts
 // cascade). With the only member gone the balancer stops emitting a doc.
 func TestDelInboundClearsSubBalancerInboundIds(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupSubBalancerDB(t)
 	ib := &model.Inbound{UserId: 1, Tag: "cleanup", Enable: false, Listen: "203.0.113.7", Port: 5001, Protocol: model.VLESS, Remark: "cleanup", Settings: `{}`, StreamSettings: `{}`}
 	if err := database.GetDB().Create(ib).Error; err != nil {

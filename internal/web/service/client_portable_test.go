@@ -10,7 +10,6 @@ import (
 // TestExportImportPreservesDisabledEnable covers #6478: ExportAll keeps the
 // real enable flag; ImportClients must not force enable=true.
 func TestExportImportPreservesDisabledEnable(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	svc := &ClientService{}
 	inboundSvc := &InboundService{}
@@ -97,7 +96,6 @@ func TestImportClientsPreservesOrphanDisabledEnable(t *testing.T) {
 }
 
 func TestBulkCreatePreservesExplicitDisable(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	svc := &ClientService{}
 	inboundSvc := &InboundService{}
@@ -141,7 +139,6 @@ func TestClientCreatePayload_OmitEnableDefaultsTrue(t *testing.T) {
 }
 
 func TestBulkCreate_DisabledOnNodeSkipsAddClient(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	nodeID, fake := setupNodeRuntime(t)
 	ib := nodeInbound(t, nodeID, 26003, nil)

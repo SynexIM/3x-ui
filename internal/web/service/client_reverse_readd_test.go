@@ -82,9 +82,10 @@ func assertReverseReAdd(t *testing.T, probe *reverseUserProbe, email string) {
 
 // The panel's most ordinary action on a reverse client: editing it removes the
 // account and adds it back, and the core rebuilds nothing without the tag.
+// In the fork an edit is re-applied to the local core by the hot-apply path
+// (hotUserMap), so that is where the stored tag has to survive.
 func TestClientEditKeepsTheReverseTag(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
-	_, email, probe := seedReverseProbeInbound(t, "rev-edit", 50071, true)
+	inbound, email, _ := seedReverseProbeInbound(t, "rev-edit", 50071, true)
 	rec := lookupClientRecord(t, email)
 
 	edited := reverseProbeClient(email, true)
@@ -92,11 +93,16 @@ func TestClientEditKeepsTheReverseTag(t *testing.T) {
 	if _, err := (&ClientService{}).Update(&InboundService{}, rec.Id, edited, 0); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
+	rec = lookupClientRecord(t, email)
+	user, err := (&XrayService{}).hotUserMap(database.GetDB(), hotInbound{Id: inbound.Id, Tag: inbound.Tag, Protocol: model.VLESS, Enable: true}, &rec, "")
+	if err != nil {
+		t.Fatalf("hotUserMap: %v", err)
+	}
+	probe := &reverseUserProbe{users: []map[string]any{user}}
 	assertReverseReAdd(t, probe, email)
 }
 
 func TestBulkReEnableKeepsTheReverseTag(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	_, email, probe := seedReverseProbeInbound(t, "rev-bulk", 50072, false)
 
 	if _, _, err := (&ClientService{}).BulkSetEnable(&InboundService{}, []string{email}, true); err != nil {
@@ -108,7 +114,6 @@ func TestBulkReEnableKeepsTheReverseTag(t *testing.T) {
 // The route an operator hits most often: a client that exhausted its quota is
 // removed, then re-added by the reset that renews it.
 func TestTrafficResetKeepsTheReverseTag(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	inbound, email, probe := seedReverseProbeInbound(t, "rev-quota", 50073, true)
 	depleteClientTraffic(t, inbound.Id, email)
 
@@ -119,7 +124,6 @@ func TestTrafficResetKeepsTheReverseTag(t *testing.T) {
 }
 
 func TestAddingClientsKeepsTheReverseTag(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	inbound, _, probe := seedReverseProbeInbound(t, "rev-add", 50074, true)
 	const added = "rev-add-second@example.test"
 	second := reverseProbeClient(added, true)

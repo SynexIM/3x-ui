@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -235,6 +234,21 @@ func (s *InboundService) adjustTraffics(tx *gorm.DB, dbClientTraffics []*xray.Cl
 
 // apiUserFromClient prepares an isolated runtime payload. Shadowsocks clients
 // inherit their cipher from the inbound-level protocol settings.
+// runtimeUserMap is the one runtime user a client becomes on an inbound: login
+// fields plus every protocol.User limit, derived key, Mixed login and reverse tag.
+func runtimeUserMap(client model.Client, ib *model.Inbound) map[string]any {
+	user := map[string]any{
+		"email": client.Email, "id": client.ID, "auth": client.Auth, "security": client.Security,
+		"flow": client.Flow, "password": client.Password,
+	}
+	if ib.Protocol == model.Shadowsocks {
+		user["cipher"] = shadowsocksMethodFromSettings(ib.Settings)
+	}
+	maps.Copy(user, client.RuntimeLimitFields())
+	maps.Copy(user, client.RuntimeCredentialFields(ib))
+	return user
+}
+
 func apiUserFromClient(client map[string]any, cipher string) map[string]any {
 	user := maps.Clone(client)
 	if user == nil {
@@ -336,7 +350,7 @@ func (s *InboundService) autoRenewClients(tx *gorm.DB, scopedEmails ...string) (
 				continue
 			}
 			client := record.ToClient()
-			if err := rt.AddUser(context.Background(), inbound, map[string]any{"email": client.Email, "id": client.ID, "auth": client.Auth, "security": client.Security, "flow": client.Flow, "password": client.Password, "cipher": shadowsocksMethodFromSettings(inbound.Settings)}); err != nil {
+			if err := rt.AddUser(context.Background(), inbound, runtimeUserMap(*client, inbound)); err != nil {
 				needRestart = true
 			}
 		}
@@ -407,10 +421,12 @@ func (s *InboundService) AddClientStat(tx *gorm.DB, inboundId int, client *model
 		ExpiryTime: client.ExpiryTime,
 		Enable:     client.Enable,
 		Reset:      client.Reset,
+		ResetDay:   client.ResetDay,
+		ResetMax:   client.ResetMax,
 	}
 	return tx.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "email"}},
-		DoUpdates: clause.AssignmentColumns([]string{"inbound_id", "total", "expiry_time", "enable", "reset"}),
+		DoUpdates: clause.AssignmentColumns([]string{"inbound_id", "total", "expiry_time", "enable", "reset", "reset_day", "reset_max"}),
 	}).Create(&clientTraffic).Error
 }
 
@@ -423,6 +439,8 @@ func (s *InboundService) UpdateClientStat(tx *gorm.DB, email string, client *mod
 			"total":       client.TotalGB,
 			"expiry_time": client.ExpiryTime,
 			"reset":       client.Reset,
+			"reset_day":   client.ResetDay,
+			"reset_max":   client.ResetMax,
 		})
 	err := result.Error
 	return err
@@ -505,24 +523,7 @@ func (s *InboundService) resetClientTrafficLocked(id int, clientEmail string) (b
 					}
 					break
 				}
-				cipher := ""
-				if string(inbound.Protocol) == "shadowsocks" {
-					var oldSettings map[string]any
-					err = json.Unmarshal([]byte(inbound.Settings), &oldSettings)
-					if err != nil {
-						return false, err
-					}
-					cipher, _ = oldSettings["method"].(string)
-				}
-				err1 := rt.AddUser(context.Background(), inbound, map[string]any{
-					"email":    client.Email,
-					"id":       client.ID,
-					"auth":     client.Auth,
-					"security": client.Security,
-					"flow":     client.Flow,
-					"password": client.Password,
-					"cipher":   cipher,
-				})
+				err1 := rt.AddUser(context.Background(), inbound, runtimeUserMap(client, inbound))
 				if err1 == nil {
 					logger.Debug("Client enabled on", rt.Name(), "due to reset traffic:", clientEmail)
 				} else if inbound.NodeID != nil {
@@ -618,13 +619,18 @@ func (s *InboundService) propagateResetAllTrafficsToNodes() {
 	if err != nil {
 		return
 	}
-	for _, node := range nodes {
-		if rt, err := runtime.GetManager().RuntimeFor(&node.Id); err == nil {
+	ids := make([]int, len(nodes))
+	for i, node := range nodes {
+		ids[i] = node.Id
+	}
+	fanoutInboundResults(ids, nodeFanoutConcurrency, func(i int) struct{} {
+		if rt, err := runtime.GetManager().RuntimeFor(&ids[i]); err == nil {
 			if e := rt.ResetAllTraffics(context.Background()); e != nil {
 				logger.Warning("ResetAllTraffics: remote propagation to", rt.Name(), "failed:", e)
 			}
 		}
-	}
+		return struct{}{}
+	})
 }
 
 func (s *InboundService) ResetInboundTraffic(id int) error {

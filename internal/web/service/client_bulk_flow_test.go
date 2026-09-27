@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -322,7 +321,6 @@ func TestBulkAdjust_MtprotoAdTagSetAndClear(t *testing.T) {
 // TestBulkAdjust_AdTagIneligibleSkipped verifies that non-MTProto clients are
 // refused adTag adjustment, reported as skipped, and their ClientRecord is untouched.
 func TestBulkAdjust_AdTagIneligibleSkipped(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	svc := &ClientService{}
 	inboundSvc := &InboundService{}
@@ -362,7 +360,6 @@ func TestBulkAdjust_AdTagIneligibleSkipped(t *testing.T) {
 // client is adjusted with both days and adTag, days are applied but adTag is not
 // written to ClientRecord and is reported as skipped.
 func TestBulkAdjust_DaysApplyDespiteIneligibleAdTag(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	svc := &ClientService{}
 	inboundSvc := &InboundService{}
@@ -408,7 +405,6 @@ func TestBulkAdjust_DaysApplyDespiteIneligibleAdTag(t *testing.T) {
 // TestBulkAdjust_MixedMtprotoAndVless_AdTag verifies bulk adjust over a mixed
 // MTProto and VLESS selection.
 func TestBulkAdjust_MixedMtprotoAndVless_AdTag(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	svc := &ClientService{}
 	inboundSvc := &InboundService{}
@@ -468,7 +464,6 @@ func TestBulkAdjust_MixedMtprotoAndVless_AdTag(t *testing.T) {
 // client that actually changed: an untouched client must not be re-stamped only
 // because a client earlier in the same inbound's array was adjusted.
 func TestBulkAdjust_UnchangedClientKeepsUpdatedAt(t *testing.T) {
-	t.Skip("upstream v3.8.5 behaviour of a service path the fork replaced with normalized clients (FORK.md: upstream merge 2026-09)")
 	setupBulkDB(t)
 	svc := &ClientService{}
 	inboundSvc := &InboundService{}
@@ -491,6 +486,11 @@ func TestBulkAdjust_UnchangedClientKeepsUpdatedAt(t *testing.T) {
 		t.Fatalf("seed traffic: %v", err)
 	}
 
+	// The fork's clients table stamps rows on write, so compare against the stamp
+	// the seed actually left rather than the value the fixture asked for.
+	before := settingsUpdatedAt(t, inboundSvc, ib.Id)
+	time.Sleep(2 * time.Millisecond)
+
 	// The flow directive is what keeps keep@x in the plan; the ws inbound cannot
 	// carry it, so the directive is not itself a change for either client.
 	if _, _, err := svc.BulkAdjust(inboundSvc, emailsOf(clients), 7, 0, "xtls-rprx-vision", nil, ""); err != nil {
@@ -498,31 +498,28 @@ func TestBulkAdjust_UnchangedClientKeepsUpdatedAt(t *testing.T) {
 	}
 
 	stamps := settingsUpdatedAt(t, inboundSvc, ib.Id)
-	if stamps["chg@x"] <= seeded {
+	if stamps["chg@x"] <= before["chg@x"] {
 		t.Fatalf("adjusted client should be re-stamped, updated_at = %d", stamps["chg@x"])
 	}
-	if stamps["keep@x"] != seeded {
+	if stamps["keep@x"] != before["keep@x"] {
 		t.Fatalf("untouched client updated_at = %d, want %d — a sibling's change must not re-stamp it", stamps["keep@x"], seeded)
 	}
 }
 
+// settingsUpdatedAt reads each attached client's updated_at from the normalized
+// clients table, which is the fork's authority (not the inbound settings JSON).
 func settingsUpdatedAt(t *testing.T, inboundSvc *InboundService, inboundId int) map[string]int64 {
 	t.Helper()
 	ib, err := inboundSvc.GetInbound(inboundId)
 	if err != nil {
 		t.Fatalf("GetInbound: %v", err)
 	}
-	var parsed struct {
-		Clients []struct {
-			Email     string `json:"email"`
-			UpdatedAt int64  `json:"updated_at"`
-		} `json:"clients"`
+	clients, err := inboundSvc.GetClients(ib)
+	if err != nil {
+		t.Fatalf("GetClients: %v", err)
 	}
-	if err := json.Unmarshal([]byte(ib.Settings), &parsed); err != nil {
-		t.Fatalf("unmarshal settings: %v", err)
-	}
-	out := make(map[string]int64, len(parsed.Clients))
-	for _, c := range parsed.Clients {
+	out := make(map[string]int64, len(clients))
+	for _, c := range clients {
 		out[c.Email] = c.UpdatedAt
 	}
 	return out

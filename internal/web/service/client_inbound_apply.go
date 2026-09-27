@@ -457,6 +457,12 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 			push = false
 		}
 		for _, client := range clients {
+			// A node's /clients/add historically coerced enable=true; leave a
+			// disabled client to the reconcile instead of pushing it live.
+			if !client.Enable {
+				push = false
+				continue
+			}
 			if push {
 				if err1 := rt.AddClient(context.Background(), oldInbound, client); err1 != nil {
 					logger.Warning("Error in adding client on", rt.Name(), ":", err1)
