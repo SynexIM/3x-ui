@@ -67,6 +67,15 @@ func (s *ClientService) BulkAttach(inboundSvc *InboundService, emails []string, 
 	}
 
 	needRestart := false
+	emailsForFlow := make([]string, 0, len(records))
+	for _, rec := range records {
+		emailsForFlow = append(emailsForFlow, rec.Email)
+	}
+	flowsByEmail, err := s.EffectiveFlowsByEmails(nil, emailsForFlow)
+	if err != nil {
+		return result, false, err
+	}
+
 	for _, ibId := range inboundIds {
 		inbound, err := inboundSvc.GetInbound(ibId)
 		if err != nil {
@@ -90,6 +99,10 @@ func (s *ClientService) BulkAttach(inboundSvc *InboundService, emails []string, 
 				continue
 			}
 			client := *rec.ToClient()
+			// clients.flow is unreliable when a non-flow inbound synced last (#4834).
+			if flow, ok := flowsByEmail[rec.Email]; ok && flow != "" {
+				client.Flow = flow
+			}
 			client.UpdatedAt = time.Now().UnixMilli()
 			if err := s.fillProtocolDefaults(&client, inbound); err != nil {
 				recordErr("%s -> inbound %d: %v", rec.Email, ibId, err)

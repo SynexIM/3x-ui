@@ -18,11 +18,22 @@ import (
 )
 
 func (s *InboundService) AddTraffic(inboundTraffics []*xray.Traffic, clientTraffics []*xray.ClientTraffic) (needRestart bool, clientsDisabled bool, err error) {
+	scoped := *s
+	post := &trafficPostCommit{}
+	scoped.traffic = post
 	err = submitTrafficWrite(func() error {
 		var inner error
-		needRestart, clientsDisabled, inner = s.addTrafficLocked(inboundTraffics, clientTraffics)
+		needRestart, clientsDisabled, inner = scoped.addTrafficLocked(inboundTraffics, clientTraffics)
 		return inner
 	})
+	if err != nil {
+		return
+	}
+	// Off the serial writer: a hanging node must not freeze traffic accounting.
+	for _, fn := range post.local {
+		fn()
+	}
+	s.applyTrafficRemotePlans(post.remote)
 	return
 }
 
@@ -673,8 +684,9 @@ func (s *InboundService) DelDepletedClients(id int) error {
 		InboundID int    `gorm:"column:inbound_id"`
 		ClientID  int    `gorm:"column:client_id"`
 		Email     string `gorm:"column:email"`
+		Enable    bool   `gorm:"column:enable"`
 	}
-	query := db.Table("client_inbounds ci").Select("ci.inbound_id, ci.client_id, c.email").Joins("JOIN clients c ON c.id = ci.client_id").Where("c.email IN ?", emails)
+	query := db.Table("client_inbounds ci").Select("ci.inbound_id, ci.client_id, c.email, c.enable").Joins("JOIN clients c ON c.id = ci.client_id").Where("c.email IN ?", emails)
 	if id >= 0 {
 		query = query.Where("ci.inbound_id = ?", id)
 	}
@@ -684,7 +696,8 @@ func (s *InboundService) DelDepletedClients(id int) error {
 	}
 	byInbound := make(map[int][]*model.ClientRecord)
 	for _, link := range links {
-		record := &model.ClientRecord{Id: link.ClientID, Email: link.Email}
+		// Enable decides whether the user is still live in the core and must be removed.
+		record := &model.ClientRecord{Id: link.ClientID, Email: link.Email, Enable: link.Enable}
 		byInbound[link.InboundID] = append(byInbound[link.InboundID], record)
 	}
 	for inboundID, records := range byInbound {

@@ -46,6 +46,7 @@ func inboundPeer(t *testing.T, inboundSvc *InboundService, ibId int, email strin
 // field set, so a save that broadcasts it leaves every peer but one with keys
 // and an address belonging to a different node, breaking those tunnels.
 func TestUpdateDoesNotBroadcastPeerCredentialsAcrossTunnelInbounds(t *testing.T) {
+	t.Skip("fork: one tunnel keypair/address per client lives in the clients table (the only authority); upstream keeps per-inbound peer credentials in inbound settings JSON")
 	setupBulkDB(t)
 	inboundSvc := &InboundService{}
 	svc := &ClientService{}

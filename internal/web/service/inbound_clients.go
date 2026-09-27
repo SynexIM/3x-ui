@@ -133,11 +133,16 @@ func (s *InboundService) emailsUsedByOtherInbounds(emails []string, exceptInboun
 	if len(emails) == 0 {
 		return shared, nil
 	}
+	// Stored emails keep the case they were typed in; identity is case-insensitive.
+	lowered := make([]string, 0, len(emails))
+	for _, email := range emails {
+		lowered = append(lowered, strings.ToLower(strings.TrimSpace(email)))
+	}
 	var rows []string
 	if err := database.GetDB().Table("client_inbounds").
 		Select("clients.email").
 		Joins("JOIN clients ON clients.id = client_inbounds.client_id").
-		Where("client_inbounds.inbound_id <> ? AND clients.email IN ?", exceptInboundId, emails).
+		Where("client_inbounds.inbound_id <> ? AND LOWER(clients.email) IN ?", exceptInboundId, lowered).
 		Distinct().Pluck("clients.email", &rows).Error; err != nil {
 		return nil, err
 	}

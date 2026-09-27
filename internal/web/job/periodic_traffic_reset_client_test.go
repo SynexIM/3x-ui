@@ -8,6 +8,7 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
 
@@ -193,14 +194,13 @@ func settingsEnableOf(t *testing.T, port int) bool {
 	if err := database.GetDB().Where("port = ?", port).First(&stored).Error; err != nil {
 		t.Fatal(err)
 	}
-	var settings struct {
-		Clients []model.Client `json:"clients"`
+	// The fork keeps inbound membership in the normalized tables.
+	clients, err := (&service.InboundService{}).GetClients(&stored)
+	if err != nil {
+		t.Fatalf("inbound clients: %v", err)
 	}
-	if err := json.Unmarshal([]byte(stored.Settings), &settings); err != nil {
-		t.Fatalf("parse inbound settings: %v", err)
+	if len(clients) != 1 {
+		t.Fatalf("inbound holds %d clients, want 1", len(clients))
 	}
-	if len(settings.Clients) != 1 {
-		t.Fatalf("inbound holds %d clients, want 1", len(settings.Clients))
-	}
-	return settings.Clients[0].Enable
+	return clients[0].Enable
 }

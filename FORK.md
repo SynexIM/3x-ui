@@ -133,24 +133,36 @@ the SynexIM xray-core (`common/protocol/tier_shaper.go`).
 
 ## Upstream merge 2026-09 (MHSanaei/3x-ui v3.8.5)
 
-Merged on top of the fork's normalized client authority. Upstream's client and
-inbound services still treat `inbounds.settings.clients` as a source of truth;
-the fork's versions of those files were kept whole, so these upstream v3.8.5
-behaviours are **not** carried yet (their tests are skipped with a reason, not
-deleted where the file also held fork tests):
+Merged on top of the fork's normalized client authority (the clients /
+client_inbounds tables are the only source of client membership; inbound
+settings JSON never holds clients) and its hot-apply red line (a client write is
+applied to the running core or fails; it never schedules a core restart). The
+fork's client and inbound service files were kept, and upstream v3.8.5 behaviour
+was re-implemented on that model: TLS certificate completeness on inbound save,
+Hysteria/TUIC client validation, AmneziaWG settings and relay-port guards, port
+conflicts checked inside the serialized writer and on enable, node-eligible
+protocols, MTProto custom share address as a managed host, sub-balancer cleanup
+on inbound delete, fanned-out node pushes with deadlines (traffic-driven node
+pushes run after commit, off the serial writer), case-insensitive email identity,
+rename onto a same-identity email, TUIC copy credentials, BulkAdjust adTag/limitHwid,
+EffectiveFlow on bulk attach, explicit `enable:false` kept on create, keepAlive
+preserved when omitted, cross-inbound tunnel address uniqueness, tombstone
+withdrawal on re-create, adopted node activation expiry latching the disable.
+Tests that asserted the settings JSON as the storage location were rewritten to
+read the normalized tables; the behaviour they pin is unchanged.
 
-- AmneziaWG / TUIC client management through inbound settings, relay-port
-  window checks on create, per-inbound tunnel AllowedIPs overrides.
-- Inbound save refusing missing TLS certificates (`validateInboundTLSCertificates`),
-  Hysteria client-auth validation on inbound update, email case-folding on
-  cross-inbound identity checks, calendar/max-count auto-renew and per-client
-  traffic-reset cycles on the renewal path (the reset job itself is wired).
-- Upstream's "restart on partial apply" flags: the fork keeps its redline that a
-  client write must hot-apply or fail, never schedule a restart.
+The core is SynexIM/xray-core on the v26.9.9 baseline, so udphop and the v26.9
+migration expectations hold.
 
-Upstream targets xray-core v26.9.x; the SynexIM core is still v26.7.28. The
-panel's `finalmask.udphop` (Hysteria2 port hopping) and three migration tests
-that assert v26.9 warnings do not hold against the fork core until it is rebased.
+Upstream tests still skipped, each with its reason in the `t.Skip` text (12):
+
+| Reason | Tests |
+|---|---|
+| Red line: client writes hot-apply or fail, never restart the core | `Test{Update,Delete,Detach}HandlerFlagsRestartOnPartialApply`, `TestManualClientDisableHonoursRestartSetting`, `TestTrafficDisableNodeRestartDoesNotBlockTrafficPoll` |
+| One tunnel keypair/address per client in the clients table; upstream keeps per-inbound peer keys in settings JSON | `TestInboundLinks_PreservesPerInboundWireGuardIdentity`, `TestUpdateDoesNotBroadcastPeerCredentialsAcrossTunnelInbounds` |
+| Client CRUD never writes or parses inbound settings JSON, so the injected failure / malformed blob cannot occur | `TestNodeBulkAdjustDoesNotPushBeforeFailedCommit`, `TestNodeBulkDeleteDoesNotPushBeforeFailedCommit`, `TestNodeBulkDeleteMalformedSettingsWithdrawsTombstone` |
+| Membership comes from the normalized tables, not an unsaved inbound blob | `TestGetInboundClientsForUsesProvidedInbound` |
+| Import succeeds only after the real core starts and answers its API; the shell stub cannot | `TestImportDBSchedulesPanelRestart` |
 
 ## Licensing and attribution
 

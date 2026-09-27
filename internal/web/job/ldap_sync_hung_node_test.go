@@ -14,6 +14,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/runtime"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
 
@@ -87,14 +88,13 @@ func inboundClientEnables(t *testing.T, inboundID int) map[string]bool {
 	if err := database.GetDB().First(&ib, inboundID).Error; err != nil {
 		t.Fatalf("reload inbound: %v", err)
 	}
-	var settings struct {
-		Clients []model.Client `json:"clients"`
+	// The fork keeps inbound membership in the normalized tables.
+	clients, err := (&service.InboundService{}).GetClients(&ib)
+	if err != nil {
+		t.Fatalf("inbound clients: %v", err)
 	}
-	if err := json.Unmarshal([]byte(ib.Settings), &settings); err != nil {
-		t.Fatalf("parse settings: %v", err)
-	}
-	out := make(map[string]bool, len(settings.Clients))
-	for _, c := range settings.Clients {
+	out := make(map[string]bool, len(clients))
+	for _, c := range clients {
 		out[c.Email] = c.Enable
 	}
 	return out

@@ -56,6 +56,14 @@ func newLinksCallbackTgbot(t *testing.T, email string) (*Tgbot, func(string) int
 	}).Error; err != nil {
 		t.Fatalf("seed traffic: %v", err)
 	}
+	// The fork binds ownership through the normalized clients table.
+	rec := &model.ClientRecord{Email: email, TgID: ownerTgID, SubID: "sub-owned", Enable: true}
+	if err := database.GetDB().Create(rec).Error; err != nil {
+		t.Fatalf("seed client record: %v", err)
+	}
+	if err := database.GetDB().Create(&model.ClientInbound{ClientId: rec.Id, InboundId: inbound.Id}).Error; err != nil {
+		t.Fatalf("seed client link: %v", err)
+	}
 
 	origRunning := isRunning
 	t.Cleanup(func() { isRunning = origRunning })

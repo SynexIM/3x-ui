@@ -140,7 +140,10 @@ func (s *ClientService) Create(inboundSvc *InboundService, payload *ClientCreate
 			needRestart = true
 		}
 	}
-	return needRestart, nil
+	// A re-created email is a live identity again: a standing delete tombstone
+	// would make the next node merge prune the new client's links.
+	withdrawClientTombstones(client.Email)
+	return needRestart, s.setClientLimitHwidByEmail(nil, client.Email, payload.LimitHwid)
 }
 
 func (s *ClientService) fillProtocolDefaults(c *model.Client, ib *model.Inbound) error {
@@ -283,6 +286,10 @@ func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model
 	}
 	if updated.Auth == "" {
 		updated.Auth = existing.Auth
+	}
+	// An edit that never mentions keepAlive keeps the stored one; an explicit 0 clears it.
+	if updated.KeepAlive == nil {
+		updated.KeepAlive = model.KeepAlivePtr(existing.KeepAlive)
 	}
 	if updated.Secret == "" {
 		updated.Secret = existing.Secret

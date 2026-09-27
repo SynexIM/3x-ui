@@ -67,6 +67,14 @@ type InboundService struct {
 	// FromNodeSync marks a master push: the row was validated where the operator
 	// acted, and a node that refuses it only falls out of sync.
 	FromNodeSync bool
+	// traffic collects what a traffic-poll transaction must apply after commit,
+	// off the serial writer; nil applies immediately.
+	traffic *trafficPostCommit
+}
+
+type trafficPostCommit struct {
+	remote []trafficInboundUpdatePlan
+	local  []func()
 }
 
 func normalizeTrafficResetDay(day int) int {

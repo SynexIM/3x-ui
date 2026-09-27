@@ -231,9 +231,10 @@ func settingsSubID(t *testing.T, inboundId int, email string) string {
 	if err := database.GetDB().First(&ib, inboundId).Error; err != nil {
 		t.Fatalf("load inbound: %v", err)
 	}
-	clients, err := ParseInboundSettingsClients(ib.Settings)
+	// The inbound's clients come from the normalized table in the fork.
+	clients, err := (&InboundService{}).GetClients(&ib)
 	if err != nil {
-		t.Fatalf("parse settings: %v", err)
+		t.Fatalf("inbound clients: %v", err)
 	}
 	for _, c := range clients {
 		if c.Email == email {

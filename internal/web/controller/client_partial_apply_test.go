@@ -90,6 +90,7 @@ func assertPartialApply(t *testing.T, w *httptest.ResponseRecorder) {
 // TestUpdateHandlerFlagsRestartOnPartialApply pins that an edit committed on some
 // inbounds and failed on others still flags Xray, as create/attach already did.
 func TestUpdateHandlerFlagsRestartOnPartialApply(t *testing.T) {
+	t.Skip("fork red line: a client write hot-applies or fails, it never schedules or performs a core restart")
 	const email = "partial-update@example.com"
 	seedPartlyApplyingClient(t, email, 43310)
 
@@ -110,6 +111,7 @@ func TestUpdateHandlerFlagsRestartOnPartialApply(t *testing.T) {
 // TestDeleteHandlerFlagsRestartOnPartialApply is the delete-side twin: the
 // removals that landed still need the restart the error path used to discard.
 func TestDeleteHandlerFlagsRestartOnPartialApply(t *testing.T) {
+	t.Skip("fork red line: a client write hot-applies or fails, it never schedules or performs a core restart")
 	const email = "partial-delete@example.com"
 	seedPartlyApplyingClient(t, email, 43320)
 
@@ -126,6 +128,7 @@ func TestDeleteHandlerFlagsRestartOnPartialApply(t *testing.T) {
 
 // TestDetachHandlerFlagsRestartOnPartialApply covers the third converted path.
 func TestDetachHandlerFlagsRestartOnPartialApply(t *testing.T) {
+	t.Skip("fork red line: a client write hot-applies or fails, it never schedules or performs a core restart")
 	const email = "partial-detach@example.com"
 	healthyID, brokenID := seedPartlyApplyingClient(t, email, 43330)
 

@@ -1080,6 +1080,14 @@ func (s *InboundService) setRemoteTrafficLocked(nodeID int, snap *runtime.Traffi
 						existing.Enable = false
 					}
 					existing.ExpiryTime = mergeActivationExpiry(priorExpiry, cs.ExpiryTime)
+					// The merge SQL judged the node's disable against the pre-merge
+					// expiry; an adopted activation deadline already past latches it.
+					if !cs.Enable && existing.Enable && priorExpiry <= 0 && existing.ExpiryTime > 0 && existing.ExpiryTime <= now {
+						if err := tx.Model(xray.ClientTraffic{}).Where("email = ?", cs.Email).Update("enable", false).Error; err != nil {
+							return false, err
+						}
+						existing.Enable = false
+					}
 					existing.Up = clampTrafficCounter(existing.Up + deltaUp)
 					existing.Down = clampTrafficCounter(existing.Down + deltaDown)
 					existing.Total = cs.Total

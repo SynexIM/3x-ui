@@ -42,7 +42,7 @@ func TestNodeCannotClaimClientOfAnotherInbound(t *testing.T) {
 	if err := db.Create(master).Error; err != nil {
 		t.Fatalf("create master inbound: %v", err)
 	}
-	masterClients, err := svc.GetClients(master)
+	masterClients, err := ParseInboundDraftClients(master.Settings) // fork: settings is only the seed draft
 	if err != nil {
 		t.Fatalf("parse master clients: %v", err)
 	}

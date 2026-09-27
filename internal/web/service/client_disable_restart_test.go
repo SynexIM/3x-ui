@@ -13,6 +13,7 @@ import (
 // drops the credential only: whether the live session ends is what the setting
 // asks for, exactly as on the auto-disable path #6533 reports from.
 func TestManualClientDisableHonoursRestartSetting(t *testing.T) {
+	t.Skip("fork red line: a client write hot-applies or fails, it never schedules or performs a core restart")
 	const email = "manual-disable@example.com"
 
 	for _, tc := range []struct {

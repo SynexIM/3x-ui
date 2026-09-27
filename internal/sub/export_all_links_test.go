@@ -128,6 +128,7 @@ func TestInboundLinks_SettingsOnlyVLESSProducesLink(t *testing.T) {
 // and private key when the same email is attached to both — those fields live
 // only in the per-inbound settings JSON, not the shared clients.wg_* columns.
 func TestInboundLinks_PreservesPerInboundWireGuardIdentity(t *testing.T) {
+	t.Skip("fork: one tunnel keypair/address per client lives in the clients table (the only authority); upstream keeps per-inbound peer credentials in inbound settings JSON")
 	seedSubDB(t)
 	db := database.GetDB()
 

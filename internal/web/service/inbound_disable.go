@@ -182,6 +182,12 @@ func (s *InboundService) disableInvalidClients(tx *gorm.DB, scopedEmails ...stri
 			logger.Warning("disableInvalidClients: settings.JSON sync failed for inbound", inboundID, ":", mErr)
 			continue
 		}
+		// MTProto is served by its sidecar, which reads the committed rows.
+		if newIb.Protocol == model.MTProto {
+			id := inboundID
+			s.afterTrafficCommit(func() { s.applyLocalMtproto(id) })
+			continue
+		}
 		if newIb.Protocol == model.Mixed && currentXrayProcess() != nil {
 			rt, rtErr := s.runtimeFor(newIb)
 			if rtErr != nil || rt.UpdateInbound(context.Background(), oldIb, newIb) != nil {
@@ -263,13 +269,26 @@ func (s *InboundService) disableRemoteClients(tx *gorm.DB, inboundID int, emails
 	if err != nil {
 		return err
 	}
-
-	rt, err := s.runtimeFor(ib)
-	if err != nil {
-		return err
+	// Dirty first: an offline or slow node converges through the reconcile.
+	if ib.NodeID != nil {
+		if err := (&NodeService{}).MarkNodeDirtyTx(tx, *ib.NodeID); err != nil {
+			return err
+		}
 	}
-	if err := rt.UpdateInbound(context.Background(), oldSnapshot, ib); err != nil {
-		return err
+	plan := trafficInboundUpdatePlan{oldInbound: *oldSnapshot, newInbound: *ib}
+	if s.traffic != nil {
+		s.traffic.remote = append(s.traffic.remote, plan)
+		return nil
 	}
+	s.applyTrafficRemotePlans([]trafficInboundUpdatePlan{plan})
 	return nil
+}
+
+// afterTrafficCommit runs fn once the traffic transaction has committed.
+func (s *InboundService) afterTrafficCommit(fn func()) {
+	if s.traffic != nil {
+		s.traffic.local = append(s.traffic.local, fn)
+		return
+	}
+	fn()
 }

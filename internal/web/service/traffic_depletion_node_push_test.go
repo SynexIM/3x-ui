@@ -10,6 +10,8 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/runtime"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
+
+	"gorm.io/gorm/clause"
 )
 
 type hangingUpdateRuntime struct {
@@ -36,7 +38,8 @@ func seedDepletedNodeClient(t *testing.T, nodeID, port int) {
 	t.Helper()
 	client := model.Client{Email: fmt.Sprintf("spent-%d", port), Enable: true}
 	ib := nodeInbound(t, nodeID, port, []model.Client{client})
-	if err := database.GetDB().Create(&xray.ClientTraffic{
+	// The fork's attach already created the traffic row; overwrite it depleted.
+	if err := database.GetDB().Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "email"}}, UpdateAll: true}).Create(&xray.ClientTraffic{
 		InboundId: ib.Id, Email: client.Email, Enable: true, Up: 100, Total: 100,
 	}).Error; err != nil {
 		t.Fatalf("seed traffic: %v", err)
@@ -130,6 +133,7 @@ func (h *hangingRestartRuntime) RestartXray(ctx context.Context) error {
 // The opt-in restart is best-effort and never replayed, so a hanging node must
 // not hold the traffic poll that disabled its client.
 func TestTrafficDisableNodeRestartDoesNotBlockTrafficPoll(t *testing.T) {
+	t.Skip("fork red line: a client write hot-applies or fails, it never schedules or performs a core restart")
 	setupConflictDB(t)
 	setRestartOnClientDisable(t, true)
 	nodeID, _ := setupNodeRuntime(t)

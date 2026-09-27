@@ -18,6 +18,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // advancePushedInbound advances the node's reconcile-skip fingerprint from the
@@ -176,13 +177,17 @@ func (s *ClientService) delInboundClients(inboundSvc *InboundService, inboundId 
 					}
 				}
 			}
-		} else if nodePush {
+		} else if nodePush && !nodePushFailed {
+			// Bounded, and the first failure ends the batch: the node is dirty,
+			// so the reconcile converges the rest instead of queueing behind a hung node.
+			ctx, cancel := nodePushContext()
 			var err error
 			if fullDelete {
-				err = nodeRt.DeleteClient(context.Background(), t.email)
+				err = nodeRt.DeleteClient(ctx, t.email)
 			} else {
-				err = nodeRt.DeleteUser(context.Background(), oldInbound, t.email)
+				err = nodeRt.DeleteUser(ctx, oldInbound, t.email)
 			}
+			cancel()
 			if err != nil {
 				logger.Warning("Error in deleting client on", nodeRt.Name(), ":", err)
 				nodePushFailed = true
@@ -313,15 +318,23 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 		interfaceClients = keptWire
 	}
 
-	if oldInbound.Protocol == model.WireGuard {
-		// Only WireGuard still needs the full membership (it derives peer
-		// defaults from what is already there). Parsing the blob is O(N), so it
-		// stays inside this branch instead of running for every protocol.
+	isTunnel := oldInbound.Protocol == model.WireGuard || oldInbound.Protocol == model.AmneziaWG
+	if isTunnel {
+		// Tunnel peers derive defaults from existing membership and must not take
+		// an address a client on another tunnel inbound already holds.
 		existingClients, gcErr := inboundSvc.GetClients(oldInbound)
 		if gcErr != nil {
 			return false, gcErr
 		}
-		if dErr := defaultWireguardClients(oldInbound.Settings, existingClients, clients, interfaceClients, nil); dErr != nil {
+		crossUsed, cErr := tunnelAddressesInUse(database.GetDB(), oldInbound.Id, clients)
+		if cErr != nil {
+			return false, cErr
+		}
+		defaults := defaultWireguardClients
+		if oldInbound.Protocol == model.AmneziaWG {
+			defaults = defaultAmneziaWGClients
+		}
+		if dErr := defaults(oldInbound.Settings, existingClients, clients, interfaceClients, crossUsed); dErr != nil {
 			return false, dErr
 		}
 	}
@@ -343,7 +356,7 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 			if client.Auth == "" {
 				return false, common.NewError("empty client ID")
 			}
-		case "wireguard":
+		case "wireguard", "amneziawg":
 			if client.PublicKey == "" {
 				return false, common.NewError("wireguard client requires a key")
 			}
@@ -353,6 +366,10 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 			}
 			if client.AdTag != "" && !model.ValidMtprotoAdTag(client.AdTag) {
 				return false, common.NewError("mtproto client ad tag must be 32 hex characters")
+			}
+		case "tuic":
+			if err := validateTuicClient(client); err != nil {
+				return false, err
 			}
 		default:
 			if client.ID == "" {
@@ -379,6 +396,21 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 	// Persist only the normalized client record and link rows. The inbound
 	// settings blob is never rewritten for client CRUD.
 	if txErr := runSerializedTx(func(tx *gorm.DB) error {
+		// Re-checked in the serialized writer: two adds on different tunnel
+		// inbounds hold different inbound locks and would both pass the check above.
+		if isTunnel {
+			used, err := tunnelAddressesInUse(tx, oldInbound.Id, clients)
+			if err != nil {
+				return err
+			}
+			for _, c := range clients {
+				for _, addr := range c.AllowedIPs {
+					if owner, taken := used[addr]; taken {
+						return common.NewError("wireguard: allowedIPs entry already used by another client:", addr, "(", owner, ")")
+					}
+				}
+			}
+		}
 		for i := range clients {
 			if len(clients[i].Email) == 0 {
 				continue
@@ -464,7 +496,10 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 				continue
 			}
 			if push {
-				if err1 := rt.AddClient(context.Background(), oldInbound, client); err1 != nil {
+				ctx, cancel := nodePushContext()
+				err1 := rt.AddClient(ctx, oldInbound, client)
+				cancel()
+				if err1 != nil {
 					logger.Warning("Error in adding client on", rt.Name(), ":", err1)
 					push = false
 				}
@@ -502,6 +537,11 @@ func (s *ClientService) UpdateInboundClient(inboundSvc *InboundService, data *mo
 	updated.CreatedAt = old.CreatedAt
 	if updated.SubID == "" {
 		updated.SubID = old.SubID
+	}
+	if !strings.EqualFold(updated.Email, old.Email) {
+		if taken, err := s.GetRecordByEmail(nil, updated.Email); err == nil && taken.Id != old.Id {
+			return s.moveInboundLinkToRecord(inboundSvc, inbound, old, taken, updated)
+		}
 	}
 	merged := *old
 	applyClientRecordMerge(&merged, updated.ToRecord())
@@ -558,6 +598,40 @@ func (s *ClientService) UpdateInboundClient(inboundSvc *InboundService, data *mo
 			return false, nil
 		}
 		return true, nil
+	}
+	return false, nil
+}
+
+// moveInboundLinkToRecord handles a rename onto an email another record owns:
+// the same identity (same subId) takes over this inbound and the old record
+// leaves it; a different identity is a duplicate.
+func (s *ClientService) moveInboundLinkToRecord(inboundSvc *InboundService, inbound *model.Inbound, old, taken *model.ClientRecord, updated model.Client) (bool, error) {
+	if taken.SubID != updated.SubID {
+		return false, common.NewError("Duplicate email:", updated.Email)
+	}
+	if err := runSerializedTx(func(tx *gorm.DB) error {
+		if err := tx.Where("client_id = ? AND inbound_id = ?", old.Id, inbound.Id).Delete(&model.ClientInbound{}).Error; err != nil {
+			return err
+		}
+		link := model.ClientInbound{ClientId: taken.Id, InboundId: inbound.Id, FlowOverride: updated.Flow}
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&link).Error; err != nil {
+			return err
+		}
+		if inbound.NodeID != nil {
+			return (&NodeService{}).MarkNodeDirtyTx(tx, *inbound.NodeID)
+		}
+		return nil
+	}); err != nil {
+		return false, err
+	}
+	rt, push, _, err := inboundSvc.nodePushPlan(inbound)
+	if err != nil || !push {
+		return err == nil && inbound.NodeID == nil, err
+	}
+	target := taken.ToClient()
+	target.Flow = updated.Flow
+	if err := rt.UpdateUser(context.Background(), inbound, old.Email, *target); err != nil {
+		return inbound.NodeID == nil, nil
 	}
 	return false, nil
 }
@@ -696,4 +770,37 @@ func (s *ClientService) ResetClientTrafficLimitByEmail(inboundSvc *InboundServic
 	return s.applyClientFieldByEmail(inboundSvc, clientEmail, func(c map[string]any) {
 		c["totalGB"] = totalGB * 1024 * 1024 * 1024
 	})
+}
+
+// tunnelAddressesInUse maps every tunnel address held by a client on another
+// WireGuard/AmneziaWG inbound (other than the incoming clients) to its owner.
+func tunnelAddressesInUse(tx *gorm.DB, excludeInboundID int, incoming []model.Client) (map[string]string, error) {
+	self := make([]string, 0, len(incoming))
+	for _, c := range incoming {
+		self = append(self, strings.ToLower(c.Email))
+	}
+	var rows []struct {
+		Email      string
+		AllowedIPs string `gorm:"column:wg_allowed_ips"`
+	}
+	query := tx.Table("clients c").
+		Select("DISTINCT c.email AS email, c.wg_allowed_ips AS wg_allowed_ips").
+		Joins("JOIN client_inbounds ci ON ci.client_id = c.id").
+		Joins("JOIN inbounds i ON i.id = ci.inbound_id").
+		Where("i.protocol IN ? AND i.id <> ? AND c.wg_allowed_ips <> ''", []model.Protocol{model.WireGuard, model.AmneziaWG}, excludeInboundID)
+	if len(self) > 0 {
+		query = query.Where("LOWER(c.email) NOT IN ?", self)
+	}
+	if err := query.Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	used := make(map[string]string)
+	for _, row := range rows {
+		for _, addr := range strings.Split(row.AllowedIPs, ",") {
+			if addr = strings.TrimSpace(addr); addr != "" {
+				used[addr] = row.Email
+			}
+		}
+	}
+	return used, nil
 }
