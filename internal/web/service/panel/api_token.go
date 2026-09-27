@@ -21,16 +21,16 @@ type ApiTokenService struct{}
 const apiTokenLength = 48
 
 type ApiTokenView struct {
-	Id        int    `json:"id" example:"2"`
-	Name      string `json:"name" example:"central-panel-a"`
-	Token     string `json:"token,omitempty" example:"new-token-string"`
-	Enabled   bool   `json:"enabled" example:"true"`
+	Id      int    `json:"id" example:"2"`
+	Name    string `json:"name" example:"central-panel-a"`
+	Token   string `json:"token,omitempty" example:"new-token-string"`
+	Enabled bool   `json:"enabled" example:"true"`
 	// Namespaces are the tag/email prefixes this token may write; empty means
 	// unrestricted, otherwise every object it writes must carry one of them.
 	Namespaces []string `json:"namespaces"`
 	CreatedAt  int64    `json:"createdAt" example:"1736000000"`
-	Scope     string `json:"scope" example:"admin"`
-	ExpiresAt int64  `json:"expiresAt" example:"0"`
+	Scope      string   `json:"scope" example:"admin"`
+	ExpiresAt  int64    `json:"expiresAt" example:"0"`
 }
 
 func apiTokenCreatedAtSeconds(createdAt int64) int64 {
@@ -45,13 +45,13 @@ func apiTokenCreatedAtSeconds(createdAt int64) int64 {
 // exactly once at creation time.
 func toView(t *model.ApiToken) *ApiTokenView {
 	return &ApiTokenView{
-		Id:        t.Id,
-		Name:      t.Name,
+		Id:         t.Id,
+		Name:       t.Name,
 		Enabled:    t.Enabled,
 		Namespaces: service.ParseNamespaces(t.Namespaces),
 		CreatedAt:  apiTokenCreatedAtSeconds(t.CreatedAt),
-		Scope:     t.Scope,
-		ExpiresAt: t.ExpiresAt,
+		Scope:      t.Scope,
+		ExpiresAt:  t.ExpiresAt,
 	}
 }
 
