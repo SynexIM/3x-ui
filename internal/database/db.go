@@ -140,6 +140,9 @@ func initModels() error {
 	if err := normalizeApiTokenCreatedAtSeconds(); err != nil {
 		return err
 	}
+	if err := migrateApiTokenNodeSettings(); err != nil {
+		return err
+	}
 	if err := migrateApiTokenScopeAndExpiry(); err != nil {
 		return err
 	}
@@ -3287,4 +3290,13 @@ func ValidateSQLiteDB(dbPath string) error {
 		return errors.New("sqlite integrity check failed: " + res)
 	}
 	return nil
+}
+
+func migrateApiTokenNodeSettings() error {
+	if !db.Migrator().HasColumn(&model.ApiToken{}, "NodeSettings") {
+		if err := db.Migrator().AddColumn(&model.ApiToken{}, "NodeSettings"); err != nil {
+			return err
+		}
+	}
+	return db.Model(&model.ApiToken{}).Where("node_settings IS NULL").Update("node_settings", false).Error
 }

@@ -561,6 +561,33 @@ func (s *InboundService) generateInboundTag(inbound *model.Inbound, ignoreId int
 }
 
 func (s *InboundService) resolveInboundTag(inbound *model.Inbound, ignoreId int) (string, error) {
+	if len(s.ScopePrefixes) > 0 {
+		if inbound.Tag == "" && ignoreId > 0 {
+			var stored model.Inbound
+			if err := database.GetDB().First(&stored, ignoreId).Error; err != nil {
+				return "", err
+			}
+			inbound.Tag = stored.Tag
+		}
+		owned := false
+		for _, prefix := range s.ScopePrefixes {
+			if strings.HasPrefix(inbound.Tag, prefix) {
+				owned = true
+				break
+			}
+		}
+		if !owned {
+			return "", common.NewError("this token owns " + strings.Join(s.ScopePrefixes, ", ") + " and may not touch inbound tag " + inbound.Tag)
+		}
+		taken, err := s.tagExists(inbound.Tag, ignoreId)
+		if err != nil {
+			return "", err
+		}
+		if taken {
+			return "", common.NewError("inbound tag already exists: " + inbound.Tag)
+		}
+		return inbound.Tag, nil
+	}
 	if inbound.Tag != "" {
 		taken, err := s.tagExists(inbound.Tag, ignoreId)
 		if err != nil {

@@ -180,9 +180,10 @@ type ApiToken struct {
 	// Namespaces is a comma-separated list of tag/email prefixes this token owns.
 	// Empty means unrestricted, which is what every token created before this
 	// column existed keeps being.
-	Namespaces string `json:"namespaces" gorm:"column:namespaces;default:''"`
-	Scope      string `json:"scope" gorm:"not null;default:admin"`
-	ExpiresAt  int64  `json:"expiresAt" gorm:"not null;default:0"`
+	Namespaces   string `json:"namespaces" gorm:"column:namespaces;default:''"`
+	NodeSettings bool   `json:"nodeSettings" gorm:"not null;default:false" example:"false"`
+	Scope        string `json:"scope" gorm:"not null;default:admin"`
+	ExpiresAt    int64  `json:"expiresAt" gorm:"not null;default:0"`
 }
 
 // MarshalJSON emits settings, streamSettings, and sniffing as nested JSON

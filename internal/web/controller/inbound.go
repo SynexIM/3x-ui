@@ -65,6 +65,8 @@ func (a *InboundController) inboundServiceFor(c *gin.Context) *service.InboundSe
 	svc := a.inboundService
 	scope, _ := c.Get("api_token_scope")
 	svc.FromNodeSync = scope == model.ApiScopeNodeSync
+	prefixes, _ := c.Get(middleware.NamespaceScopeContextKey)
+	svc.ScopePrefixes, _ = prefixes.([]string)
 	return &svc
 }
 
@@ -78,6 +80,7 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 	g.GET("/:id/fallbacks", a.getFallbacks)
 
 	g.POST("/add", a.addInbound)
+	g.POST("/validate", a.validateInbound)
 	g.POST("/del/:id", a.delInbound)
 	g.POST("/bulkDel", a.bulkDelInbounds)
 	g.POST("/update/:id", a.updateInbound)
@@ -244,6 +247,7 @@ func (a *InboundController) updateInbound(c *gin.Context) {
 	if !middleware.BindAndValidateInto(c, inbound) {
 		return
 	}
+	inbound.Id = id
 	// Same NodeID=0 → nil normalisation as addInbound. UpdateInbound
 	// loads the existing row's NodeID from DB anyway (Phase 1 doesn't
 	// support migrating an inbound between nodes), but normalising here
@@ -505,4 +509,45 @@ func (a *InboundController) setFallbacks(c *gin.Context) {
 	}
 	a.xrayService.SetToNeedRestart()
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundUpdateSuccess"), nil)
+}
+
+func (a *InboundController) validateInbound(c *gin.Context) {
+	var raw json.RawMessage
+	if err := c.ShouldBindJSON(&raw); err != nil {
+		jsonObj(c, []service.InboundValidationResult{{Errors: []service.InboundValidationError{{Path: "$", Message: err.Error()}}}}, nil)
+		return
+	}
+	var drafts []json.RawMessage
+	if len(raw) > 0 && raw[0] == '[' {
+		if err := json.Unmarshal(raw, &drafts); err != nil {
+			jsonMsg(c, "invalid validation request", err)
+			return
+		}
+	} else {
+		drafts = []json.RawMessage{raw}
+	}
+	results := make([]service.InboundValidationResult, 0, len(drafts))
+	seen := map[string]bool{}
+	validated := []*model.Inbound{}
+	for _, draft := range drafts {
+		inbound := &model.Inbound{}
+		if err := json.Unmarshal(draft, inbound); err != nil {
+			results = append(results, service.InboundValidationResult{Errors: []service.InboundValidationError{{Path: "$", Message: err.Error()}}})
+			continue
+		}
+		result := a.inboundService.ValidateInbound(inbound)
+		if inbound.Tag != "" && seen[inbound.Tag] {
+			result.Errors = append(result.Errors, service.InboundValidationError{Path: "tag", Message: "duplicate tag in validation batch: " + inbound.Tag})
+		}
+		seen[inbound.Tag] = true
+		for _, previous := range validated {
+			if service.InboundDraftPortsConflict(inbound, previous) {
+				result.Errors = append(result.Errors, service.InboundValidationError{Path: "port", Message: "port conflicts with another validation draft"})
+			}
+		}
+		validated = append(validated, inbound)
+		result.OK = len(result.Errors) == 0
+		results = append(results, result)
+	}
+	jsonObj(c, results, nil)
 }

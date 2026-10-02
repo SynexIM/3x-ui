@@ -3,6 +3,8 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+	"sync"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
@@ -98,6 +100,10 @@ func (s *FairShareService) GetPolicyView() (*FairSharePolicyView, error) {
 }
 
 func (s *FairShareService) SavePolicy(policy *FairSharePolicy) error {
+	return s.SaveScopedPolicy(policy, nil, true)
+}
+
+func (s *FairShareService) savePolicy(policy *FairSharePolicy) error {
 	if err := validateFairSharePolicy(policy); err != nil {
 		return err
 	}
@@ -227,4 +233,47 @@ func validateFairSharePolicy(policy *FairSharePolicy) error {
 		}
 	}
 	return nil
+}
+
+// FairShareScopeError identifies an authorization refusal rather than a bad policy.
+type FairShareScopeError struct{ Message string }
+
+func (e *FairShareScopeError) Error() string { return e.Message }
+
+var fairShareWriteMu sync.Mutex
+
+func (s *FairShareService) SaveScopedPolicy(policy *FairSharePolicy, prefixes []string, nodeSettings bool) error {
+	fairShareWriteMu.Lock()
+	defer fairShareWriteMu.Unlock()
+	if len(prefixes) == 0 {
+		return s.savePolicy(policy)
+	}
+	owns := func(name string) bool {
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(name, prefix) {
+				return true
+			}
+		}
+		return false
+	}
+	for _, class := range policy.Classes {
+		if !owns(class.Name) {
+			return &FairShareScopeError{Message: "this token owns " + strings.Join(prefixes, ", ") + " and may not touch class " + class.Name}
+		}
+	}
+	current, err := s.GetPolicy()
+	if err != nil {
+		return err
+	}
+	if !nodeSettings && (policy.AvailBitPerSec != current.AvailBitPerSec || policy.CongestionEnterPercent != current.CongestionEnterPercent || policy.CongestionExitPercent != current.CongestionExitPercent || policy.CongestionExitTicks != current.CongestionExitTicks) {
+		return &FairShareScopeError{Message: "this token owns " + strings.Join(prefixes, ", ") + " and lacks nodeSettings authorization"}
+	}
+	merged := *policy
+	merged.Classes = append([]FairShareClassPolicy{}, policy.Classes...)
+	for _, class := range current.Classes {
+		if !owns(class.Name) {
+			merged.Classes = append(merged.Classes, class)
+		}
+	}
+	return s.savePolicy(&merged)
 }

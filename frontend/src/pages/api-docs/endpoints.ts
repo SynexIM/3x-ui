@@ -297,6 +297,21 @@ export const sections: readonly Section[] = [
       },
       {
         method: 'POST',
+        path: '/panel/api/inbounds/validate',
+        summary:
+          'Read-only validation of one inbound payload (same shape as add) or an array of inbound payloads. Runs panel validation and the in-process Xray infra/conf builder without starting a core or saving data. Returns one {ok, errors:[{path,message}]} per draft. Checks existing and batch port/tag conflicts; an existing same-tag inbound is treated as the update target. Namespace checks do not restrict this read operation.',
+        requestSchema: {
+          oneOf: [
+            { $ref: '#/components/schemas/Inbound' },
+            { type: 'array', items: { $ref: '#/components/schemas/Inbound' } },
+          ],
+        },
+        body: inboundBody,
+        responseSchema: 'InboundValidationResult',
+        responseSchemaArray: true,
+      },
+      {
+        method: 'POST',
         path: '/panel/api/inbounds/add',
         summary:
           'Create a new inbound. Send the full inbound payload (protocol, port, settings, streamSettings, sniffing, remark, expiryTime, total, enable). settings, streamSettings, and sniffing may be sent as nested JSON objects (preferred) or as JSON-encoded strings (legacy).',
@@ -1813,7 +1828,7 @@ export const sections: readonly Section[] = [
         method: 'POST',
         path: '/panel/api/nodes/fairshare',
         summary:
-          'Save and push the node-level fair-share policy to the running core (SetNodeBandwidth + SetClassPolicy). The class list is replaced whole: a class left out is deleted. Rejected while the node is declaratively managed.',
+          'Save and push the node-level fair-share policy to the running core (SetNodeBandwidth + SetClassPolicy). Unrestricted tokens and sessions replace the whole class list. Namespaced tokens replace only classes under their own prefixes, preserving every other class; foreign class names are refused. Node bandwidth and congestion fields must match current values unless the token has nodeSettings authorization.',
         body: '{\n  "availBitPerSec": 1000000000,\n  "congestionEnterPercent": 85,\n  "congestionExitPercent": 70,\n  "congestionExitTicks": 5,\n  "classes": [\n    {\n      "name": "c1",\n      "weight": 3,\n      "floorBitPerSec": 5000000,\n      "uploadReservedBitPerSec": 0,\n      "downloadReservedBitPerSec": 0,\n      "heavyWindowSeconds": 900,\n      "heavyPercent": 80\n    }\n  ]\n}',
       },
     ],
@@ -2063,8 +2078,15 @@ export const sections: readonly Section[] = [
             optional: true,
             desc: 'Comma-separated tag/email prefixes this token owns. Empty means unrestricted; otherwise every object it creates, edits or deletes must carry one of them.',
           },
+          {
+            name: 'nodeSettings',
+            in: 'body',
+            type: 'boolean',
+            optional: true,
+            desc: 'Allow a namespaced token to modify node bandwidth and congestion thresholds. Defaults to false on creation; omitted on setNamespaces preserves the current authorization.',
+          },
         ],
-        body: '{\n  "name": "central-panel-a",\n  "scope": "admin",\n  "expiresAt": 0,\n  "namespaces": "ipl_"\n}',
+        body: '{\n  "name": "central-panel-a",\n  "scope": "admin",\n  "expiresAt": 0,\n  "namespaces": "ipl_",\n  "nodeSettings": false\n}',
         responseSchema: 'ApiTokenView',
         errorResponse:
           '{\n  "success": false,\n  "msg": "a token with that name already exists"\n}',
@@ -2117,8 +2139,15 @@ export const sections: readonly Section[] = [
             type: 'string',
             desc: 'Comma-separated prefixes, e.g. "ipl_,fleet-".',
           },
+          {
+            name: 'nodeSettings',
+            in: 'body',
+            type: 'boolean',
+            optional: true,
+            desc: 'Allow a namespaced token to modify node bandwidth and congestion thresholds. Defaults to false on creation; omitted on setNamespaces preserves the current authorization.',
+          },
         ],
-        body: '{\n  "namespaces": "ipl_"\n}',
+        body: '{\n  "namespaces": "ipl_",\n  "nodeSettings": false\n}',
         response: '{\n  "success": true\n}',
       },
     ],

@@ -328,6 +328,7 @@ export interface ApiToken {
   id: number;
   name: string;
   namespaces: string;
+  nodeSettings: boolean;
   scope: string;
   token: string;
 }
@@ -339,6 +340,7 @@ export interface ApiTokenView {
   id: number;
   name: string;
   namespaces: string[];
+  nodeSettings: boolean;
   scope: string;
   token?: string;
 }
@@ -805,6 +807,16 @@ export interface InboundTrafficSummary {
   id: number;
   total: number;
   up: number;
+}
+
+export interface InboundValidationError {
+  message: string;
+  path: string;
+}
+
+export interface InboundValidationResult {
+  errors: InboundValidationError[];
+  ok: boolean;
 }
 
 export interface IngressProbeRequest {

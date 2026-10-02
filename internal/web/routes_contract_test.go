@@ -15,6 +15,7 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/global"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/middleware"
 )
 
 var rateLimitContractFields = []string{
@@ -197,6 +198,28 @@ func TestClientRateLimitDocumentationContract(t *testing.T) {
 	for _, field := range rateLimitContractFields {
 		if _, ok := client.Properties[field]; !ok {
 			t.Errorf("generated OpenAPI Client schema is missing %s", field)
+		}
+	}
+}
+
+func TestEveryWriteRouteDeclaresNamespaceScope(t *testing.T) {
+	routes := registeredContractRoutes(t)
+	for route := range routes {
+		method, path, _ := strings.Cut(route, " ")
+		if method != "POST" && method != "PUT" && method != "PATCH" && method != "DELETE" {
+			continue
+		}
+		registered, reason := middleware.ScopeRoutePolicy(method, path)
+		if !registered && reason == "" {
+			t.Errorf("write route %s lacks a scope resolver or explicit refusal reason", route)
+		}
+		if registered && reason != "" {
+			t.Errorf("write route %s is both supported and unavailable", route)
+		}
+	}
+	for route := range middleware.ScopeUnavailableRoutes {
+		if !routes[route] {
+			t.Errorf("scope refusal registry contains stale route %s", route)
 		}
 	}
 }

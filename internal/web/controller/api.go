@@ -60,6 +60,7 @@ func (a *APIController) checkAPIAuth(c *gin.Context) {
 			// The namespaces travel with the token, so one panel can serve
 			// several automations that never step on each other.
 			c.Set(middleware.NamespaceScopeContextKey, service.ParseNamespaces(row.Namespaces))
+			c.Set(middleware.NodeSettingsContextKey, row.NodeSettings)
 			c.Next()
 			return
 		}

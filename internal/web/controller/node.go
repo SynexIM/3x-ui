@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strconv"
 	"time"
@@ -81,7 +82,15 @@ func (a *NodeController) setFairShare(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "pages.nodes.toasts.saveFairShare"), err)
 		return
 	}
-	if err := a.fairShareService.SavePolicy(policy); err != nil {
+	prefixes, _ := c.Get(middleware.NamespaceScopeContextKey)
+	owned, _ := prefixes.([]string)
+	nodeSettings, _ := c.Get(middleware.NodeSettingsContextKey)
+	allowed, _ := nodeSettings.(bool)
+	if err := a.fairShareService.SaveScopedPolicy(policy, owned, allowed); err != nil {
+		if scoped, ok := errors.AsType[*service.FairShareScopeError](err); ok {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"success": false, "msg": scoped.Error()})
+			return
+		}
 		jsonMsg(c, I18nWeb(c, "pages.nodes.toasts.saveFairShare"), err)
 		return
 	}

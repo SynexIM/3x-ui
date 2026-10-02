@@ -246,7 +246,8 @@ type apiTokenCreateForm struct {
 	ExpiresAt int64  `json:"expiresAt" form:"expiresAt"`
 	// Namespaces scopes the token to objects whose tag or email starts with one
 	// of these prefixes, sent comma-separated so a plain HTML form can express it.
-	Namespaces string `json:"namespaces" form:"namespaces"`
+	Namespaces   string `json:"namespaces" form:"namespaces"`
+	NodeSettings bool   `json:"nodeSettings" form:"nodeSettings"`
 }
 
 type apiTokenEnabledForm struct {
@@ -259,7 +260,8 @@ type apiTokenScopeForm struct {
 }
 
 type apiTokenNamespacesForm struct {
-	Namespaces string `json:"namespaces" form:"namespaces"`
+	Namespaces   string `json:"namespaces" form:"namespaces"`
+	NodeSettings *bool  `json:"nodeSettings" form:"nodeSettings"`
 }
 
 func (a *SettingController) listApiTokens(c *gin.Context) {
@@ -277,7 +279,7 @@ func (a *SettingController) createApiToken(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
 		return
 	}
-	row, err := a.apiTokenService.Create(form.Name, form.Scope, form.ExpiresAt, service.ParseNamespaces(form.Namespaces))
+	row, err := a.apiTokenService.Create(form.Name, form.Scope, form.ExpiresAt, service.ParseNamespaces(form.Namespaces), form.NodeSettings)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
 		return
@@ -324,8 +326,12 @@ func (a *SettingController) setApiTokenNamespaces(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), bindErr)
 		return
 	}
+	var authorization []bool
+	if form.NodeSettings != nil {
+		authorization = []bool{*form.NodeSettings}
+	}
 	jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"),
-		a.apiTokenService.SetNamespaces(id, service.ParseNamespaces(form.Namespaces)))
+		a.apiTokenService.SetNamespaces(id, service.ParseNamespaces(form.Namespaces), authorization...))
 }
 
 func (a *SettingController) testSmtp(c *gin.Context) {

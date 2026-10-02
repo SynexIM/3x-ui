@@ -333,6 +333,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "id": 0,
     "name": "",
     "namespaces": "",
+    "nodeSettings": false,
     "scope": "",
     "token": ""
   },
@@ -345,6 +346,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "namespaces": [
       ""
     ],
+    "nodeSettings": false,
     "scope": "admin",
     "token": "new-token-string"
   },
@@ -925,6 +927,19 @@ export const EXAMPLES: Record<string, unknown> = {
     "id": 0,
     "total": 0,
     "up": 0
+  },
+  "InboundValidationError": {
+    "message": "invalid inbound configuration",
+    "path": "settings"
+  },
+  "InboundValidationResult": {
+    "errors": [
+      {
+        "message": "invalid inbound configuration",
+        "path": "settings"
+      }
+    ],
+    "ok": false
   },
   "IngressProbeRequest": {
     "address": "203.0.113.10",

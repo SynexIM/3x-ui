@@ -1373,6 +1373,10 @@
             "description": "Namespaces is a comma-separated list of tag/email prefixes this token owns.\nEmpty means unrestricted, which is what every token created before this\ncolumn existed keeps being.",
             "type": "string"
           },
+          "nodeSettings": {
+            "example": false,
+            "type": "boolean"
+          },
           "scope": {
             "type": "string"
           },
@@ -1388,6 +1392,7 @@
           "id",
           "name",
           "namespaces",
+          "nodeSettings",
           "scope",
           "token"
         ],
@@ -1424,6 +1429,10 @@
             },
             "type": "array"
           },
+          "nodeSettings": {
+            "example": false,
+            "type": "boolean"
+          },
           "scope": {
             "example": "admin",
             "type": "string"
@@ -1440,6 +1449,7 @@
           "id",
           "name",
           "namespaces",
+          "nodeSettings",
           "scope"
         ],
         "type": "object"
@@ -1569,7 +1579,7 @@
             "type": "string"
           },
           "mixed_user": {
-            "description": "Mixed (HTTP+SOCKS5) login; empty falls back to email / password.",
+            "description": "Independent Mixed/HTTP login; empty credentials mean the account is unset.",
             "type": "string"
           },
           "password": {
@@ -3494,6 +3504,42 @@
           "id",
           "total",
           "up"
+        ],
+        "type": "object"
+      },
+      "InboundValidationError": {
+        "properties": {
+          "message": {
+            "example": "invalid inbound configuration",
+            "type": "string"
+          },
+          "path": {
+            "example": "settings",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "path"
+        ],
+        "type": "object"
+      },
+      "InboundValidationResult": {
+        "properties": {
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/InboundValidationError"
+            },
+            "type": "array"
+          },
+          "ok": {
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "errors",
+          "ok"
         ],
         "type": "object"
       },
@@ -5657,6 +5703,75 @@
                     },
                     "obj": {}
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/inbounds/validate": {
+      "post": {
+        "tags": [
+          "Inbounds"
+        ],
+        "summary": "Read-only validation of one inbound payload (same shape as add) or an array of inbound payloads. Runs panel validation and the in-process Xray infra/conf builder without starting a core or saving data. Returns one {ok, errors:[{path,message}]} per draft. Checks existing and batch port/tag conflicts; an existing same-tag inbound is treated as the update target. Namespace checks do not restrict this read operation.",
+        "operationId": "post_panel_api_inbounds_validate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Inbound"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Inbound"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/InboundValidationResult"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": [
+                    {
+                      "errors": [
+                        {
+                          "message": "invalid inbound configuration",
+                          "path": "settings"
+                        }
+                      ],
+                      "ok": false
+                    }
+                  ]
                 }
               }
             }
@@ -12334,7 +12449,7 @@
         "tags": [
           "Nodes"
         ],
-        "summary": "Save and push the node-level fair-share policy to the running core (SetNodeBandwidth + SetClassPolicy). The class list is replaced whole: a class left out is deleted. Rejected while the node is declaratively managed.",
+        "summary": "Save and push the node-level fair-share policy to the running core (SetNodeBandwidth + SetClassPolicy). Unrestricted tokens and sessions replace the whole class list. Namespaced tokens replace only classes under their own prefixes, preserving every other class; foreign class names are refused. Node bandwidth and congestion fields must match current values unless the token has nodeSettings authorization.",
         "operationId": "post_panel_api_nodes_fairshare",
         "requestBody": {
           "required": true,
@@ -13893,6 +14008,10 @@
                   "namespaces": {
                     "type": "string",
                     "description": "Comma-separated tag/email prefixes this token owns. Empty means unrestricted; otherwise every object it creates, edits or deletes must carry one of them."
+                  },
+                  "nodeSettings": {
+                    "type": "boolean",
+                    "description": "Allow a namespaced token to modify node bandwidth and congestion thresholds. Defaults to false on creation; omitted on setNamespaces preserves the current authorization."
                   }
                 },
                 "required": [
@@ -13903,7 +14022,8 @@
                 "name": "central-panel-a",
                 "scope": "admin",
                 "expiresAt": 0,
-                "namespaces": "ipl_"
+                "namespaces": "ipl_",
+                "nodeSettings": false
               }
             }
           }
@@ -13938,6 +14058,7 @@
                     "namespaces": [
                       ""
                     ],
+                    "nodeSettings": false,
                     "scope": "admin",
                     "token": "new-token-string"
                   }
@@ -14136,6 +14257,10 @@
                   "namespaces": {
                     "type": "string",
                     "description": "Comma-separated prefixes, e.g. \"ipl_,fleet-\"."
+                  },
+                  "nodeSettings": {
+                    "type": "boolean",
+                    "description": "Allow a namespaced token to modify node bandwidth and congestion thresholds. Defaults to false on creation; omitted on setNamespaces preserves the current authorization."
                   }
                 },
                 "required": [
@@ -14143,7 +14268,8 @@
                 ]
               },
               "example": {
-                "namespaces": "ipl_"
+                "namespaces": "ipl_",
+                "nodeSettings": false
               }
             }
           }

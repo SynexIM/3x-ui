@@ -46,6 +46,14 @@ _openapi:
       title: Fetch a single inbound by numeric ID.
       url: '#fetch-a-single-inbound-by-numeric-id'
     - depth: 2
+      title: Read-only validation of one inbound payload (same shape as add) or an
+        array of inbound payloads. Runs panel validation and the in-process Xray
+        infra/conf builder without starting a core or saving data. Returns one
+        {ok, errors:[{path,message}]} per draft. Checks existing and batch
+        port/tag conflicts; an existing same-tag inbound is treated as the
+        update target. Namespace checks do not restrict this read operation.
+      url: '#read-only-validation-of-one-inbound-payload-same-shape-as-add-or-an-array-of-inbound-payloads-runs-panel-validation-and-the-in-process-xray-infraconf-builder-without-starting-a-core-or-saving-data-returns-one-ok-errorspathmessage-per-draft-checks-existing-and-batch-porttag-conflicts-an-existing-same-tag-inbound-is-treated-as-the-update-target-namespace-checks-do-not-restrict-this-read-operation'
+    - depth: 2
       title: Create a new inbound. Send the full inbound payload (protocol, port,
         settings, streamSettings, sniffing, remark, expiryTime, total, enable).
         settings, streamSettings, and sniffing may be sent as nested JSON
@@ -140,6 +148,14 @@ _openapi:
         id: return-every-protocol-url-vless-vmess-trojan-ss-hysteria-mtproto-socks5-http-across-all-inbounds-and-all-of-their-clients-links-are-rendered-through-the-subscription-engine-so-the-configured-remark-template-name-only-display-part-is-applied-per-client--the-same-output-the-client-infoqr-pages-use-protocols-without-a-url-form-contribute-nothing-used-by-the-panels-export-all-inbound-links-action
       - content: Fetch a single inbound by numeric ID.
         id: fetch-a-single-inbound-by-numeric-id
+      - content: Read-only validation of one inbound payload (same shape as add) or an
+          array of inbound payloads. Runs panel validation and the in-process
+          Xray infra/conf builder without starting a core or saving data.
+          Returns one {ok, errors:[{path,message}]} per draft. Checks existing
+          and batch port/tag conflicts; an existing same-tag inbound is treated
+          as the update target. Namespace checks do not restrict this read
+          operation.
+        id: read-only-validation-of-one-inbound-payload-same-shape-as-add-or-an-array-of-inbound-payloads-runs-panel-validation-and-the-in-process-xray-infraconf-builder-without-starting-a-core-or-saving-data-returns-one-ok-errorspathmessage-per-draft-checks-existing-and-batch-porttag-conflicts-an-existing-same-tag-inbound-is-treated-as-the-update-target-namespace-checks-do-not-restrict-this-read-operation
       - content: Create a new inbound. Send the full inbound payload (protocol, port,
           settings, streamSettings, sniffing, remark, expiryTime, total,
           enable). settings, streamSettings, and sniffing may be sent as nested
@@ -201,7 +217,7 @@ export default function Layout(props) {
   return (
     <>
       {props.children}
-      <Comp document="./public/openapi.json" webhooks={[]} operations={[{"path":"/panel/api/inbounds/list","method":"get"},{"path":"/panel/api/inbounds/list/slim","method":"get"},{"path":"/panel/api/inbounds/options","method":"get"},{"path":"/panel/api/inbounds/allLinks","method":"get"},{"path":"/panel/api/inbounds/get/{id}","method":"get"},{"path":"/panel/api/inbounds/add","method":"post"},{"path":"/panel/api/inbounds/del/{id}","method":"post"},{"path":"/panel/api/inbounds/bulkDel","method":"post"},{"path":"/panel/api/inbounds/update/{id}","method":"post"},{"path":"/panel/api/inbounds/setEnable/{id}","method":"post"},{"path":"/panel/api/inbounds/{id}/subSortIndex","method":"post"},{"path":"/panel/api/inbounds/{id}/resetTraffic","method":"post"},{"path":"/panel/api/inbounds/{id}/delAllClients","method":"post"},{"path":"/panel/api/inbounds/resetAllTraffics","method":"post"},{"path":"/panel/api/inbounds/import","method":"post"},{"path":"/panel/api/inbounds/pushClientTraffics","method":"post"},{"path":"/panel/api/inbounds/{id}/fallbacks","method":"get"},{"path":"/panel/api/inbounds/{id}/fallbacks","method":"post"}]} showTitle />
+      <Comp document="./public/openapi.json" webhooks={[]} operations={[{"path":"/panel/api/inbounds/list","method":"get"},{"path":"/panel/api/inbounds/list/slim","method":"get"},{"path":"/panel/api/inbounds/options","method":"get"},{"path":"/panel/api/inbounds/allLinks","method":"get"},{"path":"/panel/api/inbounds/get/{id}","method":"get"},{"path":"/panel/api/inbounds/validate","method":"post"},{"path":"/panel/api/inbounds/add","method":"post"},{"path":"/panel/api/inbounds/del/{id}","method":"post"},{"path":"/panel/api/inbounds/bulkDel","method":"post"},{"path":"/panel/api/inbounds/update/{id}","method":"post"},{"path":"/panel/api/inbounds/setEnable/{id}","method":"post"},{"path":"/panel/api/inbounds/{id}/subSortIndex","method":"post"},{"path":"/panel/api/inbounds/{id}/resetTraffic","method":"post"},{"path":"/panel/api/inbounds/{id}/delAllClients","method":"post"},{"path":"/panel/api/inbounds/resetAllTraffics","method":"post"},{"path":"/panel/api/inbounds/import","method":"post"},{"path":"/panel/api/inbounds/pushClientTraffics","method":"post"},{"path":"/panel/api/inbounds/{id}/fallbacks","method":"get"},{"path":"/panel/api/inbounds/{id}/fallbacks","method":"post"}]} showTitle />
     </>
   );
 }

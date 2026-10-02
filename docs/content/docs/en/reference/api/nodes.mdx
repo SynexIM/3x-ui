@@ -88,11 +88,13 @@ _openapi:
         never a default.
       url: '#this-panels-own-node-level-fair-share-policy-plus-whether-an-api-client-has-applied-desired-state-to-it-declarativelymanaged-in-which-case-a-later-reconciliation-may-put-the-automated-values-back-local-writes-are-never-refused-every-rate-is-bits-0-means-the-field-is-not-enabled-never-a-default'
     - depth: 2
-      title: 'Save and push the node-level fair-share policy to the running core
-        (SetNodeBandwidth + SetClassPolicy). The class list is replaced whole: a
-        class left out is deleted. Rejected while the node is declaratively
-        managed.'
-      url: '#save-and-push-the-node-level-fair-share-policy-to-the-running-core-setnodebandwidth--setclasspolicy-the-class-list-is-replaced-whole-a-class-left-out-is-deleted-rejected-while-the-node-is-declaratively-managed'
+      title: Save and push the node-level fair-share policy to the running core
+        (SetNodeBandwidth + SetClassPolicy). Unrestricted tokens and sessions
+        replace the whole class list. Namespaced tokens replace only classes
+        under their own prefixes, preserving every other class; foreign class
+        names are refused. Node bandwidth and congestion fields must match
+        current values unless the token has nodeSettings authorization.
+      url: '#save-and-push-the-node-level-fair-share-policy-to-the-running-core-setnodebandwidth--setclasspolicy-unrestricted-tokens-and-sessions-replace-the-whole-class-list-namespaced-tokens-replace-only-classes-under-their-own-prefixes-preserving-every-other-class-foreign-class-names-are-refused-node-bandwidth-and-congestion-fields-must-match-current-values-unless-the-token-has-nodesettings-authorization'
     - depth: 2
       title: Probe an ingress IP over TCP, TLS or QUIC; certificate verification is
         mandatory for encrypted transports. This does not test customer
@@ -172,11 +174,13 @@ _openapi:
           Local writes are never refused. Every rate is bit/s; 0 means the field
           is not enabled, never a default.
         id: this-panels-own-node-level-fair-share-policy-plus-whether-an-api-client-has-applied-desired-state-to-it-declarativelymanaged-in-which-case-a-later-reconciliation-may-put-the-automated-values-back-local-writes-are-never-refused-every-rate-is-bits-0-means-the-field-is-not-enabled-never-a-default
-      - content: 'Save and push the node-level fair-share policy to the running core
-          (SetNodeBandwidth + SetClassPolicy). The class list is replaced whole:
-          a class left out is deleted. Rejected while the node is declaratively
-          managed.'
-        id: save-and-push-the-node-level-fair-share-policy-to-the-running-core-setnodebandwidth--setclasspolicy-the-class-list-is-replaced-whole-a-class-left-out-is-deleted-rejected-while-the-node-is-declaratively-managed
+      - content: Save and push the node-level fair-share policy to the running core
+          (SetNodeBandwidth + SetClassPolicy). Unrestricted tokens and sessions
+          replace the whole class list. Namespaced tokens replace only classes
+          under their own prefixes, preserving every other class; foreign class
+          names are refused. Node bandwidth and congestion fields must match
+          current values unless the token has nodeSettings authorization.
+        id: save-and-push-the-node-level-fair-share-policy-to-the-running-core-setnodebandwidth--setclasspolicy-unrestricted-tokens-and-sessions-replace-the-whole-class-list-namespaced-tokens-replace-only-classes-under-their-own-prefixes-preserving-every-other-class-foreign-class-names-are-refused-node-bandwidth-and-congestion-fields-must-match-current-values-unless-the-token-has-nodesettings-authorization
       - content: Probe an ingress IP over TCP, TLS or QUIC; certificate verification is
           mandatory for encrypted transports. This does not test customer
           authentication.

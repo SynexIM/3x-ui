@@ -27,10 +27,11 @@ type ApiTokenView struct {
 	Enabled bool   `json:"enabled" example:"true"`
 	// Namespaces are the tag/email prefixes this token may write; empty means
 	// unrestricted, otherwise every object it writes must carry one of them.
-	Namespaces []string `json:"namespaces"`
-	CreatedAt  int64    `json:"createdAt" example:"1736000000"`
-	Scope      string   `json:"scope" example:"admin"`
-	ExpiresAt  int64    `json:"expiresAt" example:"0"`
+	Namespaces   []string `json:"namespaces"`
+	NodeSettings bool     `json:"nodeSettings" example:"false"`
+	CreatedAt    int64    `json:"createdAt" example:"1736000000"`
+	Scope        string   `json:"scope" example:"admin"`
+	ExpiresAt    int64    `json:"expiresAt" example:"0"`
 }
 
 func apiTokenCreatedAtSeconds(createdAt int64) int64 {
@@ -45,13 +46,14 @@ func apiTokenCreatedAtSeconds(createdAt int64) int64 {
 // exactly once at creation time.
 func toView(t *model.ApiToken) *ApiTokenView {
 	return &ApiTokenView{
-		Id:         t.Id,
-		Name:       t.Name,
-		Enabled:    t.Enabled,
-		Namespaces: service.ParseNamespaces(t.Namespaces),
-		CreatedAt:  apiTokenCreatedAtSeconds(t.CreatedAt),
-		Scope:      t.Scope,
-		ExpiresAt:  t.ExpiresAt,
+		Id:           t.Id,
+		Name:         t.Name,
+		Enabled:      t.Enabled,
+		Namespaces:   service.ParseNamespaces(t.Namespaces),
+		NodeSettings: t.NodeSettings,
+		CreatedAt:    apiTokenCreatedAtSeconds(t.CreatedAt),
+		Scope:        t.Scope,
+		ExpiresAt:    t.ExpiresAt,
 	}
 }
 
@@ -83,7 +85,7 @@ func (s *ApiTokenService) List() ([]*ApiTokenView, error) {
 	return out, nil
 }
 
-func (s *ApiTokenService) Create(name, scope string, expiresAt int64, namespaces []string) (*ApiTokenView, error) {
+func (s *ApiTokenService) Create(name, scope string, expiresAt int64, namespaces []string, nodeSettings ...bool) (*ApiTokenView, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, common.NewError("token name is required")
@@ -112,12 +114,13 @@ func (s *ApiTokenService) Create(name, scope string, expiresAt int64, namespaces
 	}
 	plaintext := random.Seq(apiTokenLength)
 	row := &model.ApiToken{
-		Name:       name,
-		Token:      crypto.HashTokenSHA256(plaintext),
-		Enabled:    true,
-		Scope:      normScope,
-		ExpiresAt:  expiresAt,
-		Namespaces: stored,
+		Name:         name,
+		Token:        crypto.HashTokenSHA256(plaintext),
+		Enabled:      true,
+		Scope:        normScope,
+		ExpiresAt:    expiresAt,
+		Namespaces:   stored,
+		NodeSettings: len(nodeSettings) > 0 && nodeSettings[0],
 	}
 	if err := db.Create(row).Error; err != nil {
 		return nil, err
@@ -273,7 +276,7 @@ func (s *ApiTokenService) Match(presented string) bool {
 }
 
 // SetNamespaces replaces the prefixes a token owns.
-func (s *ApiTokenService) SetNamespaces(id int, namespaces []string) error {
+func (s *ApiTokenService) SetNamespaces(id int, namespaces []string, nodeSettings ...bool) error {
 	if id <= 0 {
 		return common.NewError("invalid token id")
 	}
@@ -282,7 +285,11 @@ func (s *ApiTokenService) SetNamespaces(id int, namespaces []string) error {
 		return err
 	}
 	db := database.GetDB()
-	res := db.Model(model.ApiToken{}).Where("id = ?", id).Update("namespaces", stored)
+	updates := map[string]any{"namespaces": stored}
+	if len(nodeSettings) > 0 {
+		updates["node_settings"] = nodeSettings[0]
+	}
+	res := db.Model(model.ApiToken{}).Where("id = ?", id).Updates(updates)
 	if res.Error != nil {
 		return res.Error
 	}

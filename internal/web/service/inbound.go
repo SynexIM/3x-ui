@@ -61,6 +61,7 @@ func (s *InboundService) checkAmneziaWGRelayAfterSave(tx *gorm.DB, inbound *mode
 }
 
 type InboundService struct {
+	ScopePrefixes   []string
 	xrayApi         xray.XrayAPI
 	clientService   ClientService
 	fallbackService FallbackService
@@ -947,32 +948,7 @@ func (s *InboundService) normalizeMtprotoXrayPort(inbound *model.Inbound, oldSet
 func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, bool, error) {
 	inbound.Id = 0
 	legacyShareAddr := legacyMtprotoShareAddr(inbound)
-	inbound.TrafficResetDay = normalizeTrafficResetDay(inbound.TrafficResetDay)
-	// Normalize streamSettings based on protocol
-	s.normalizeStreamSettings(inbound)
-	if !s.FromNodeSync {
-		if err := validateInboundTLSCertificates(inbound.StreamSettings); err != nil {
-			return inbound, false, err
-		}
-	}
-	if err := validateFinalMaskRealityCombo(inbound.StreamSettings); err != nil {
-		return inbound, false, err
-	}
-	if err := validateFinalMaskXmcProfiles(inbound.StreamSettings); err != nil {
-		return inbound, false, err
-	}
-	s.normalizeMtprotoSecret(inbound)
-	if err := s.normalizeMtprotoXrayPort(inbound, ""); err != nil {
-		return inbound, false, err
-	}
-	if err := s.normalizeAmneziaWGSettings(inbound, ""); err != nil {
-		return inbound, false, err
-	}
-	if inbound.NodeID != nil && !isNodeEligibleProtocol(inbound.Protocol) {
-		return inbound, false, common.NewErrorf("%s inbounds cannot be assigned to a node", inbound.Protocol)
-	}
-	inbound.SubSortIndex = normalizeSubSortIndex(inbound.SubSortIndex)
-	if err := normalizeInboundShareAddressStrict(inbound); err != nil {
+	if err := s.prepareInbound(inbound); err != nil {
 		return inbound, false, err
 	}
 
@@ -1008,45 +984,8 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 	}
 	inbound.Settings = persistedSettings
 
-	// Secure client ID
-	for _, client := range clients {
-		switch inbound.Protocol {
-		case "mixed", "http":
-			if err := validateMixedCredentials(client, inbound.Protocol); err != nil {
-				return inbound, false, err
-			}
-		case "trojan":
-			if client.Password == "" {
-				return inbound, false, common.NewError("empty client ID")
-			}
-		case "shadowsocks":
-			if client.Email == "" {
-				return inbound, false, common.NewError("empty client ID")
-			}
-		case "hysteria":
-			if client.Auth == "" {
-				return inbound, false, common.NewError("empty client ID")
-			}
-		case "wireguard", "amneziawg":
-			if client.PublicKey == "" {
-				return inbound, false, common.NewError("wireguard client requires a key")
-			}
-		case "mtproto":
-			if client.Secret == "" {
-				return inbound, false, common.NewError("mtproto client requires a secret")
-			}
-			if client.AdTag != "" && !model.ValidMtprotoAdTag(client.AdTag) {
-				return inbound, false, common.NewError("mtproto client ad tag must be 32 hex characters")
-			}
-		case "tuic":
-			if err := validateTuicClient(client); err != nil {
-				return inbound, false, err
-			}
-		default:
-			if client.ID == "" {
-				return inbound, false, common.NewError("empty client ID")
-			}
-		}
+	if err := validateInboundDraftCredentials(inbound, clients); err != nil {
+		return inbound, false, err
 	}
 
 	needRestart := false
@@ -1864,4 +1803,81 @@ func (s *InboundService) SearchInbounds(query string) ([]*model.Inbound, error) 
 		return nil, err
 	}
 	return inbounds, nil
+}
+
+func (s *InboundService) prepareInbound(inbound *model.Inbound) error {
+	inbound.TrafficResetDay = normalizeTrafficResetDay(inbound.TrafficResetDay)
+	// Normalize streamSettings based on protocol
+	s.normalizeStreamSettings(inbound)
+	if !s.FromNodeSync {
+		if err := validateInboundTLSCertificates(inbound.StreamSettings); err != nil {
+			return err
+		}
+	}
+	if err := validateFinalMaskRealityCombo(inbound.StreamSettings); err != nil {
+		return err
+	}
+	if err := validateFinalMaskXmcProfiles(inbound.StreamSettings); err != nil {
+		return err
+	}
+	s.normalizeMtprotoSecret(inbound)
+	if err := s.normalizeMtprotoXrayPort(inbound, ""); err != nil {
+		return err
+	}
+	if err := s.normalizeAmneziaWGSettings(inbound, ""); err != nil {
+		return err
+	}
+	if inbound.NodeID != nil && !isNodeEligibleProtocol(inbound.Protocol) {
+		return common.NewErrorf("%s inbounds cannot be assigned to a node", inbound.Protocol)
+	}
+	inbound.SubSortIndex = normalizeSubSortIndex(inbound.SubSortIndex)
+	if err := normalizeInboundShareAddressStrict(inbound); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateInboundDraftCredentials(inbound *model.Inbound, clients []model.Client) error {
+	for _, client := range clients {
+		switch inbound.Protocol {
+		case "mixed", "http":
+			if err := validateMixedCredentials(client, inbound.Protocol); err != nil {
+				return err
+			}
+		case "trojan":
+			if client.Password == "" {
+				return common.NewError("empty client ID")
+			}
+		case "shadowsocks":
+			if client.Email == "" {
+				return common.NewError("empty client ID")
+			}
+		case "hysteria":
+			if client.Auth == "" {
+				return common.NewError("empty client ID")
+			}
+		case "wireguard", "amneziawg":
+			if client.PublicKey == "" {
+				return common.NewError("wireguard client requires a key")
+			}
+		case "mtproto":
+			if client.Secret == "" {
+				return common.NewError("mtproto client requires a secret")
+			}
+			if client.AdTag != "" && !model.ValidMtprotoAdTag(client.AdTag) {
+				return common.NewError("mtproto client ad tag must be 32 hex characters")
+			}
+		case "tuic":
+			if err := validateTuicClient(client); err != nil {
+				return err
+			}
+		default:
+			if client.ID == "" {
+				return common.NewError("empty client ID")
+			}
+		}
+	}
+
+	return nil
 }

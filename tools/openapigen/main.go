@@ -102,6 +102,8 @@ func run(root, outDir string) error {
 				"FairSharePolicyView",
 				"FairShareStatusView",
 				"InboundOption",
+				"InboundValidationError",
+				"InboundValidationResult",
 				"HappLinkResult",
 				"ClientSlim",
 				"ClientPageResponse",

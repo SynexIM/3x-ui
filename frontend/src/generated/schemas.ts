@@ -1347,6 +1347,10 @@ export const SCHEMAS: Record<string, unknown> = {
         "description": "Namespaces is a comma-separated list of tag/email prefixes this token owns.\nEmpty means unrestricted, which is what every token created before this\ncolumn existed keeps being.",
         "type": "string"
       },
+      "nodeSettings": {
+        "example": false,
+        "type": "boolean"
+      },
       "scope": {
         "type": "string"
       },
@@ -1362,6 +1366,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "id",
       "name",
       "namespaces",
+      "nodeSettings",
       "scope",
       "token"
     ],
@@ -1398,6 +1403,10 @@ export const SCHEMAS: Record<string, unknown> = {
         },
         "type": "array"
       },
+      "nodeSettings": {
+        "example": false,
+        "type": "boolean"
+      },
       "scope": {
         "example": "admin",
         "type": "string"
@@ -1414,6 +1423,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "id",
       "name",
       "namespaces",
+      "nodeSettings",
       "scope"
     ],
     "type": "object"
@@ -1543,7 +1553,7 @@ export const SCHEMAS: Record<string, unknown> = {
         "type": "string"
       },
       "mixed_user": {
-        "description": "Mixed (HTTP+SOCKS5) login; empty falls back to email / password.",
+        "description": "Independent Mixed/HTTP login; empty credentials mean the account is unset.",
         "type": "string"
       },
       "password": {
@@ -3468,6 +3478,42 @@ export const SCHEMAS: Record<string, unknown> = {
       "id",
       "total",
       "up"
+    ],
+    "type": "object"
+  },
+  "InboundValidationError": {
+    "properties": {
+      "message": {
+        "example": "invalid inbound configuration",
+        "type": "string"
+      },
+      "path": {
+        "example": "settings",
+        "type": "string"
+      }
+    },
+    "required": [
+      "message",
+      "path"
+    ],
+    "type": "object"
+  },
+  "InboundValidationResult": {
+    "properties": {
+      "errors": {
+        "items": {
+          "$ref": "#/components/schemas/InboundValidationError"
+        },
+        "type": "array"
+      },
+      "ok": {
+        "example": false,
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "errors",
+      "ok"
     ],
     "type": "object"
   },

@@ -345,6 +345,7 @@ export const ApiTokenSchema = z.object({
   id: z.number().int(),
   name: z.string(),
   namespaces: z.string(),
+  nodeSettings: z.boolean(),
   scope: z.string(),
   token: z.string(),
 });
@@ -357,6 +358,7 @@ export const ApiTokenViewSchema = z.object({
   id: z.number().int(),
   name: z.string(),
   namespaces: z.array(z.string()),
+  nodeSettings: z.boolean(),
   scope: z.string(),
   token: z.string().optional(),
 });
@@ -857,6 +859,18 @@ export const InboundTrafficSummarySchema = z.object({
   up: z.number().int(),
 });
 export type InboundTrafficSummary = z.infer<typeof InboundTrafficSummarySchema>;
+
+export const InboundValidationErrorSchema = z.object({
+  message: z.string(),
+  path: z.string(),
+});
+export type InboundValidationError = z.infer<typeof InboundValidationErrorSchema>;
+
+export const InboundValidationResultSchema = z.object({
+  errors: z.array(z.lazy(() => InboundValidationErrorSchema)),
+  ok: z.boolean(),
+});
+export type InboundValidationResult = z.infer<typeof InboundValidationResultSchema>;
 
 export const IngressProbeRequestSchema = z.object({
   address: z.string(),
