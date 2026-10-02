@@ -16078,15 +16078,8 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {
-                  "outbound": {
-                    "type": "object",
-                    "description": "One outbound object in xray config shape, including a unique \"tag\"."
-                  }
-                },
-                "required": [
-                  "outbound"
-                ]
+                "additionalProperties": true,
+                "description": "The body is one outbound object in xray config shape, including a unique \"tag\"."
               }
             }
           }
@@ -16150,15 +16143,8 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {
-                  "outbound": {
-                    "type": "object",
-                    "description": "The full replacement outbound object, carrying the same tag."
-                  }
-                },
-                "required": [
-                  "outbound"
-                ]
+                "additionalProperties": true,
+                "description": "The body is the full replacement outbound object, carrying the same tag."
               }
             }
           }
@@ -16377,15 +16363,8 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {
-                  "rule": {
-                    "type": "object",
-                    "description": "One routing rule in xray config shape, including a unique \"ruleTag\"."
-                  }
-                },
-                "required": [
-                  "rule"
-                ]
+                "additionalProperties": true,
+                "description": "The body is one routing rule in xray config shape, including a unique \"ruleTag\"."
               }
             }
           }

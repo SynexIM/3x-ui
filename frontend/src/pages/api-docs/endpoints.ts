@@ -2819,14 +2819,12 @@ export const sections: readonly Section[] = [
         path: '/panel/api/outbounds',
         summary:
           "Append one outbound and add it to the running core (xray AddOutbound). The tag is the identity every later request uses and must be unique; a body xray-core would refuse is rejected before anything is written. Appended, never inserted: the core's first outbound is fixed at process start.",
-        params: [
-          {
-            name: 'outbound',
-            in: 'body (json)',
-            type: 'object',
-            desc: 'One outbound object in xray config shape, including a unique "tag".',
-          },
-        ],
+        requestSchema: {
+          type: 'object',
+          additionalProperties: true,
+          description:
+            'The body is one outbound object in xray config shape, including a unique "tag".',
+        },
         responseSchema: 'ObjectApplyResult',
       },
       {
@@ -2834,15 +2832,12 @@ export const sections: readonly Section[] = [
         path: '/panel/api/outbounds/:tag',
         summary:
           'Replace the outbound carrying this tag and reload it in the running core. The body must carry the same tag: renaming would orphan every routing rule pointing at the old name, so it is refused. Answers 404 when no outbound carries the tag.',
-        params: [
-          { name: 'tag', in: 'path', type: 'string', desc: 'Outbound tag to replace.' },
-          {
-            name: 'outbound',
-            in: 'body (json)',
-            type: 'object',
-            desc: 'The full replacement outbound object, carrying the same tag.',
-          },
-        ],
+        params: [{ name: 'tag', in: 'path', type: 'string', desc: 'Outbound tag to replace.' }],
+        requestSchema: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'The body is the full replacement outbound object, carrying the same tag.',
+        },
         responseSchema: 'ObjectApplyResult',
       },
       {
@@ -2872,14 +2867,12 @@ export const sections: readonly Section[] = [
         path: '/panel/api/routing/rules',
         summary:
           'Append one routing rule and load it into the running core. A ruleTag is required: xray removes rules by ruleTag, so an untagged rule could never be addressed again. Rules are appended, which is where a first-match router wants the most specific overrides.',
-        params: [
-          {
-            name: 'rule',
-            in: 'body (json)',
-            type: 'object',
-            desc: 'One routing rule in xray config shape, including a unique "ruleTag".',
-          },
-        ],
+        requestSchema: {
+          type: 'object',
+          additionalProperties: true,
+          description:
+            'The body is one routing rule in xray config shape, including a unique "ruleTag".',
+        },
         responseSchema: 'ObjectApplyResult',
       },
       {
