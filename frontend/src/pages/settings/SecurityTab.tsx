@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
+  Checkbox,
   Empty,
   Form,
   Input,
@@ -34,6 +35,7 @@ interface ApiTokenRow {
   name: string;
   enabled: boolean;
   namespaces?: string[];
+  nodeSettings: boolean;
   createdAt: number;
   scope: 'admin' | 'monitor' | 'node-sync';
   expiresAt: number;
@@ -91,6 +93,7 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createNamespaces, setCreateNamespaces] = useState<string[]>([]);
+  const [createNodeSettings, setCreateNodeSettings] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createdToken, setCreatedToken] = useState<{ name: string; token: string } | null>(null);
 
@@ -173,6 +176,7 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
   function openCreateModal() {
     setCreateName('');
     setCreateNamespaces([]);
+    setCreateNodeSettings(false);
     setCreateOpen(true);
   }
 
@@ -187,6 +191,7 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
       const msg = (await HttpUtil.post('/panel/api/setting/apiTokens/create', {
         name,
         namespaces: createNamespaces.join(','),
+        nodeSettings: createNodeSettings,
       })) as ApiMsg<{
         token?: string;
       }>;
@@ -220,9 +225,14 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
     });
   }
 
-  async function saveTokenNamespaces(row: ApiTokenRow, namespaces: string[]) {
+  async function saveTokenNamespaces(
+    row: ApiTokenRow,
+    namespaces: string[],
+    nodeSettings = row.nodeSettings,
+  ) {
     const msg = (await HttpUtil.post(`/panel/api/setting/apiTokens/setNamespaces/${row.id}`, {
       namespaces: namespaces.join(','),
+      nodeSettings,
     })) as ApiMsg;
     if (msg?.success) await loadApiTokens();
   }
@@ -410,6 +420,16 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
                           onChange={(next) => saveTokenNamespaces(row, next as string[])}
                         />
                       </Form.Item>
+                      <Form.Item help={t('pages.settings.security.apiTokenNodeSettingsDesc')}>
+                        <Checkbox
+                          checked={row.nodeSettings}
+                          onChange={(e) =>
+                            saveTokenNamespaces(row, row.namespaces ?? [], e.target.checked)
+                          }
+                        >
+                          {t('pages.settings.security.apiTokenNodeSettings')}
+                        </Checkbox>
+                      </Form.Item>
                     </div>
                   ))}
                 </Spin>
@@ -454,6 +474,14 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
               placeholder={t('pages.settings.security.apiTokenNamespacesBlank')}
               onChange={(next) => setCreateNamespaces(next as string[])}
             />
+          </Form.Item>
+          <Form.Item help={t('pages.settings.security.apiTokenNodeSettingsDesc')}>
+            <Checkbox
+              checked={createNodeSettings}
+              onChange={(e) => setCreateNodeSettings(e.target.checked)}
+            >
+              {t('pages.settings.security.apiTokenNodeSettings')}
+            </Checkbox>
           </Form.Item>
         </Form>
       </Modal>

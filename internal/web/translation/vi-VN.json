@@ -1452,6 +1452,8 @@
         "apiTokenCreatedTitle": "Đã tạo token",
         "apiTokenCreatedNotice": "Hãy sao chép token này ngay bây giờ. Vì lý do bảo mật, token không được lưu ở dạng đọc được và sẽ không hiển thị lại.",
         "apiTokenNamespaces": "Namespace mà token sở hữu",
+        "apiTokenNodeSettings": "Allow node-level fair-share changes",
+        "apiTokenNodeSettingsDesc": "Scoped tokens may change node bandwidth and congestion thresholds when enabled. Otherwise these values must match the current policy. Tokens without namespaces remain unrestricted.",
         "apiTokenNamespacesDesc": "Tiền tố của tag và email mà token này được ghi. Để trống nghĩa là không giới hạn, như trước đây. Điền vào thì token chỉ tạo, sửa hoặc xoá được các đối tượng có tag hoặc email bắt đầu bằng một trong số đó, và một yêu cầu ghi không nêu tên đối tượng nào sẽ bị từ chối. Đó là cách một hệ tự động và người ngồi trước panel dùng chung một node mà không ghi đè nhau.",
         "apiTokenNamespacesBlank": "Để trống = không giới hạn, ví dụ ipl_"
       },

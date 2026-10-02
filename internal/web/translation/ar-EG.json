@@ -1452,6 +1452,8 @@
         "apiTokenCreatedTitle": "تم إنشاء الرمز",
         "apiTokenCreatedNotice": "انسخ هذا الرمز الآن. لأسباب أمنية لا يتم تخزينه بصيغة قابلة للقراءة ولن يتم عرضه مرة أخرى.",
         "apiTokenNamespaces": "المساحات الاسمية التي يملكها",
+        "apiTokenNodeSettings": "Allow node-level fair-share changes",
+        "apiTokenNodeSettingsDesc": "Scoped tokens may change node bandwidth and congestion thresholds when enabled. Otherwise these values must match the current policy. Tokens without namespaces remain unrestricted.",
         "apiTokenNamespacesDesc": "بادئات الوسوم والبُرد الإلكترونية التي يُسمح لهذا الرمز بالكتابة فيها. اتركها فارغة فيبقى بلا قيود كما كان. املأها فلن يستطيع إنشاء أو تعديل أو حذف سوى الكائنات التي يبدأ وسمها أو بريدها بإحداها، ويُرفض أي طلب كتابة لا يسمّي كائنًا بعينه. بهذا يتشارك التشغيل الآلي ومن يجلس أمام اللوحة عقدة واحدة دون أن يمحو أحدهما الآخر.",
         "apiTokenNamespacesBlank": "فارغ = بلا قيود، مثل ipl_"
       },

@@ -1452,6 +1452,8 @@
         "apiTokenCreatedTitle": "トークンを作成しました",
         "apiTokenCreatedNotice": "このトークンを今すぐコピーしてください。セキュリティ上、読み取り可能な形式では保存されず、再表示されません。",
         "apiTokenNamespaces": "所有する名前空間",
+        "apiTokenNodeSettings": "Allow node-level fair-share changes",
+        "apiTokenNodeSettingsDesc": "Scoped tokens may change node bandwidth and congestion thresholds when enabled. Otherwise these values must match the current policy. Tokens without namespaces remain unrestricted.",
         "apiTokenNamespacesDesc": "このトークンが書き込める tag / email の接頭辞。空欄なら従来どおり無制限です。指定すると、tag か email がいずれかで始まるオブジェクトしか作成・編集・削除できず、対象を特定できない書き込みは拒否されます。自動化と panel の前にいる人が、互いを上書きせずに 1 台を共有する方法です。",
         "apiTokenNamespacesBlank": "空欄 = 無制限。例: ipl_"
       },

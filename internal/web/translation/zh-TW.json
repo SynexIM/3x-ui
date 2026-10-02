@@ -1475,6 +1475,8 @@
         "apiTokenCreatedTitle": "權杖已建立",
         "apiTokenCreatedNotice": "請立即複製此權杖。基於安全考量，它不會以可讀形式儲存，也不會再次顯示。",
         "apiTokenNamespaces": "它擁有的命名空間",
+        "apiTokenNodeSettings": "允许修改节点级公平参数",
+        "apiTokenNodeSettingsDesc": "作用域令牌勾选后可修改节点总带宽和拥塞阈值；未勾选时这些值必须与当前值一致。无命名空间的令牌不受此限制。",
         "apiTokenNamespacesDesc": "這把 token 能寫的 tag / email 前綴。留空＝不受限，和以前一樣。填了以後，它只能增刪改「tag 或 email 以其中之一開頭」的物件，而且任何一個說不清自己在動誰的寫入請求都會被拒。這就是自動化和坐在面板前的人共用一台機器卻互不覆蓋的辦法。",
         "apiTokenNamespacesBlank": "留空＝不受限，例如 ipl_"
       },

@@ -1452,6 +1452,8 @@
         "apiTokenCreatedTitle": "Token Oluşturuldu",
         "apiTokenCreatedNotice": "Bu token'ı şimdi kopyalayın. Güvenlik nedeniyle okunabilir biçimde saklanmaz ve tekrar gösterilmez.",
         "apiTokenNamespaces": "Sahip olduğu ad alanları",
+        "apiTokenNodeSettings": "Allow node-level fair-share changes",
+        "apiTokenNodeSettingsDesc": "Scoped tokens may change node bandwidth and congestion thresholds when enabled. Otherwise these values must match the current policy. Tokens without namespaces remain unrestricted.",
         "apiTokenNamespacesDesc": "Bu token’ın yazabileceği tag ve e-posta önekleri. Boşsa eskisi gibi sınırsızdır. Doldurulursa yalnızca tag’i veya e-postası bunlardan biriyle başlayan nesneleri oluşturabilir, düzenleyebilir veya silebilir; hiçbir nesneyi adlandırmayan bir yazma isteği reddedilir. Bir otomasyon ile panelin başındaki kişi bir düğümü böyle birbirini ezmeden paylaşır.",
         "apiTokenNamespacesBlank": "Boş = sınırsız, örn. ipl_"
       },

@@ -1475,6 +1475,8 @@
         "apiTokenCreatedTitle": "令牌已创建",
         "apiTokenCreatedNotice": "请立即复制此令牌。出于安全考虑，它不会以可读形式存储，也不会再次显示。",
         "apiTokenNamespaces": "它拥有的命名空间",
+        "apiTokenNodeSettings": "允许修改节点级公平参数",
+        "apiTokenNodeSettingsDesc": "作用域令牌勾选后可修改节点总带宽和拥塞阈值；未勾选时这些值必须与当前值一致。无命名空间的令牌不受此限制。",
         "apiTokenNamespacesDesc": "这把 token 能写的 tag / email 前缀。留空＝不受限，和以前一样。填了以后，它只能增删改「tag 或 email 以其中之一开头」的对象，而且任何一个说不清自己在动谁的写请求都会被拒。这就是自动化和坐在面板前的人共用一台机器却互不覆盖的办法。",
         "apiTokenNamespacesBlank": "留空＝不受限，例如 ipl_"
       },

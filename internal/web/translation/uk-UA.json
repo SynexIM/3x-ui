@@ -1452,6 +1452,8 @@
         "apiTokenCreatedTitle": "Токен створено",
         "apiTokenCreatedNotice": "Скопіюйте цей токен зараз. З міркувань безпеки він не зберігається у читабельному вигляді й більше не відображатиметься.",
         "apiTokenNamespaces": "Простори імен цього токена",
+        "apiTokenNodeSettings": "Allow node-level fair-share changes",
+        "apiTokenNodeSettingsDesc": "Scoped tokens may change node bandwidth and congestion thresholds when enabled. Otherwise these values must match the current policy. Tokens without namespaces remain unrestricted.",
         "apiTokenNamespacesDesc": "Префікси тегів і адрес, які цей токен може писати. Порожньо — без обмежень, як раніше. Заповнено — токен може створювати, змінювати й видаляти лише об’єкти, чий tag або email починається з одного з них, а запис, що не називає жодного об’єкта, відхиляється. Так автоматизація і людина за панеллю ділять один вузол, не затираючи одне одного.",
         "apiTokenNamespacesBlank": "Порожньо = без обмежень, напр. ipl_"
       },

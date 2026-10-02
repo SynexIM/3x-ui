@@ -1597,6 +1597,8 @@
         "apiTokenCreatedTitle": "Token created",
         "apiTokenCreatedNotice": "Copy this token now. For security it is not stored in readable form and will not be shown again.",
         "apiTokenNamespaces": "Namespaces it owns",
+        "apiTokenNodeSettings": "Allow node-level fair-share changes",
+        "apiTokenNodeSettingsDesc": "Scoped tokens may change node bandwidth and congestion thresholds when enabled. Otherwise these values must match the current policy. Tokens without namespaces remain unrestricted.",
         "apiTokenNamespacesDesc": "Prefixes of the tags and emails this token may write. Leave empty and the token can write anything, as before. Fill it in and the token can only create, edit or delete objects whose tag or email starts with one of these — and a write that names no object at all is refused. This is how an automation and the person at the panel share one node without overwriting each other.",
         "apiTokenNamespacesBlank": "Blank = unrestricted, e.g. ipl_"
       },

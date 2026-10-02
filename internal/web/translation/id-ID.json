@@ -1452,6 +1452,8 @@
         "apiTokenCreatedTitle": "Token dibuat",
         "apiTokenCreatedNotice": "Salin token ini sekarang. Demi keamanan, token tidak disimpan dalam bentuk yang dapat dibaca dan tidak akan ditampilkan lagi.",
         "apiTokenNamespaces": "Namespace yang dimilikinya",
+        "apiTokenNodeSettings": "Allow node-level fair-share changes",
+        "apiTokenNodeSettingsDesc": "Scoped tokens may change node bandwidth and congestion thresholds when enabled. Otherwise these values must match the current policy. Tokens without namespaces remain unrestricted.",
         "apiTokenNamespacesDesc": "Awalan tag dan email yang boleh ditulis token ini. Kosong berarti tanpa batas, seperti sebelumnya. Bila diisi, token hanya bisa membuat, menyunting, atau menghapus objek yang tag atau email-nya diawali salah satunya, dan permintaan tulis yang tidak menyebut objek apa pun ditolak. Begitulah otomasi dan orang di depan panel berbagi satu node tanpa saling menimpa.",
         "apiTokenNamespacesBlank": "Kosong = tanpa batas, mis. ipl_"
       },

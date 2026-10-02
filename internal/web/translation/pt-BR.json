@@ -1452,6 +1452,8 @@
         "apiTokenCreatedTitle": "Token criado",
         "apiTokenCreatedNotice": "Copie este token agora. Por segurança, ele não é armazenado de forma legível e não será exibido novamente.",
         "apiTokenNamespaces": "Namespaces que ele possui",
+        "apiTokenNodeSettings": "Allow node-level fair-share changes",
+        "apiTokenNodeSettingsDesc": "Scoped tokens may change node bandwidth and congestion thresholds when enabled. Otherwise these values must match the current policy. Tokens without namespaces remain unrestricted.",
         "apiTokenNamespacesDesc": "Prefixos das tags e e-mails que este token pode escrever. Vazio significa sem restrição, como antes. Preenchido, ele só cria, edita ou apaga objetos cuja tag ou e-mail comece por um deles, e uma escrita que não nomeie objeto algum é recusada. É assim que uma automação e a pessoa no painel dividem um nó sem se sobrescrever.",
         "apiTokenNamespacesBlank": "Vazio = sem restrição, ex. ipl_"
       },

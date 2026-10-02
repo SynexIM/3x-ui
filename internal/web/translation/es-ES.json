@@ -1452,6 +1452,8 @@
         "apiTokenCreatedTitle": "Token creado",
         "apiTokenCreatedNotice": "Copia este token ahora. Por seguridad, no se almacena de forma legible y no se volverá a mostrar.",
         "apiTokenNamespaces": "Espacios de nombres que posee",
+        "apiTokenNodeSettings": "Allow node-level fair-share changes",
+        "apiTokenNodeSettingsDesc": "Scoped tokens may change node bandwidth and congestion thresholds when enabled. Otherwise these values must match the current policy. Tokens without namespaces remain unrestricted.",
         "apiTokenNamespacesDesc": "Prefijos de las etiquetas y correos que este token puede escribir. Vacío significa sin restricción, como antes. Con valores, solo puede crear, editar o borrar objetos cuyo tag o email empiece por uno de ellos, y una escritura que no nombre ningún objeto se rechaza. Así una automatización y la persona ante el panel comparten un nodo sin pisarse.",
         "apiTokenNamespacesBlank": "Vacío = sin restricción, p. ej. ipl_"
       },
