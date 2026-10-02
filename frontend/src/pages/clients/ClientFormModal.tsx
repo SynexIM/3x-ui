@@ -609,7 +609,9 @@ export default function ClientFormModal({
 
   const showMixed = useMemo(() => {
     const mixedIds = new Set(
-      (inbounds || []).filter((row) => row?.protocol === 'mixed').map((row) => row.id),
+      (inbounds || [])
+        .filter((row) => row?.protocol === 'mixed' || row?.protocol === 'http')
+        .map((row) => row.id),
     );
     return (inboundIds || []).some((id) => mixedIds.has(id));
   }, [inbounds, inboundIds]);
@@ -781,6 +783,10 @@ export default function ClientFormModal({
       messageApi.error(t(issue?.message ?? 'somethingWentWrong'));
       return;
     }
+    if (showMixed && (!values.mixedUser.trim() || !values.mixedPass)) {
+      messageApi.error(t('pages.clients.mixedUserDesc'));
+      return;
+    }
     const expiryTime = values.delayedStart
       ? -86400000 * (Number(values.delayedDays) || 0)
       : values.expiryDate || 0;
@@ -817,8 +823,8 @@ export default function ClientFormModal({
       sustained_bps: rateToBps(Number(values.sustainedRate) || 0, values.rateUnit),
       pool: values.pool.trim(),
       class: values.rateClass.trim(),
-      mixed_user: showMixed ? values.mixedUser.trim() : '',
-      mixed_pass: showMixed ? values.mixedPass : '',
+      mixed_user: values.mixedUser.trim(),
+      mixed_pass: values.mixedPass,
       rateUnit: values.rateUnit,
       burstUnit: values.burstUnit,
     };

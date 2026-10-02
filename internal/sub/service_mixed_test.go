@@ -14,7 +14,7 @@ func TestGenMixedLinkFields(t *testing.T) {
 		Listen:   "2001:db8::1",
 		Port:     1080,
 		Protocol: model.Mixed,
-		Settings: `{"auth":"password","clients":[{"email":"alice@example.test","password":"p@ss word","enable":true}]}`,
+		Settings: `{"auth":"password","clients":[{"email":"alice@example.test","password":"old-secret","mixed_user":"independent-login","mixed_pass":"p@ss word","enable":true}]}`,
 	}
 	s := &SubService{}
 	lines := strings.Split(s.genMixedLink(inbound, "alice@example.test"), "\n")
@@ -30,7 +30,7 @@ func TestGenMixedLinkFields(t *testing.T) {
 			t.Fatalf("link %d scheme = %q, want %q", i, parsed.Scheme, scheme)
 		}
 	}
-	if !strings.Contains(lines[0], "alice%40example.test:p%40ss%20word@[2001:db8::1]:1080") {
+	if !strings.Contains(lines[0], "independent-login:p%40ss%20word@[2001:db8::1]:1080") {
 		t.Fatalf("SOCKS5 credentials or IPv6 authority are not encoded: %q", lines[0])
 	}
 }
@@ -49,7 +49,7 @@ func TestGetInboundsBySubIdIncludesMixed(t *testing.T) {
 		t.Fatalf("create Mixed inbound: %v", err)
 	}
 	record := &model.ClientRecord{
-		Email: "u@mixed", SubID: "submixed", Password: "secret", Enable: true,
+		Email: "u@mixed", SubID: "submixed", Password: "old-secret", MixedUser: "mixed-login", MixedPass: "secret", Enable: true,
 	}
 	if err := db.Create(record).Error; err != nil {
 		t.Fatalf("create Mixed client: %v", err)

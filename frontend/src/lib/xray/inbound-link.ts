@@ -1374,6 +1374,8 @@ type ClientShape = {
   security?: VmessSecurity;
   flow?: VlessClient['flow'];
   password?: string;
+  mixed_user?: string;
+  mixed_pass?: string;
   auth?: string;
   secret?: string;
   email?: string;
@@ -1530,8 +1532,9 @@ export function genAllLinks(input: GenAllLinksInput): GenAllLinksEntry[] {
   const port = inbound.port;
 
   if (inbound.protocol === 'mixed') {
-    const user = encodeURIComponent(client.email ?? '');
-    const password = encodeURIComponent(client.password ?? '');
+    if (!client.mixed_user || !client.mixed_pass) return [];
+    const user = encodeURIComponent(client.mixed_user);
+    const password = encodeURIComponent(client.mixed_pass);
     const authority = `${user}:${password}@${formatUrlHost(addr)}:${port}`;
     return [
       { remark: 'SOCKS5', link: `socks5://${authority}` },
@@ -1543,12 +1546,15 @@ export function genAllLinks(input: GenAllLinksInput): GenAllLinksEntry[] {
     ];
   }
   if (inbound.protocol === 'http') {
-    const user = encodeURIComponent(client.email ?? '');
-    const password = encodeURIComponent(client.password ?? '');
-    return [{
-      remark: 'HTTP',
-      link: `http://${user}:${password}@${formatUrlHost(addr)}:${port}`,
-    }];
+    if (!client.mixed_user || !client.mixed_pass) return [];
+    const user = encodeURIComponent(client.mixed_user);
+    const password = encodeURIComponent(client.mixed_pass);
+    return [
+      {
+        remark: 'HTTP',
+        link: `http://${user}:${password}@${formatUrlHost(addr)}:${port}`,
+      },
+    ];
   }
 
   const composeRemark = (proxyRemark: string): string =>

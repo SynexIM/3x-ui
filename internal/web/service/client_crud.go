@@ -160,7 +160,9 @@ func (s *ClientService) fillProtocolDefaults(c *model.Client, ib *model.Inbound)
 		if c.ID == "" {
 			c.ID = uuid.NewString()
 		}
-	case model.Trojan, model.Mixed, model.HTTP:
+	case model.Mixed, model.HTTP:
+		return validateMixedCredentials(*c, ib.Protocol)
+	case model.Trojan:
 		if c.Password == "" {
 			c.Password = strings.ReplaceAll(uuid.NewString(), "-", "")
 		}
@@ -248,6 +250,7 @@ func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model
 	if err != nil {
 		return false, err
 	}
+	allInboundIDs := append([]int(nil), inboundIds...)
 	if len(inboundFilter) > 0 {
 		allow := make(map[int]struct{}, len(inboundFilter))
 		for _, fid := range inboundFilter {
@@ -276,6 +279,9 @@ func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model
 	}
 	if updated.SubID == "" {
 		updated.SubID = uuid.NewString()
+	}
+	if err := createCredentialConflict(database.GetDB(), updated, allInboundIDs, id); err != nil {
+		return false, err
 	}
 	updated.UpdatedAt = time.Now().UnixMilli()
 	if updated.CreatedAt == 0 {

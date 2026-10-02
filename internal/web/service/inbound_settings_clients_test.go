@@ -98,6 +98,16 @@ func TestInjectNormalizedClientsBuildsRuntimeClone(t *testing.T) {
 	if !ok || len(clients) != 1 {
 		t.Fatalf("runtime clients = %#v", settings["clients"])
 	}
+	for _, protocol := range []model.Protocol{model.Mixed, model.HTTP} {
+		accounts := map[string]any{}
+		if err := injectNormalizedClients(accounts, protocol, []model.Client{{Email: "legacy", Password: "old-password"}, {Email: "identity", Password: "unrelated", MixedUser: "login", MixedPass: "secret"}}); err != nil {
+			t.Fatal(err)
+		}
+		entries := accounts["accounts"].([]any)
+		if len(entries) != 1 || entries[0].(map[string]any)["user"] != "login" || entries[0].(map[string]any)["pass"] != "secret" {
+			t.Fatalf("%s accounts = %#v", protocol, entries)
+		}
+	}
 	if _, persisted := settings["peers"]; persisted {
 		t.Fatalf("unexpected peers in vless clone: %#v", settings)
 	}

@@ -26,6 +26,12 @@ func applyClientRecordMerge(row *model.ClientRecord, incoming *model.ClientRecor
 	if incoming.Password != "" {
 		row.Password = incoming.Password
 	}
+	if incoming.MixedUser != "" {
+		row.MixedUser = incoming.MixedUser
+	}
+	if incoming.MixedPass != "" {
+		row.MixedPass = incoming.MixedPass
+	}
 	if incoming.Auth != "" {
 		row.Auth = incoming.Auth
 	}

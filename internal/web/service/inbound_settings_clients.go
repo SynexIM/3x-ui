@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
+	"github.com/mhsanaei/3x-ui/v3/internal/logger"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 )
 
@@ -84,13 +85,17 @@ func injectNormalizedClients(settings map[string]any, protocol model.Protocol, c
 			peers = append(peers, model.WireguardPeerFromClient(clients[i]))
 			continue
 		}
-		if protocol == model.Mixed {
+		if protocol == model.Mixed || protocol == model.HTTP {
 			user, pass := clients[i].MixedCredentials()
-			entries = append(entries, map[string]any{"email": clients[i].Email, "user": user, "pass": pass})
-			continue
-		}
-		if protocol == model.HTTP {
-			entries = append(entries, map[string]any{"user": clients[i].Email, "pass": clients[i].Password})
+			if user == "" || pass == "" {
+				logger.Warningf("Skip %s account for client %s: independent credentials are unset", protocol, clients[i].Email)
+				continue
+			}
+			entry := map[string]any{"user": user, "pass": pass}
+			if protocol == model.Mixed {
+				entry["email"] = clients[i].Email
+			}
+			entries = append(entries, entry)
 			continue
 		}
 		encoded, err := json.Marshal(clients[i])

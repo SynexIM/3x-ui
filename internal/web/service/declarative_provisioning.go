@@ -35,9 +35,12 @@ func IsDeclarativelyManaged() bool {
 }
 
 type DeclarativeClient struct {
-	Email    string  `json:"email"`
-	UUID     string  `json:"uuid"`
-	Password *string `json:"password"`
+	Email     string  `json:"email"`
+	UUID      string  `json:"uuid"`
+	Password  *string `json:"password"`
+	Auth      *string `json:"auth"`
+	MixedUser *string `json:"mixed_user"`
+	MixedPass *string `json:"mixed_pass"`
 	// VLESS 的 flow。**下发端说了算**：vision 只在 raw/tcp 上合法，
 	// 面板以前给所有 vless 客户端硬编码它，ws/grpc 上的客户因此永远握手不过。
 	Flow      *string `json:"flow"`
@@ -387,17 +390,20 @@ func modelInboundFor(inbound DeclarativeInbound) (*model.Inbound, error) {
 			if client.Flow != nil {
 				entry["flow"] = *client.Flow
 			}
-		case "trojan", "shadowsocks", "mixed":
+		case "mixed", "http":
+			if client.MixedUser == nil || client.MixedPass == nil || !validMixedUser(*client.MixedUser) || !validSecret(*client.MixedPass) {
+				return nil, credentialInvalid("%s client %q requires mixed_user and mixed_pass", inbound.Protocol, client.Email)
+			}
+			entry["mixed_user"], entry["mixed_pass"] = *client.MixedUser, *client.MixedPass
+		case "trojan", "shadowsocks":
 			if client.Password == nil || *client.Password == "" {
 				return nil, fmt.Errorf("%s client %q requires a password", inbound.Protocol, client.Email)
 			}
 		case "hysteria":
-			// Hysteria2 has no UUID: conf.HysteriaUserConfig reads the account
-			// from "auth" alone, so the line's shared password is that token.
-			if client.Password == nil || *client.Password == "" {
-				return nil, fmt.Errorf("hysteria client %q requires a password to use as its auth token", client.Email)
+			if client.Auth == nil || !validSecret(*client.Auth) {
+				return nil, credentialInvalid("hysteria client %q requires auth", client.Email)
 			}
-			entry["auth"] = *client.Password
+			entry["auth"] = *client.Auth
 		}
 		clients = append(clients, entry)
 	}

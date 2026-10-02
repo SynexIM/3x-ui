@@ -14,11 +14,12 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 )
 
-// ClientCredentialPatch changes only the fields it names; password also becomes
-// the Hysteria2 auth, and empty mixed_user/mixed_pass fall back to email/password.
+// ClientCredentialPatch changes only the named, independent protocol credentials.
+// Mixed/HTTP usernames and passwords cannot be cleared.
 type ClientCredentialPatch struct {
 	ID        *string `json:"id,omitempty" example:"0f7a8c1e-4d2b-4e6a-9c3f-1b2d3e4f5a6b"`
 	Password  *string `json:"password,omitempty" example:"s3cret-Pass_01"`
+	Auth      *string `json:"auth,omitempty" example:"hy2-secret_01"`
 	MixedUser *string `json:"mixed_user,omitempty" example:"line-0001"`
 	MixedPass *string `json:"mixed_pass,omitempty" example:"s3cret-Pass_02"`
 }
@@ -48,22 +49,27 @@ func (s *ClientService) UpdateCredentials(ctx context.Context, inboundSvc *Inbou
 			return credentialInvalid("password must be 1-128 printable characters without spaces")
 		}
 		updates["password"] = *patch.Password
-		updates["auth"] = *patch.Password
+	}
+	if patch.Auth != nil {
+		if !validSecret(*patch.Auth) {
+			return credentialInvalid("auth must be 1-128 printable characters without spaces")
+		}
+		updates["auth"] = *patch.Auth
 	}
 	if patch.MixedUser != nil {
-		if *patch.MixedUser != "" && !validMixedUser(*patch.MixedUser) {
+		if !validMixedUser(*patch.MixedUser) {
 			return credentialInvalid("mixed_user must be 1-64 characters of A-Z a-z 0-9 . _ @ -")
 		}
 		updates["mixed_user"] = *patch.MixedUser
 	}
 	if patch.MixedPass != nil {
-		if *patch.MixedPass != "" && !validSecret(*patch.MixedPass) {
+		if !validSecret(*patch.MixedPass) {
 			return credentialInvalid("mixed_pass must be 1-128 printable characters without spaces")
 		}
 		updates["mixed_pass"] = *patch.MixedPass
 	}
 	if len(updates) == 0 {
-		return credentialInvalid("at least one of id, password, mixed_user, mixed_pass is required")
+		return credentialInvalid("at least one of id, password, auth, mixed_user, mixed_pass is required")
 	}
 	updates["updated_at"] = time.Now().UnixMilli()
 	return s.updateClientRecordLive(ctx, inboundSvc, email, updates, func(tx *gorm.DB, record model.ClientRecord, inbounds []model.Inbound) error {
@@ -74,10 +80,6 @@ func (s *ClientService) UpdateCredentials(ctx context.Context, inboundSvc *Inbou
 // checkCredentialConflicts refuses a credential another client on the same
 // inbound already authenticates with; the core would reject or misroute it.
 func checkCredentialConflicts(tx *gorm.DB, record model.ClientRecord, inbounds []model.Inbound, updates map[string]any) error {
-	mixedUser, _ := updates["mixed_user"].(string)
-	if _, set := updates["mixed_user"]; set && mixedUser == "" {
-		mixedUser = record.Email
-	}
 	for _, ib := range inbounds {
 		var column, value string
 		switch ib.Protocol {
@@ -87,8 +89,18 @@ func checkCredentialConflicts(tx *gorm.DB, record model.ClientRecord, inbounds [
 			column, value = "c.auth", stringUpdate(updates, "auth")
 		case model.Shadowsocks:
 			column, value = "c.password", stringUpdate(updates, "password")
-		case model.Mixed:
-			column, value = "COALESCE(NULLIF(c.mixed_user, ''), c.email)", mixedUser
+		case model.Mixed, model.HTTP:
+			client := record.ToClient()
+			if user, set := updates["mixed_user"].(string); set {
+				client.MixedUser = user
+			}
+			if pass, set := updates["mixed_pass"].(string); set {
+				client.MixedPass = pass
+			}
+			if err := validateMixedCredentials(*client, ib.Protocol); err != nil {
+				return err
+			}
+			column, value = "c.mixed_user", stringUpdate(updates, "mixed_user")
 		}
 		if value == "" {
 			continue
@@ -125,7 +137,7 @@ func validSecret(v string) bool {
 }
 
 func validMixedUser(v string) bool {
-	if len(v) > 64 {
+	if v == "" || len(v) > 64 {
 		return false
 	}
 	for _, r := range v {
@@ -137,9 +149,8 @@ func validMixedUser(v string) bool {
 	return true
 }
 
-// createCredentialConflict refuses a new or re-added client whose credentials
-// another client already authenticates with on one of the target inbounds.
-// excludeID is the client's own existing record when an identity is re-added.
+// createCredentialConflict checks target inbounds, excluding the identity
+// being re-added or updated.
 func createCredentialConflict(db *gorm.DB, client model.Client, inboundIDs []int, excludeID int) error {
 	var inbounds []model.Inbound
 	if err := db.Where("id IN ?", inboundIDs).Find(&inbounds).Error; err != nil {
@@ -150,6 +161,17 @@ func createCredentialConflict(db *gorm.DB, client model.Client, inboundIDs []int
 		"auth":       client.Auth,
 		"password":   client.Password,
 		"mixed_user": client.MixedUser,
+		"mixed_pass": client.MixedPass,
 	}
 	return checkCredentialConflicts(db, model.ClientRecord{Id: excludeID, Email: client.Email}, inbounds, updates)
+}
+
+func validateMixedCredentials(client model.Client, protocol model.Protocol) error {
+	if protocol != model.Mixed && protocol != model.HTTP {
+		return nil
+	}
+	if !validMixedUser(client.MixedUser) || !validSecret(client.MixedPass) {
+		return credentialInvalid("Mixed/HTTP requires an independent mixed_user and mixed_pass")
+	}
+	return nil
 }

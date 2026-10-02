@@ -116,7 +116,7 @@ func TestHealedConfigsBuildInXray(t *testing.T) {
 			Port:     1080,
 			Listen:   "127.0.0.1",
 			Tag:      "in-mixed",
-			Settings: `{"auth":"password","clients":[{"email":"alice","password":"secret","enable":true}],"udp":true,"ip":"127.0.0.1"}`,
+			Settings: `{"auth":"password","clients":[{"email":"alice","password":"old-secret","mixed_user":"alice","mixed_pass":"secret","enable":true}],"udp":true,"ip":"127.0.0.1"}`,
 		}
 		raw, err := json.Marshal(in.GenXrayInboundConfig())
 		if err != nil {

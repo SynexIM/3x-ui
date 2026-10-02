@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -155,6 +156,10 @@ func callerOutsideUtil() (string, string) {
 
 // jsonMsgObj sends a JSON response with a message, object, and error status.
 func jsonMsgObj(c *gin.Context, msg string, obj any, err error) {
+	if errors.Is(err, service.ErrClientCredentialInvalid) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"success": false, "code": "CLIENT_CREDENTIAL_INVALID", "msg": err.Error()})
+		return
+	}
 	m := entity.Msg{
 		Obj: obj,
 	}

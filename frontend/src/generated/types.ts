@@ -398,6 +398,7 @@ export interface Client {
 }
 
 export interface ClientCredentialPatch {
+  auth?: string | null;
   id?: string | null;
   mixed_pass?: string | null;
   mixed_user?: string | null;

@@ -10,13 +10,18 @@ export type HttpAccount = z.infer<typeof HttpAccountSchema>;
 
 export const HttpClientSchema = z.object({
   ...ClientRateLimitShape,
-  password: z.string().min(1),
+  password: z.string().default(''),
+  mixed_user: z.string().optional(),
+  mixed_pass: z.string().optional(),
   email: z.string().min(1),
   limitIp: z.number().int().min(0).default(0),
   totalGB: z.number().int().min(0).default(0),
   expiryTime: z.number().int().default(0),
   enable: z.boolean().default(true),
-  tgId: z.union([z.number(), z.string()]).transform((v) => Number(v) || 0).default(0),
+  tgId: z
+    .union([z.number(), z.string()])
+    .transform((v) => Number(v) || 0)
+    .default(0),
   subId: z.string().default(''),
   group: z.string().default(''),
   comment: z.string().default(''),
@@ -33,12 +38,17 @@ const HttpInboundSettingsWireSchema = z.object({
 });
 
 export const HttpInboundSettingsSchema = HttpInboundSettingsWireSchema.transform((settings) => ({
-  clients: settings.clients.length > 0
-    ? settings.clients
-    : (settings.accounts ?? []).map((account) => HttpClientSchema.parse({
-      email: account.user,
-      password: account.pass,
-    })),
+  clients:
+    settings.clients.length > 0
+      ? settings.clients
+      : (settings.accounts ?? []).map((account) =>
+          HttpClientSchema.parse({
+            email: account.user,
+            password: account.pass,
+            mixed_user: account.user,
+            mixed_pass: account.pass,
+          }),
+        ),
   allowTransparent: settings.allowTransparent,
 }));
 export type HttpInboundSettings = z.infer<typeof HttpInboundSettingsSchema>;

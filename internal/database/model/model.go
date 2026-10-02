@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/logger"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/json_util"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
@@ -557,12 +558,13 @@ func MixedClientsToAccounts(settings string) (string, bool) {
 		if enabled, exists := client["enable"].(bool); exists && !enabled {
 			continue
 		}
-		email, _ := client["email"].(string)
-		password, _ := client["password"].(string)
-		if email == "" || password == "" {
+		user, _ := client["mixed_user"].(string)
+		pass, _ := client["mixed_pass"].(string)
+		if user == "" || pass == "" {
+			logger.Warningf("Skip Mixed/HTTP account for client %v: independent credentials are unset", client["email"])
 			continue
 		}
-		account := map[string]any{"user": email, "pass": password}
+		account := map[string]any{"user": user, "pass": pass}
 		// Mixed accounts are xray SocksAccounts; the limit keys are identical,
 		// so dropping them here would silently unlimit only this protocol.
 		copyClientRateLimits(client, account)
@@ -602,12 +604,13 @@ func HTTPClientsToAccounts(settings string) (string, bool) {
 		if enabled, exists := client["enable"].(bool); exists && !enabled {
 			continue
 		}
-		email, _ := client["email"].(string)
-		password, _ := client["password"].(string)
-		if email == "" || password == "" {
+		user, _ := client["mixed_user"].(string)
+		pass, _ := client["mixed_pass"].(string)
+		if user == "" || pass == "" {
+			logger.Warningf("Skip Mixed/HTTP account for client %v: independent credentials are unset", client["email"])
 			continue
 		}
-		account := map[string]any{"user": email, "pass": password}
+		account := map[string]any{"user": user, "pass": pass}
 		copyClientRateLimits(client, account)
 		accounts = append(accounts, account)
 	}
@@ -1089,7 +1092,7 @@ type Client struct {
 	Pool  string `json:"pool,omitempty" form:"pool"`
 	Class string `json:"class,omitempty" form:"class"`
 
-	// Mixed (HTTP+SOCKS5) login; empty falls back to email / password.
+	// Independent Mixed/HTTP login; empty credentials mean the account is unset.
 	MixedUser string `json:"mixed_user,omitempty" form:"mixed_user"`
 	MixedPass string `json:"mixed_pass,omitempty" form:"mixed_pass"`
 
@@ -1736,17 +1739,9 @@ func MergeClientRecord(existing *ClientRecord, incoming *ClientRecord) []ClientM
 	return conflicts
 }
 
-// MixedCredentials is the Mixed (HTTP+SOCKS5) login, falling back to email and
-// password so clients created before the separate fields keep their old login.
+// MixedCredentials returns only the independent Mixed/HTTP login.
 func (c Client) MixedCredentials() (user, pass string) {
-	user, pass = c.MixedUser, c.MixedPass
-	if user == "" {
-		user = c.Email
-	}
-	if pass == "" {
-		pass = c.Password
-	}
-	return user, pass
+	return c.MixedUser, c.MixedPass
 }
 
 // ShadowsocksClientKey turns one client password into the per-inbound key a
@@ -1811,7 +1806,7 @@ func (c Client) RuntimeCredentialFields(ib *Inbound) map[string]any {
 		if settings.Method != "" {
 			fields["cipher"] = settings.Method
 		}
-	case Mixed:
+	case Mixed, HTTP:
 		fields["user"], fields["pass"] = c.MixedCredentials()
 	}
 	return fields

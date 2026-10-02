@@ -1011,7 +1011,11 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 	// Secure client ID
 	for _, client := range clients {
 		switch inbound.Protocol {
-		case "trojan", "mixed", "http":
+		case "mixed", "http":
+			if err := validateMixedCredentials(client, inbound.Protocol); err != nil {
+				return inbound, false, err
+			}
+		case "trojan":
 			if client.Password == "" {
 				return inbound, false, common.NewError("empty client ID")
 			}
@@ -1490,6 +1494,11 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 		draftClients = oldClients
 	}
 	for _, client := range draftClients {
+		if membershipProvided {
+			if err := validateMixedCredentials(client, inbound.Protocol); err != nil {
+				return inbound, false, err
+			}
+		}
 		switch inbound.Protocol {
 		case model.Hysteria:
 			if client.Auth == "" {

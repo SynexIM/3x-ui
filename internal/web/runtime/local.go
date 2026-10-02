@@ -12,6 +12,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/amneziawg"
 	"github.com/mhsanaei/3x-ui/v3/internal/amneziawgnet"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
+	"github.com/mhsanaei/3x-ui/v3/internal/logger"
 	"github.com/mhsanaei/3x-ui/v3/internal/mtproto"
 	"github.com/mhsanaei/3x-ui/v3/internal/tuic"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
@@ -287,6 +288,14 @@ func (l *Local) AddUser(_ context.Context, ib *model.Inbound, userMap map[string
 	}
 	if requiresInboundReloadForUserMutation(ib.Protocol) {
 		return l.reloadInbound(ib)
+	}
+	if ib.Protocol == model.Mixed {
+		user, _ := userMap["user"].(string)
+		pass, _ := userMap["pass"].(string)
+		if user == "" || pass == "" {
+			logger.Warningf("Skip Mixed account for client %v: independent credentials are unset", userMap["email"])
+			return nil
+		}
 	}
 	return l.withAPI(func(api *xray.XrayAPI) error {
 		return api.AddUser(string(ib.Protocol), ib.Tag, userMap)

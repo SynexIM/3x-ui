@@ -17,7 +17,7 @@ const (
 
 func limitedClient(email, id string) model.Client {
 	client := model.Client{
-		Email: email, ID: id, Password: id, Auth: id, Enable: true, EgressTag: "dedicated-us",
+		Email: email, ID: id, Password: id, Auth: id, MixedUser: "mixed-login", MixedPass: "mixed-secret", Enable: true, EgressTag: "dedicated-us",
 		BandwidthBps: testPIR, CommittedBps: testCIR, CommittedBurstBytes: testCBS,
 		ConnLimit: testConnLimit,
 		RateUnit:  "Mbps", BurstUnit: "MB",

@@ -348,6 +348,10 @@ func (s *XrayService) hotUserMap(db *gorm.DB, ib hotInbound, record *model.Clien
 		user["cipher"] = method
 	case model.Mixed:
 		// SOCKS account at runtime: email stays the identity, the login may differ.
+		if client.MixedUser == "" || client.MixedPass == "" {
+			logger.Warningf("Skip Mixed account for client %s: independent credentials are unset", client.Email)
+			return nil, nil
+		}
 		user["user"], user["pass"] = client.MixedCredentials()
 	default:
 		return nil, errNeedsFullReconcile

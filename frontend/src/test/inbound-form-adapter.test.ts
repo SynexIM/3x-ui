@@ -208,7 +208,13 @@ describe('formValuesToWirePayload', () => {
     const parsed = JSON.parse(formValuesToWirePayload(values).settings);
     expect(parsed.accounts).toBeUndefined();
     expect(parsed.clients).toEqual([
-      expect.objectContaining({ email: 'alice', password: 'secret', enable: true }),
+      expect.objectContaining({
+        email: 'alice',
+        password: 'secret',
+        mixed_user: 'alice',
+        mixed_pass: 'secret',
+        enable: true,
+      }),
     ]);
   });
 
@@ -218,20 +224,26 @@ describe('formValuesToWirePayload', () => {
       protocol: 'mixed',
       settings: {
         auth: 'password',
-        clients: [{
-          email: 'alice',
-          password: 'secret',
-          enable: true,
-          id: 'must-not-leak',
-          auth: 'must-not-leak',
-        }],
+        clients: [
+          {
+            email: 'alice',
+            password: 'unrelated-secret',
+            mixed_user: 'login',
+            mixed_pass: 'secret',
+            enable: true,
+            id: 'must-not-leak',
+            auth: 'must-not-leak',
+          },
+        ],
         udp: false,
         ip: '127.0.0.1',
       },
     });
     const client = JSON.parse(formValuesToWirePayload(values).settings).clients[0];
     expect(client.email).toBe('alice');
-    expect(client.password).toBe('secret');
+    expect(client.password).toBe('unrelated-secret');
+    expect(client.mixed_user).toBe('login');
+    expect(client.mixed_pass).toBe('secret');
     expect(client.id).toBeUndefined();
     expect(client.auth).toBeUndefined();
   });

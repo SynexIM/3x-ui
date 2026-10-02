@@ -1239,3 +1239,30 @@ describe('genTuicLink', () => {
     expect(link).not.toContain('#TUIC-Node-US-US');
   });
 });
+
+describe('Mixed/HTTP independent credentials', () => {
+  for (const protocol of ['mixed', 'http'] as const) {
+    it(`${protocol} links use only mixed_user/mixed_pass`, () => {
+      const inbound = InboundSchema.parse({
+        protocol,
+        port: 1080,
+        settings: { clients: [] },
+      });
+      const input = {
+        inbound,
+        fallbackHostname: 'proxy.example.test',
+        client: {
+          email: 'identity@example.test',
+          password: 'old-password',
+          mixed_user: 'login',
+          mixed_pass: 'secret',
+        },
+      };
+      const links = genAllLinks(input);
+      expect(links.length).toBe(protocol === 'mixed' ? 3 : 1);
+      expect(links[0].link).toContain('login:secret@');
+      expect(genAllLinks({ ...input, client: { ...input.client, mixed_user: '' } })).toEqual([]);
+      expect(genAllLinks({ ...input, client: { ...input.client, mixed_pass: '' } })).toEqual([]);
+    });
+  }
+});

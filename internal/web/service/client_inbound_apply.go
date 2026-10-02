@@ -277,6 +277,12 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 		return false, err
 	}
 
+	for _, client := range clients {
+		if err := validateMixedCredentials(client, oldInbound.Protocol); err != nil {
+			return false, err
+		}
+	}
+
 	// A client already on this inbound is skipped instead of appended again:
 	// checkEmailsExistForClients exempts a matching subId so one identity can
 	// live on several inbounds, which let retried or raced adds duplicate the
@@ -534,6 +540,9 @@ func (s *ClientService) UpdateInboundClient(inboundSvc *InboundService, data *mo
 		old = &folded
 	}
 	updated := clients[0]
+	if err := validateMixedCredentials(updated, inbound.Protocol); err != nil {
+		return false, err
+	}
 	updated.CreatedAt = old.CreatedAt
 	if updated.SubID == "" {
 		updated.SubID = old.SubID

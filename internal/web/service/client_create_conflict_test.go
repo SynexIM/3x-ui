@@ -18,14 +18,14 @@ func TestCreateRefusesACredentialAnotherClientHoldsOnTheInbound(t *testing.T) {
 	const id = "3f1d2c4b-5a6e-4f70-8a9b-0c1d2e3f4a5b"
 
 	if _, err := svc.Create(inboundSvc, &ClientCreatePayload{
-		Client:     model.Client{Email: "owner@x", ID: id, Password: "Owner_pass1", MixedUser: "login1", Enable: true},
+		Client:     model.Client{Email: "owner@x", ID: id, Password: "Owner_pass1", MixedUser: "login1", MixedPass: "mixed-owner", Enable: true},
 		InboundIds: []int{vless.Id, mixed.Id},
 	}); err != nil {
 		t.Fatalf("seed owner: %v", err)
 	}
 	for name, client := range map[string]model.Client{
-		"same uuid":        {Email: "thief1@x", ID: id, Enable: true},
-		"same mixed login": {Email: "thief2@x", MixedUser: "login1", Password: "Other_pass2", Enable: true},
+		"same uuid":        {Email: "thief1@x", ID: id, MixedUser: "login2", MixedPass: "mixed-other", Enable: true},
+		"same mixed login": {Email: "thief2@x", MixedUser: "login1", MixedPass: "mixed-other", Password: "Other_pass2", Enable: true},
 	} {
 		_, err := svc.Create(inboundSvc, &ClientCreatePayload{Client: client, InboundIds: []int{vless.Id, mixed.Id}})
 		if !errors.Is(err, ErrClientCredentialConflict) {

@@ -277,7 +277,7 @@ func TestMixedClientsToAccounts_CompilesEnabledClientsOnly(t *testing.T) {
 		"udp":true,
 		"ip":"127.0.0.1",
 		"clients":[
-			{"email":"alice@example.test","password":"alice-secret","enable":true},
+			{"email":"alice@example.test","password":"old-secret","mixed_user":"alice-login","mixed_pass":"alice-secret","enable":true},
 			{"email":"disabled@example.test","password":"disabled-secret","enable":false}
 		]
 	}`
@@ -300,7 +300,7 @@ func TestMixedClientsToAccounts_CompilesEnabledClientsOnly(t *testing.T) {
 		t.Fatalf("expected exactly one enabled account, got %#v", parsed["accounts"])
 	}
 	account := accounts[0].(map[string]any)
-	if account["user"] != "alice@example.test" || account["pass"] != "alice-secret" {
+	if account["user"] != "alice-login" || account["pass"] != "alice-secret" {
 		t.Fatalf("unexpected compiled account: %#v", account)
 	}
 	if parsed["udp"] != true || parsed["ip"] != "127.0.0.1" {
@@ -335,7 +335,7 @@ func TestMixedClientsToAccounts_PreservesLegacyAccounts(t *testing.T) {
 }
 
 func TestGenXrayInboundConfig_CompilesMixedClientsWithoutMutatingRow(t *testing.T) {
-	settings := `{"auth":"password","clients":[{"email":"alice","password":"secret","enable":true}],"udp":false}`
+	settings := `{"auth":"password","clients":[{"email":"alice","password":"old-secret","mixed_user":"alice","mixed_pass":"secret","enable":true}],"udp":false}`
 	in := Inbound{Protocol: Mixed, Port: 1080, Tag: "mixed-in", Settings: settings}
 	cfg := in.GenXrayInboundConfig()
 	if strings.Contains(string(cfg.Settings), `"clients"`) {
@@ -350,7 +350,7 @@ func TestGenXrayInboundConfig_CompilesMixedClientsWithoutMutatingRow(t *testing.
 }
 
 func TestGenXrayInboundConfigCompilesHTTPClientsWithLimits(t *testing.T) {
-	settings := `{"clients":[{"email":"alice","password":"secret","enable":true,"bandwidth_bps":100000000,"committed_bps":10000000,"committed_burst_bytes":5000000}],"allowTransparent":false}`
+	settings := `{"clients":[{"email":"alice","password":"old-secret","mixed_user":"alice","mixed_pass":"secret","enable":true,"bandwidth_bps":100000000,"committed_bps":10000000,"committed_burst_bytes":5000000}],"allowTransparent":false}`
 	in := Inbound{Protocol: HTTP, Port: 8080, Tag: "http-in", Settings: settings}
 	cfg := in.GenXrayInboundConfig()
 	if strings.Contains(string(cfg.Settings), `"clients"`) {
@@ -371,5 +371,29 @@ func TestGenXrayInboundConfigCompilesHTTPClientsWithLimits(t *testing.T) {
 	}
 	if in.Settings != settings {
 		t.Fatal("runtime compilation must not mutate the database row")
+	}
+}
+
+func TestMixedHTTPAccountsNeverUseOtherCredentials(t *testing.T) {
+	for _, protocol := range []Protocol{Mixed, HTTP} {
+		t.Run(string(protocol), func(t *testing.T) {
+			settings := `{"clients":[{"email":"old-email","password":"old-pass","enable":true},{"email":"missing-user","password":"old-pass","mixed_pass":"independent-pass","enable":true},{"email":"missing-pass","password":"old-pass","mixed_user":"independent-user","enable":true},{"email":"identity","password":"unrelated-pass","mixed_user":"login","mixed_pass":"secret","enable":true}]}`
+			in := Inbound{Protocol: protocol, Port: 1080, Settings: settings}
+			cfg := in.GenXrayInboundConfig()
+			var parsed struct {
+				Accounts []map[string]any `json:"accounts"`
+			}
+			if err := json.Unmarshal(cfg.Settings, &parsed); err != nil {
+				t.Fatal(err)
+			}
+			if len(parsed.Accounts) != 1 || parsed.Accounts[0]["user"] != "login" || parsed.Accounts[0]["pass"] != "secret" {
+				t.Fatalf("accounts = %#v", parsed.Accounts)
+			}
+			legacy := Client{Email: "old-email", Password: "old-pass"}
+			fields := legacy.RuntimeCredentialFields(&in)
+			if fields["user"] != "" || fields["pass"] != "" {
+				t.Fatalf("runtime fallback = %#v", fields)
+			}
+		})
 	}
 }

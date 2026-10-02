@@ -779,7 +779,7 @@ func (s *SubService) GetLink(inbound *model.Inbound, email string) string {
 		return s.genHysteriaLink(inbound, email)
 	case "mtproto":
 		return s.genMtprotoLink(inbound, email)
-	case "mixed":
+	case "mixed", "http":
 		return s.genMixedLink(inbound, email)
 	case "wireguard":
 		return s.genWireguardLink(inbound, email)
@@ -804,7 +804,7 @@ func (s *SubService) GetLinkAtEndpoint(inbound *model.Inbound, email, host strin
 }
 
 func (s *SubService) genMixedLink(inbound *model.Inbound, email string) string {
-	if inbound.Protocol != model.Mixed {
+	if inbound.Protocol != model.Mixed && inbound.Protocol != model.HTTP {
 		return ""
 	}
 	client, ok := s.clientForLink(inbound, email)
@@ -812,7 +812,7 @@ func (s *SubService) genMixedLink(inbound *model.Inbound, email string) string {
 		return ""
 	}
 	user, pass := client.MixedCredentials()
-	if pass == "" {
+	if user == "" || pass == "" {
 		return ""
 	}
 	address := s.resolveInboundAddress(inbound)
@@ -823,6 +823,9 @@ func (s *SubService) genMixedLink(inbound *model.Inbound, email string) string {
 		"port":   strconv.Itoa(inbound.Port),
 		"user":   user,
 		"pass":   pass,
+	}
+	if inbound.Protocol == model.HTTP {
+		return "http://" + authority
 	}
 	return strings.Join([]string{
 		"socks5://" + authority,

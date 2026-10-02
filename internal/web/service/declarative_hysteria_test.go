@@ -63,11 +63,13 @@ func fiveProtocolConfig(t *testing.T) DeclarativeNodeConfig {
 	inboundKey := "MTIzNDU2Nzg5MGFiY2RlZg=="
 	clientKey := "YWJjZGVmMTIzNDU2Nzg5MA=="
 	password := "line-shared-secret"
+	auth := "line-hy2-secret"
 	client := func(extra *string) DeclarativeClient {
 		return DeclarativeClient{
 			Email:    "line-001@line.invalid",
 			UUID:     "11111111-1111-1111-1111-111111111111",
 			Password: extra,
+			Auth:     &auth,
 			PirBps:   100_000_000,
 			CirBps:   20_000_000,
 			CbsBytes: 50_000_000,
@@ -184,7 +186,7 @@ func TestHysteriaInboundCompilesToTheShapeXrayReads(t *testing.T) {
 		t.Fatalf("clients = %d, want 1", len(settings.Clients))
 	}
 	got := settings.Clients[0]
-	if got.Auth != "line-shared-secret" {
+	if got.Auth != "line-hy2-secret" {
 		t.Fatalf("auth = %q; without it the account cannot connect at all", got.Auth)
 	}
 	if got.Email != "line-001@line.invalid" ||
@@ -225,11 +227,11 @@ func TestHysteriaInboundRequiresTLSAndAnAuthToken(t *testing.T) {
 		}
 	})
 
-	t.Run("without a password", func(t *testing.T) {
+	t.Run("without auth", func(t *testing.T) {
 		config := fiveProtocolConfig(t)
-		config.Inbounds[4].Clients[0].Password = nil
+		config.Inbounds[4].Clients[0].Auth = nil
 		if _, err := modelInboundFor(config.Inbounds[4]); err == nil {
-			t.Fatal("a hysteria client with no password has no auth token and could never connect")
+			t.Fatal("a hysteria client requires its independent auth token")
 		}
 	})
 }

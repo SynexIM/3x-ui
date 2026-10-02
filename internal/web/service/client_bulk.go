@@ -1456,7 +1456,7 @@ func batchCredentialClash(seen map[string]struct{}, client model.Client, inbound
 			kind, value = "auth", client.Auth
 		case model.Shadowsocks:
 			kind, value = "password", client.Password
-		case model.Mixed:
+		case model.Mixed, model.HTTP:
 			user, _ := client.MixedCredentials()
 			kind, value = "mixed_user", user
 		}

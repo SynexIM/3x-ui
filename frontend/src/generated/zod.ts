@@ -418,6 +418,7 @@ export const ClientSchema = z.object({
 export type Client = z.infer<typeof ClientSchema>;
 
 export const ClientCredentialPatchSchema = z.object({
+  auth: z.string().nullable().optional(),
   id: z.string().nullable().optional(),
   mixed_pass: z.string().nullable().optional(),
   mixed_user: z.string().nullable().optional(),

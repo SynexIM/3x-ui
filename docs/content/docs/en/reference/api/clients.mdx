@@ -35,9 +35,9 @@ _openapi:
     - depth: 2
       title: Create a new client and attach it to one or more inbounds in a single
         call. Body is JSON. Per-protocol secrets (UUID for VLESS/VMess, password
-        for Trojan/Mixed/HTTP/Shadowsocks, auth for Hysteria) are generated
-        server-side when omitted, so callers can send only the universal fields.
-      url: '#create-a-new-client-and-attach-it-to-one-or-more-inbounds-in-a-single-call-body-is-json-per-protocol-secrets-uuid-for-vlessvmess-password-for-trojanmixedhttpshadowsocks-auth-for-hysteria-are-generated-server-side-when-omitted-so-callers-can-send-only-the-universal-fields'
+        for Trojan/Shadowsocks, auth for Hysteria) are generated server-side
+        when omitted. Mixed/HTTP requires independent mixed_user and mixed_pass.
+      url: '#create-a-new-client-and-attach-it-to-one-or-more-inbounds-in-a-single-call-body-is-json-per-protocol-secrets-uuid-for-vlessvmess-password-for-trojanshadowsocks-auth-for-hysteria-are-generated-server-side-when-omitted-mixedhttp-requires-independent-mixed_user-and-mixed_pass'
     - depth: 2
       title: Update an existing client by email. Changes propagate to every attached
         inbound. Body is the JSON client payload — supply the full set of fields
@@ -60,11 +60,11 @@ _openapi:
     - depth: 2
       title: Rotate one client's credentials on every inbound it is attached to,
         hot-applied without restarting the core. id is the VLESS/VMess UUID;
-        password is the Trojan/Shadowsocks password and the Hysteria2 auth
-        (Shadowsocks-2022 inbounds derive a per-inbound key from it); mixed_user
-        / mixed_pass are the Mixed inbound login (empty restores the email /
-        password fallback). Only the fields sent change.
-      url: '#rotate-one-clients-credentials-on-every-inbound-it-is-attached-to-hot-applied-without-restarting-the-core-id-is-the-vlessvmess-uuid-password-is-the-trojanshadowsocks-password-and-the-hysteria2-auth-shadowsocks-2022-inbounds-derive-a-per-inbound-key-from-it-mixed_user--mixed_pass-are-the-mixed-inbound-login-empty-restores-the-email--password-fallback-only-the-fields-sent-change'
+        password is the Trojan/Shadowsocks password (Shadowsocks-2022 inbounds
+        derive a per-inbound key from it); auth is the independent Hysteria2
+        secret; mixed_user / mixed_pass are the independent Mixed/HTTP login and
+        cannot be empty. Only the fields sent change.
+      url: '#rotate-one-clients-credentials-on-every-inbound-it-is-attached-to-hot-applied-without-restarting-the-core-id-is-the-vlessvmess-uuid-password-is-the-trojanshadowsocks-password-shadowsocks-2022-inbounds-derive-a-per-inbound-key-from-it-auth-is-the-independent-hysteria2-secret-mixed_user--mixed_pass-are-the-independent-mixedhttp-login-and-cannot-be-empty-only-the-fields-sent-change'
     - depth: 2
       title: Delete a client by email. Removes it from every attached inbound and
         drops its traffic record unless keepTraffic=1 is passed.
@@ -342,10 +342,10 @@ _openapi:
         id: fetch-clients-by-telegram-user-id-returns-an-array-since-multiple-clients-can-share-the-same-telegram-id
       - content: Create a new client and attach it to one or more inbounds in a single
           call. Body is JSON. Per-protocol secrets (UUID for VLESS/VMess,
-          password for Trojan/Mixed/HTTP/Shadowsocks, auth for Hysteria) are
-          generated server-side when omitted, so callers can send only the
-          universal fields.
-        id: create-a-new-client-and-attach-it-to-one-or-more-inbounds-in-a-single-call-body-is-json-per-protocol-secrets-uuid-for-vlessvmess-password-for-trojanmixedhttpshadowsocks-auth-for-hysteria-are-generated-server-side-when-omitted-so-callers-can-send-only-the-universal-fields
+          password for Trojan/Shadowsocks, auth for Hysteria) are generated
+          server-side when omitted. Mixed/HTTP requires independent mixed_user
+          and mixed_pass.
+        id: create-a-new-client-and-attach-it-to-one-or-more-inbounds-in-a-single-call-body-is-json-per-protocol-secrets-uuid-for-vlessvmess-password-for-trojanshadowsocks-auth-for-hysteria-are-generated-server-side-when-omitted-mixedhttp-requires-independent-mixed_user-and-mixed_pass
       - content: Update an existing client by email. Changes propagate to every attached
           inbound. Body is the JSON client payload — supply the full set of
           fields you want to keep (the server replaces the row, it does not
@@ -366,11 +366,11 @@ _openapi:
         id: patch-runtime-rate-limits-connection-limit-and-egress-tag-for-one-identity-upload_bandwidth_bps--download_bandwidth_bps-are-the-standard-rates-burst_bps--burst_credit_bytes-add-a-credit-paid-burst-above-standard-sustained_bps-is-not-a-cap-but-the-guaranteed-rate-of-a-heavy-pool-while-the-node-is-congested-symmetric-0--off-burst--standard--sustained-pool-names-the-shaping-pool-shared-across-clients-and-inbounds-class-names-the-fair-share-class-omitted-fields-are-preserved-zero-clears-a-limit-applied-to-the-running-core-without-restarting-it-or-dropping-established-connections-credentials-validity-traffic-quota-and-per-inbound-flow-are-preserved-a-failed-or-pending-receipt-requires-reconciliation-before-reporting-the-change-as-usable
       - content: Rotate one client's credentials on every inbound it is attached to,
           hot-applied without restarting the core. id is the VLESS/VMess UUID;
-          password is the Trojan/Shadowsocks password and the Hysteria2 auth
-          (Shadowsocks-2022 inbounds derive a per-inbound key from it);
-          mixed_user / mixed_pass are the Mixed inbound login (empty restores
-          the email / password fallback). Only the fields sent change.
-        id: rotate-one-clients-credentials-on-every-inbound-it-is-attached-to-hot-applied-without-restarting-the-core-id-is-the-vlessvmess-uuid-password-is-the-trojanshadowsocks-password-and-the-hysteria2-auth-shadowsocks-2022-inbounds-derive-a-per-inbound-key-from-it-mixed_user--mixed_pass-are-the-mixed-inbound-login-empty-restores-the-email--password-fallback-only-the-fields-sent-change
+          password is the Trojan/Shadowsocks password (Shadowsocks-2022 inbounds
+          derive a per-inbound key from it); auth is the independent Hysteria2
+          secret; mixed_user / mixed_pass are the independent Mixed/HTTP login
+          and cannot be empty. Only the fields sent change.
+        id: rotate-one-clients-credentials-on-every-inbound-it-is-attached-to-hot-applied-without-restarting-the-core-id-is-the-vlessvmess-uuid-password-is-the-trojanshadowsocks-password-shadowsocks-2022-inbounds-derive-a-per-inbound-key-from-it-auth-is-the-independent-hysteria2-secret-mixed_user--mixed_pass-are-the-independent-mixedhttp-login-and-cannot-be-empty-only-the-fields-sent-change
       - content: Delete a client by email. Removes it from every attached inbound and
           drops its traffic record unless keepTraffic=1 is passed.
         id: delete-a-client-by-email-removes-it-from-every-attached-inbound-and-drops-its-traffic-record-unless-keeptraffic1-is-passed

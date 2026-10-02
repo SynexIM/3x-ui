@@ -7,6 +7,8 @@ import (
 
 func TestDeclarativeInboundCompilesSharedIdentityAndBandwidth(t *testing.T) {
 	password := "line-secret"
+	user := "independent-login"
+	pass := "independent-pass"
 	inbound, err := modelInboundFor(DeclarativeInbound{
 		Tag:        "group-mixed",
 		Protocol:   "mixed",
@@ -22,6 +24,8 @@ func TestDeclarativeInboundCompilesSharedIdentityAndBandwidth(t *testing.T) {
 			Email:     "line-001@line.ipvelo.invalid",
 			UUID:      "11111111-1111-1111-1111-111111111111",
 			Password:  &password,
+			MixedUser: &user,
+			MixedPass: &pass,
 			PirBps:    100_000_000,
 			CirBps:    20_000_000,
 			CbsBytes:  50_000_000,
@@ -30,6 +34,21 @@ func TestDeclarativeInboundCompilesSharedIdentityAndBandwidth(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	hy2, err := modelInboundFor(DeclarativeInbound{Protocol: "hysteria", Clients: []DeclarativeClient{{Email: "hy2@x", Password: &password, Auth: &pass}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var hySettings struct {
+		Clients []struct {
+			Auth string `json:"auth"`
+		} `json:"clients"`
+	}
+	if err := json.Unmarshal([]byte(hy2.Settings), &hySettings); err != nil {
+		t.Fatal(err)
+	}
+	if len(hySettings.Clients) != 1 || hySettings.Clients[0].Auth != pass {
+		t.Fatalf("declarative auth = %#v", hySettings)
 	}
 	compiled := inbound.GenXrayInboundConfig()
 	var settings struct {
@@ -49,7 +68,7 @@ func TestDeclarativeInboundCompilesSharedIdentityAndBandwidth(t *testing.T) {
 		t.Fatalf("accounts = %d, want 1", len(settings.Accounts))
 	}
 	account := settings.Accounts[0]
-	if account.User != "line-001@line.ipvelo.invalid" || account.Pass != password {
+	if account.User != user || account.Pass != pass {
 		t.Fatalf("compiled account = %#v", account)
 	}
 	if account.BandwidthBps != 100_000_000 ||
@@ -69,10 +88,12 @@ func TestDeclarativeInboundCompilesSharedIdentityAndBandwidth(t *testing.T) {
 		Settings:       map[string]any{},
 		StreamSettings: map[string]any{},
 		Clients: []DeclarativeClient{{
-			Email:    "line-001@line.ipvelo.invalid",
-			UUID:     "11111111-1111-1111-1111-111111111111",
-			Password: &password,
-			PirBps:   100_000_000,
+			Email:     "line-001@line.ipvelo.invalid",
+			UUID:      "11111111-1111-1111-1111-111111111111",
+			Password:  &password,
+			MixedUser: &user,
+			MixedPass: &pass,
+			PirBps:    100_000_000,
 		}},
 	})
 	if err != nil {

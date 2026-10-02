@@ -275,7 +275,14 @@ describe('getInboundClients with schema-shaped inbound', () => {
       protocol: 'mixed',
       settings: {
         auth: 'password',
-        clients: [{ email: 'alice@example.test', password: 'p@ss word' }],
+        clients: [
+          {
+            email: 'alice@example.test',
+            password: 'unrelated-password',
+            mixed_user: 'independent-login',
+            mixed_pass: 'p@ss word',
+          },
+        ],
         udp: false,
         ip: '127.0.0.1',
       },
@@ -287,12 +294,8 @@ describe('getInboundClients with schema-shaped inbound', () => {
       fallbackHostname: 'proxy.example.test',
     });
     expect(links.map((entry) => entry.remark)).toEqual(['SOCKS5', 'HTTP', 'Telegram']);
-    expect(links[0].link).toBe(
-      'socks5://alice%40example.test:p%40ss%20word@proxy.example.test:1080',
-    );
-    expect(links[1].link).toBe(
-      'http://alice%40example.test:p%40ss%20word@proxy.example.test:1080',
-    );
+    expect(links[0].link).toBe('socks5://independent-login:p%40ss%20word@proxy.example.test:1080');
+    expect(links[1].link).toBe('http://independent-login:p%40ss%20word@proxy.example.test:1080');
   });
 
   it('parses HTTP clients and generates an HTTP proxy link', () => {
@@ -301,21 +304,32 @@ describe('getInboundClients with schema-shaped inbound', () => {
       port: 8080,
       protocol: 'http',
       settings: {
-        clients: [{ email: 'alice@example.test', password: 'p@ss word' }],
+        clients: [
+          {
+            email: 'alice@example.test',
+            password: 'unrelated-password',
+            mixed_user: 'independent-login',
+            mixed_pass: 'p@ss word',
+          },
+        ],
         allowTransparent: false,
       },
       streamSettings: '',
     });
     const clients = getInboundClients(inbound);
     expect(clients).toHaveLength(1);
-    expect(genAllLinks({
-      inbound,
-      client: clients![0],
-      fallbackHostname: 'proxy.example.test',
-    })).toEqual([{
-      remark: 'HTTP',
-      link: 'http://alice%40example.test:p%40ss%20word@proxy.example.test:8080',
-    }]);
+    expect(
+      genAllLinks({
+        inbound,
+        client: clients![0],
+        fallbackHostname: 'proxy.example.test',
+      }),
+    ).toEqual([
+      {
+        remark: 'HTTP',
+        link: 'http://independent-login:p%40ss%20word@proxy.example.test:8080',
+      },
+    ]);
   });
 
   it('returns null for non-client protocols (tun/tunnel)', () => {

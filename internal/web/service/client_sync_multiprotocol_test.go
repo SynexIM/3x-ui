@@ -47,7 +47,7 @@ func TestSyncInbound_PreservesCredentialsAcrossProtocols(t *testing.T) {
 	if err := svc.SyncInbound(nil, hysteriaInbound.Id, []model.Client{hysteriaClient}); err != nil {
 		t.Fatalf("hysteria SyncInbound: %v", err)
 	}
-	mixedClient := model.Client{Email: sharedEmail, Password: wantPassword, Enable: true}
+	mixedClient := model.Client{Email: sharedEmail, Password: wantPassword, MixedUser: "independent-user", MixedPass: "independent-pass", Enable: true}
 	if err := svc.SyncInbound(nil, mixedInbound.Id, []model.Client{mixedClient}); err != nil {
 		t.Fatalf("Mixed SyncInbound: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestSyncInbound_PreservesCredentialsAcrossProtocols(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build Mixed runtime user: %v", err)
 	}
-	if mixedHotUser["user"] != sharedEmail || mixedHotUser["pass"] != wantPassword {
+	if mixedHotUser["user"] != "independent-user" || mixedHotUser["pass"] != "independent-pass" {
 		t.Fatalf("Mixed runtime user = %#v, want user=%q pass=%q", mixedHotUser, sharedEmail, wantPassword)
 	}
 

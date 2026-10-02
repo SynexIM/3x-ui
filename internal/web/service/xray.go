@@ -303,6 +303,10 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			if !c.Enable {
 				continue
 			}
+			if (inbound.Protocol == model.Mixed || inbound.Protocol == model.HTTP) && (c.MixedUser == "" || c.MixedPass == "") {
+				logger.Warningf("Skip %s account for client %s: independent credentials are unset", inbound.Protocol, c.Email)
+				continue
+			}
 			flow := c.Flow
 			if flow == "xtls-rprx-vision-udp443" {
 				flow = "xtls-rprx-vision"
@@ -348,10 +352,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				}
 			case model.HTTP:
 				delete(entry, "email")
-				entry["user"] = c.Email
-				if c.Password != "" {
-					entry["pass"] = c.Password
-				}
+				entry["user"], entry["pass"] = c.MixedCredentials()
 			case model.Shadowsocks:
 				if c.Password != "" {
 					method, _ := settings["method"].(string)

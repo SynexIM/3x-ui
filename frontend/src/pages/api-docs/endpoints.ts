@@ -1146,13 +1146,13 @@ export const sections: readonly Section[] = [
         method: 'POST',
         path: '/panel/api/clients/add',
         summary:
-          'Create a new client and attach it to one or more inbounds in a single call. Body is JSON. Per-protocol secrets (UUID for VLESS/VMess, password for Trojan/Mixed/HTTP/Shadowsocks, auth for Hysteria) are generated server-side when omitted, so callers can send only the universal fields.',
+          'Create a new client and attach it to one or more inbounds in a single call. Body is JSON. Per-protocol secrets (UUID for VLESS/VMess, password for Trojan/Shadowsocks, auth for Hysteria) are generated server-side when omitted. Mixed/HTTP requires independent mixed_user and mixed_pass.',
         params: [
           {
             name: 'client',
             in: 'body (json)',
             type: 'object',
-            desc: 'Client fields: email, subId, id (uuid), password, auth, flow, totalGB, expiryTime, limitIp, tgId, comment, enable; bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit (Mbps/Kbps/MB/s/KB/s), burstUnit (MB/GB); upload_bandwidth_bps / download_bandwidth_bps (standard bits/s), burst_bps, burst_credit_bytes, sustained_bps (pool shaping), pool (shaping pool shared by every client carrying it; empty = email), class (fair-share class name); mixed_user / mixed_pass (Mixed login, default email / password). Zero rate values mean unlimited; units are display metadata.',
+            desc: 'Client fields: email, subId, id (uuid), password, auth, flow, totalGB, expiryTime, limitIp, tgId, comment, enable; bandwidth_bps (PIR bits/s), committed_bps (CIR bits/s), committed_burst_bytes (CBS bytes), rateUnit (Mbps/Kbps/MB/s/KB/s), burstUnit (MB/GB); upload_bandwidth_bps / download_bandwidth_bps (standard bits/s), burst_bps, burst_credit_bytes, sustained_bps (pool shaping), pool (shaping pool shared by every client carrying it; empty = email), class (fair-share class name); mixed_user / mixed_pass (required independent Mixed/HTTP login). Zero rate values mean unlimited; units are display metadata.',
           },
           {
             name: 'inboundIds',
@@ -1199,7 +1199,7 @@ export const sections: readonly Section[] = [
         method: 'POST',
         path: '/panel/api/clients/:email/credentials',
         summary:
-          "Rotate one client's credentials on every inbound it is attached to, hot-applied without restarting the core. id is the VLESS/VMess UUID; password is the Trojan/Shadowsocks password and the Hysteria2 auth (Shadowsocks-2022 inbounds derive a per-inbound key from it); mixed_user / mixed_pass are the Mixed inbound login (empty restores the email / password fallback). Only the fields sent change.",
+          "Rotate one client's credentials on every inbound it is attached to, hot-applied without restarting the core. id is the VLESS/VMess UUID; password is the Trojan/Shadowsocks password (Shadowsocks-2022 inbounds derive a per-inbound key from it); auth is the independent Hysteria2 secret; mixed_user / mixed_pass are the independent Mixed/HTTP login and cannot be empty. Only the fields sent change.",
         requestSchema: 'ClientCredentialPatch',
         responseSchema: 'ClientRuntimeReceipt',
         params: [{ name: 'email', in: 'path', type: 'string', desc: 'Stable client identity.' }],

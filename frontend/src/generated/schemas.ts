@@ -1665,8 +1665,13 @@ export const SCHEMAS: Record<string, unknown> = {
     "type": "object"
   },
   "ClientCredentialPatch": {
-    "description": "ClientCredentialPatch changes only the fields it names; password also becomes\nthe Hysteria2 auth, and empty mixed_user/mixed_pass fall back to email/password.",
+    "description": "ClientCredentialPatch changes only the named, independent protocol credentials.\nMixed/HTTP usernames and passwords cannot be cleared.",
     "properties": {
+      "auth": {
+        "example": "hy2-secret_01",
+        "nullable": true,
+        "type": "string"
+      },
       "id": {
         "example": "0f7a8c1e-4d2b-4e6a-9c3f-1b2d3e4f5a6b",
         "nullable": true,

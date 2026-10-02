@@ -404,6 +404,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "upload_peak_bps": 0
   },
   "ClientCredentialPatch": {
+    "auth": "hy2-secret_01",
     "id": "0f7a8c1e-4d2b-4e6a-9c3f-1b2d3e4f5a6b",
     "mixed_pass": "s3cret-Pass_02",
     "mixed_user": "line-0001",
